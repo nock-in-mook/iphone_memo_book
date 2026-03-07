@@ -9,11 +9,8 @@ struct MainView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // タグフィルター（キーボード非表示時のみ）
-                if !isInputFocused {
-                    TagFilterPickerView(selectedTag: $selectedTag)
-                        .transition(.opacity)
-                }
+                // タグフィルター（常に表示）
+                TagFilterPickerView(selectedTag: $selectedTag)
 
                 // テキスト入力エリア
                 MemoInputView(viewModel: viewModel, isInputFocused: $isInputFocused)
@@ -23,18 +20,20 @@ struct MainView: View {
                 // メモリスト
                 MemoListView(selectedTag: selectedTag)
             }
-            .animation(.easeInOut(duration: 0.2), value: isInputFocused)
             .navigationTitle("即メモ君")
             .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                // キーボード閉じるボタン
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("閉じる") {
+                        isInputFocused = false
+                    }
+                }
+            }
             .sheet(isPresented: $viewModel.showTagTitleSheet) {
                 if let memo = viewModel.savedMemo {
                     TagTitleSheetView(memo: memo)
-                }
-            }
-            .onAppear {
-                // 起動時に自動フォーカス
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                    isInputFocused = true
                 }
             }
         }

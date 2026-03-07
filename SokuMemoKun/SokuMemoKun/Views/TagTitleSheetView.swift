@@ -7,12 +7,18 @@ struct TagTitleSheetView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var existingTags: [Tag]
     @State private var titleText: String = ""
-    @State private var selectedTagIDs: Set<UUID> = []
+    @State private var contentText: String = ""
+    @State private var selectedTags: [Tag] = []
     @State private var newTagName: String = ""
 
     var body: some View {
         NavigationStack {
             Form {
+                Section("メモ内容") {
+                    TextEditor(text: $contentText)
+                        .frame(minHeight: 100)
+                }
+
                 Section("タイトル（任意）") {
                     TextField("タイトルを入力", text: $titleText)
                 }
@@ -26,7 +32,7 @@ struct TagTitleSheetView: View {
                             HStack {
                                 Text(tag.name)
                                 Spacer()
-                                if selectedTagIDs.contains(tag.id) {
+                                if selectedTags.contains(where: { $0.id == tag.id }) {
                                     Image(systemName: "checkmark")
                                         .foregroundStyle(.blue)
                                 }
@@ -51,26 +57,32 @@ struct TagTitleSheetView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
-                    Button("スキップ") {
+                    Button("キャンセル") {
                         dismiss()
                     }
                 }
                 ToolbarItem(placement: .confirmationAction) {
-                    Button("決定") {
+                    Button("保存") {
                         applySettings()
                         dismiss()
                     }
                 }
             }
+            .onAppear {
+                // 既存の値を読み込み
+                titleText = memo.title
+                contentText = memo.content
+                selectedTags = memo.tags
+            }
         }
-        .presentationDetents([.medium])
+        .presentationDetents([.large])
     }
 
     private func toggleTag(_ tag: Tag) {
-        if selectedTagIDs.contains(tag.id) {
-            selectedTagIDs.remove(tag.id)
+        if let index = selectedTags.firstIndex(where: { $0.id == tag.id }) {
+            selectedTags.remove(at: index)
         } else {
-            selectedTagIDs.insert(tag.id)
+            selectedTags.append(tag)
         }
     }
 
@@ -79,18 +91,14 @@ struct TagTitleSheetView: View {
         guard !name.isEmpty else { return }
         let tag = Tag(name: name)
         modelContext.insert(tag)
-        selectedTagIDs.insert(tag.id)
+        selectedTags.append(tag)
         newTagName = ""
     }
 
     private func applySettings() {
-        if !titleText.isEmpty {
-            memo.title = titleText
-        }
-        // 選択されたタグをメモに紐付け
-        // existingTagsに加え、新規作成タグも含める
-        let allTags = existingTags
-        memo.tags = allTags.filter { selectedTagIDs.contains($0.id) }
+        memo.content = contentText
+        memo.title = titleText
+        memo.tags = selectedTags
         memo.updatedAt = Date()
     }
 }

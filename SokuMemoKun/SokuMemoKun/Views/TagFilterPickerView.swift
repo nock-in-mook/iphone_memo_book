@@ -7,22 +7,38 @@ struct TagFilterPickerView: View {
     @State private var selectedTagID: String = ""
 
     var body: some View {
-        if !tags.isEmpty {
-            Picker("タグフィルター", selection: $selectedTagID) {
-                Text("すべて").tag("")
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                // 「すべて」ボタン
+                tagButton(label: "すべて", id: "")
+
+                // 既存タグ
                 ForEach(tags) { tag in
-                    Text(tag.name).tag(tag.id.uuidString)
+                    tagButton(label: tag.name, id: tag.id.uuidString)
                 }
             }
-            .pickerStyle(.wheel)
-            .frame(height: 100)
-            .onChange(of: selectedTagID) { _, newValue in
-                if newValue.isEmpty {
-                    selectedTag = nil
-                } else {
-                    selectedTag = tags.first { $0.id.uuidString == newValue }
-                }
+            .padding(.horizontal)
+            .padding(.vertical, 8)
+        }
+    }
+
+    private func tagButton(label: String, id: String) -> some View {
+        let isSelected = selectedTagID == id
+        return Button {
+            selectedTagID = id
+            if id.isEmpty {
+                selectedTag = nil
+            } else {
+                selectedTag = tags.first { $0.id.uuidString == id }
             }
+        } label: {
+            Text(label)
+                .font(.callout)
+                .padding(.horizontal, 14)
+                .padding(.vertical, 6)
+                .background(isSelected ? Color.accentColor : Color.gray.opacity(0.15))
+                .foregroundStyle(isSelected ? .white : .primary)
+                .clipShape(Capsule())
         }
     }
 }
