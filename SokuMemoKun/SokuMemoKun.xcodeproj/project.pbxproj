@@ -20,6 +20,7 @@
 		B1000000000000000000AE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000AE /* Assets.xcassets */; };
 		B1000000000000000000B1 /* TrapezoidTabShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B1 /* TrapezoidTabShape.swift */; };
 		B1000000000000000000B2 /* TabbedMemoListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B2 /* TabbedMemoListView.swift */; };
+		B1000000000000000000B3 /* TagDialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B3 /* TagDialView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -37,6 +38,7 @@
 		A1000000000000000000AF /* SokuMemoKun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SokuMemoKun.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		A1000000000000000000B1 /* TrapezoidTabShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrapezoidTabShape.swift; sourceTree = "<group>"; };
 		A1000000000000000000B2 /* TabbedMemoListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabbedMemoListView.swift; sourceTree = "<group>"; };
+		A1000000000000000000B3 /* TagDialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagDialView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -90,6 +92,7 @@
 				A1000000000000000000AC /* TagTitleSheetView.swift */,
 				A1000000000000000000B1 /* TrapezoidTabShape.swift */,
 				A1000000000000000000B2 /* TabbedMemoListView.swift */,
+				A1000000000000000000B3 /* TagDialView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -192,6 +195,7 @@
 				B1000000000000000000AD /* MemoInputViewModel.swift in Sources */,
 				B1000000000000000000B1 /* TrapezoidTabShape.swift in Sources */,
 				B1000000000000000000B2 /* TabbedMemoListView.swift in Sources */,
+				B1000000000000000000B3 /* TagDialView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

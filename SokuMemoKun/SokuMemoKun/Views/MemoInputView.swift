@@ -4,45 +4,42 @@ import SwiftData
 struct MemoInputView: View {
     @Bindable var viewModel: MemoInputViewModel
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Tag.name) private var tags: [Tag]
 
     var body: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 6) {
             TextEditor(text: $viewModel.inputText)
-                .frame(minHeight: 100, maxHeight: 150)
-                .padding(8)
+                .frame(minHeight: 80, maxHeight: 120)
+                .padding(6)
                 .overlay(
                     RoundedRectangle(cornerRadius: 8)
                         .stroke(Color.gray.opacity(0.3))
                 )
                 .overlay(alignment: .topLeading) {
-                    // プレースホルダー
                     if viewModel.inputText.isEmpty {
                         Text("メモを入力...")
                             .foregroundStyle(.gray.opacity(0.5))
-                            .padding(.horizontal, 13)
-                            .padding(.vertical, 16)
+                            .padding(.horizontal, 11)
+                            .padding(.vertical, 14)
                             .allowsHitTesting(false)
                     }
                 }
 
             HStack {
                 Spacer()
-
-                // コピーボタン
                 Button {
                     UIPasteboard.general.string = viewModel.inputText
                 } label: {
                     Label("コピー", systemImage: "doc.on.doc")
-                        .font(.callout)
+                        .font(.caption)
                 }
                 .disabled(viewModel.inputText.isEmpty)
 
-                // 保存ボタン
                 Button {
-                    viewModel.save(context: modelContext)
+                    viewModel.save(context: modelContext, tags: tags)
                 } label: {
                     Label("保存", systemImage: "square.and.arrow.down")
-                        .font(.callout)
+                        .font(.caption)
                         .bold()
                 }
                 .buttonStyle(.borderedProminent)
@@ -50,6 +47,6 @@ struct MemoInputView: View {
             }
         }
         .padding(.horizontal)
-        .padding(.vertical, 8)
+        .padding(.vertical, 6)
     }
 }

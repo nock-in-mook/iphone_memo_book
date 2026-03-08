@@ -21,7 +21,6 @@ func tagColor(for index: Int) -> Color {
 struct PaperTextureOverlay: View {
     var body: some View {
         Canvas { context, size in
-            // 微細なドットで紙のテクスチャを再現
             for _ in 0..<800 {
                 let x = CGFloat.random(in: 0...size.width)
                 let y = CGFloat.random(in: 0...size.height)
@@ -37,7 +36,9 @@ struct PaperTextureOverlay: View {
     }
 }
 
-private let tabWidth: CGFloat = 64 // 固定幅
+private let tabWidth: CGFloat = 76
+private let borderColor = Color.primary.opacity(0.45)
+private let borderWidth: CGFloat = 2.0
 
 struct TabbedMemoListView: View {
     @Query(sort: \Tag.name) private var tags: [Tag]
@@ -69,7 +70,6 @@ struct TabbedMemoListView: View {
         tagColor(for: selectedTabIndex)
     }
 
-    // 4列グリッド
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 4)
 
     var body: some View {
@@ -93,12 +93,11 @@ struct TabbedMemoListView: View {
                 }
             }
 
-            // メモ一覧（紙の質感背景）
+            // メモ一覧（縁取り付き）
             ZStack {
                 currentColor
                     .ignoresSafeArea(edges: .bottom)
 
-                // 紙テクスチャ
                 PaperTextureOverlay()
                     .ignoresSafeArea(edges: .bottom)
 
@@ -108,7 +107,7 @@ struct TabbedMemoListView: View {
                             .font(.title2)
                             .foregroundStyle(.secondary)
                         Text("メモがありません")
-                            .font(.system(size: 13, design: .rounded))
+                            .font(.system(size: 14, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -157,24 +156,14 @@ struct TabbedMemoListView: View {
             }
         } label: {
             Text(label)
-                .font(.system(size: 10, weight: isSelected ? .semibold : .regular, design: .rounded))
+                .font(.system(size: 12, weight: isSelected ? .bold : .medium, design: .rounded))
                 .foregroundStyle(isSelected ? .primary : .secondary)
                 .lineLimit(1)
                 .frame(width: tabWidth)
-                .padding(.vertical, 7)
+                .padding(.vertical, 9)
                 .background(
                     TrapezoidTabShape()
-                        .fill(isSelected ? color : color.opacity(0.4))
-                )
-                // 右側のみシャドウ
-                .background(
-                    TrapezoidTabShape()
-                        .fill(.clear)
-                        .shadow(color: .black.opacity(0.18), radius: 2, x: 3, y: 1)
-                )
-                .clipShape(
-                    // 右のシャドウだけ見せるため、左側をクリップしない形でマスク
-                    Rectangle().offset(x: -4)
+                        .fill(color)
                 )
                 .offset(y: isSelected ? 2 : 0)
         }
@@ -189,11 +178,11 @@ struct MemoCardView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(memo.title.isEmpty ? "無題" : memo.title)
-                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
                 .lineLimit(1)
 
             Text(memo.content)
-                .font(.system(size: 9))
+                .font(.system(size: 10))
                 .foregroundStyle(.secondary)
                 .lineLimit(2)
         }

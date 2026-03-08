@@ -3,8 +3,8 @@ import SwiftUI
 // 角丸台形タブの形状（ファイルのインデックスタブ風）
 struct TrapezoidTabShape: Shape {
     func path(in rect: CGRect) -> Path {
-        let inset: CGFloat = 6   // 台形の傾き量
-        let radius: CGFloat = 8  // 角丸の半径
+        let inset: CGFloat = 7   // 台形の傾き量
+        let radius: CGFloat = 4  // 角丸の半径（控えめでへこみ防止）
 
         var path = Path()
         // 左下から時計回り

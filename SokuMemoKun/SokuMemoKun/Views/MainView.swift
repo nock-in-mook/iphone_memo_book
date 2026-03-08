@@ -18,8 +18,16 @@ struct MainView: View {
             }
             .navigationTitle("即メモ君")
             .navigationBarTitleDisplayMode(.inline)
+            // ジョグダイヤル（画面右端に張り付き）
+            .overlay(alignment: .trailing) {
+                if !isKeyboardVisible {
+                    TagDialView(selectedTagID: $viewModel.selectedTagID)
+                        .frame(height: 200)
+                        .offset(y: -60) // 入力欄の横あたりに配置
+                        .transition(.move(edge: .trailing))
+                }
+            }
             .overlay(alignment: .bottomTrailing) {
-                // キーボード閉じるボタン（キーボード表示中のみ）
                 if isKeyboardVisible {
                     Button {
                         UIApplication.shared.sendAction(
