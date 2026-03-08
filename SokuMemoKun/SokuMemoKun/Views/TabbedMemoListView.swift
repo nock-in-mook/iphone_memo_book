@@ -3,7 +3,7 @@ import SwiftData
 
 // タブの色パレット
 private let tabColors: [Color] = [
-    .gray.opacity(0.35),       // タグ無し用（グレー）
+    Color(red: 0.82, green: 0.80, blue: 0.76),  // タグ無し（ベージュグレー・画用紙風）
     Color(red: 0.55, green: 0.80, blue: 0.95),  // 水色
     Color(red: 0.95, green: 0.70, blue: 0.55),  // オレンジ
     Color(red: 0.70, green: 0.90, blue: 0.70),  // 緑
@@ -13,10 +13,31 @@ private let tabColors: [Color] = [
     Color(red: 0.60, green: 0.75, blue: 0.95),  // 青
 ]
 
-// タグのインデックスから色を取得
 func tagColor(for index: Int) -> Color {
     tabColors[index % tabColors.count]
 }
+
+// 紙の質感を表現するオーバーレイ
+struct PaperTextureOverlay: View {
+    var body: some View {
+        Canvas { context, size in
+            // 微細なドットで紙のテクスチャを再現
+            for _ in 0..<800 {
+                let x = CGFloat.random(in: 0...size.width)
+                let y = CGFloat.random(in: 0...size.height)
+                let opacity = Double.random(in: 0.02...0.08)
+                let dotSize = CGFloat.random(in: 0.5...1.5)
+                context.fill(
+                    Path(ellipseIn: CGRect(x: x, y: y, width: dotSize, height: dotSize)),
+                    with: .color(.black.opacity(opacity))
+                )
+            }
+        }
+        .allowsHitTesting(false)
+    }
+}
+
+private let tabWidth: CGFloat = 64 // 固定幅
 
 struct TabbedMemoListView: View {
     @Query(sort: \Tag.name) private var tags: [Tag]
@@ -25,7 +46,6 @@ struct TabbedMemoListView: View {
     @State private var selectedTabIndex: Int = 0
     @State private var editingMemo: Memo?
 
-    // タブ一覧：「タグ無し」+ 全タグ
     private var tabItems: [(label: String, tag: Tag?)] {
         var items: [(String, Tag?)] = [("タグ無し", nil)]
         for tag in tags {
@@ -34,7 +54,6 @@ struct TabbedMemoListView: View {
         return items
     }
 
-    // 選択中のタブに対応するメモ
     private var filteredMemos: [Memo] {
         let item = tabItems[selectedTabIndex]
         if let tag = item.tag {
@@ -42,22 +61,23 @@ struct TabbedMemoListView: View {
                 memo.tags.contains { $0.id == tag.id }
             }
         } else {
-            // タグ無し：タグが空のメモ
             return allMemos.filter { $0.tags.isEmpty }
         }
     }
 
-    // 選択中タブの色
     private var currentColor: Color {
         tagColor(for: selectedTabIndex)
     }
+
+    // 4列グリッド
+    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 4)
 
     var body: some View {
         VStack(spacing: 0) {
             // タブ行
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: -2) {
+                    HStack(spacing: -1) {
                         ForEach(Array(tabItems.enumerated()), id: \.offset) { index, item in
                             tabButton(label: item.label, index: index)
                                 .id(index)
@@ -73,24 +93,28 @@ struct TabbedMemoListView: View {
                 }
             }
 
-            // メモ一覧（タブの色を背景に）
+            // メモ一覧（紙の質感背景）
             ZStack {
                 currentColor
                     .ignoresSafeArea(edges: .bottom)
 
+                // 紙テクスチャ
+                PaperTextureOverlay()
+                    .ignoresSafeArea(edges: .bottom)
+
                 if filteredMemos.isEmpty {
-                    VStack(spacing: 12) {
+                    VStack(spacing: 8) {
                         Image(systemName: "note.text")
-                            .font(.largeTitle)
+                            .font(.title2)
                             .foregroundStyle(.secondary)
                         Text("メモがありません")
-                            .font(.headline)
+                            .font(.system(size: 13, design: .rounded))
                             .foregroundStyle(.secondary)
                     }
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        LazyVStack(spacing: 8) {
+                        LazyVGrid(columns: columns, spacing: 4) {
                             ForEach(filteredMemos) { memo in
                                 MemoCardView(memo: memo)
                                     .onTapGesture {
@@ -110,8 +134,8 @@ struct TabbedMemoListView: View {
                                     }
                             }
                         }
-                        .padding(.horizontal, 12)
-                        .padding(.top, 8)
+                        .padding(.horizontal, 6)
+                        .padding(.top, 6)
                         .padding(.bottom, 20)
                     }
                 }
@@ -133,55 +157,49 @@ struct TabbedMemoListView: View {
             }
         } label: {
             Text(label)
-                .font(.caption)
-                .fontWeight(isSelected ? .bold : .regular)
+                .font(.system(size: 10, weight: isSelected ? .semibold : .regular, design: .rounded))
                 .foregroundStyle(isSelected ? .primary : .secondary)
-                .padding(.horizontal, 16)
-                .padding(.vertical, 8)
+                .lineLimit(1)
+                .frame(width: tabWidth)
+                .padding(.vertical, 7)
                 .background(
                     TrapezoidTabShape()
                         .fill(isSelected ? color : color.opacity(0.4))
                 )
-                .offset(y: isSelected ? 2 : 0) // 選択中のタブは少し下にずれて繋がって見える
+                // 右側のみシャドウ
+                .background(
+                    TrapezoidTabShape()
+                        .fill(.clear)
+                        .shadow(color: .black.opacity(0.18), radius: 2, x: 3, y: 1)
+                )
+                .clipShape(
+                    // 右のシャドウだけ見せるため、左側をクリップしない形でマスク
+                    Rectangle().offset(x: -4)
+                )
+                .offset(y: isSelected ? 2 : 0)
         }
-        .zIndex(isSelected ? 1 : 0) // 選択中のタブを前面に
+        .zIndex(isSelected ? 1 : 0)
     }
 }
 
-// カード風のメモ行（背景色付きリスト用）
+// 超コンパクトなメモカード（4列グリッド用）
 struct MemoCardView: View {
     let memo: Memo
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                Text(memo.title.isEmpty ? "無題" : memo.title)
-                    .font(.headline)
-                    .lineLimit(1)
-
-                Spacer()
-
-                Button {
-                    UIPasteboard.general.string = memo.content
-                } label: {
-                    Image(systemName: "doc.on.doc")
-                        .font(.caption)
-                        .foregroundStyle(.gray)
-                }
-                .buttonStyle(.plain)
-            }
+        VStack(alignment: .leading, spacing: 2) {
+            Text(memo.title.isEmpty ? "無題" : memo.title)
+                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                .lineLimit(1)
 
             Text(memo.content)
-                .font(.subheadline)
+                .font(.system(size: 9))
                 .foregroundStyle(.secondary)
-                .lineLimit(3)
-
-            Text(memo.createdAt, style: .relative)
-                .font(.caption2)
-                .foregroundStyle(.tertiary)
+                .lineLimit(2)
         }
-        .padding(12)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(6)
         .background(.regularMaterial)
-        .clipShape(RoundedRectangle(cornerRadius: 10))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
     }
 }
