@@ -8,7 +8,7 @@ struct MainView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // テキスト入力エリア
+                // テキスト入力エリア（右にルーレット付き）
                 MemoInputView(viewModel: viewModel)
 
                 Divider()
@@ -39,11 +39,6 @@ struct MainView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: isKeyboardVisible)
-            .sheet(isPresented: $viewModel.showTagTitleSheet) {
-                if let memo = viewModel.savedMemo {
-                    TagTitleSheetView(memo: memo)
-                }
-            }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
                 isKeyboardVisible = true
             }

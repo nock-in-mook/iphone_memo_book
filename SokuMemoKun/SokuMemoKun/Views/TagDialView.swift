@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-// 入力欄の右に張り付くカラフルなジョグダイヤル
+// カジノルーレット風タグ選択（巨大な円の右端の弧だけ見える）
 struct TagDialView: View {
     @Query(sort: \Tag.name) private var tags: [Tag]
     @Binding var selectedTagID: UUID?
@@ -14,101 +14,127 @@ struct TagDialView: View {
         return list
     }
 
-    private let dialRadius: CGFloat = 60
+    // 巨大な円の半径（画面外に中心がある）
+    private let wheelRadius: CGFloat = 300
+    // 各タグ間の角度（度）
+    private let itemAngle: CGFloat = 12
 
-    @State private var dragAngle: Double = 0
-    @State private var baseAngle: Double = 0
+    @State private var rotation: CGFloat = 0
+    @State private var dragStart: CGFloat = 0
+
+    private var currentIndex: Int {
+        let count = options.count
+        guard count > 0 else { return 0 }
+        let raw = Int(round(rotation / itemAngle))
+        return ((raw % count) + count) % count
+    }
 
     var body: some View {
-        let optionCount = options.count
-        let anglePerItem = 360.0 / Double(max(optionCount, 1))
+        let count = options.count
 
         GeometryReader { geo in
             ZStack {
-                // ダイヤル本体
-                Circle()
-                    .fill(
-                        AngularGradient(
-                            colors: options.map { $0.color } + [options.first?.color ?? .gray],
-                            center: .center
-                        )
-                    )
-                    .frame(width: dialRadius * 2, height: dialRadius * 2)
-                    .overlay(
-                        Circle()
-                            .fill(.ultraThinMaterial)
-                            .opacity(0.2)
-                    )
-                    .overlay(
-                        ForEach(Array(options.enumerated()), id: \.offset) { i, option in
-                            let angle = Double(i) * anglePerItem + dragAngle + baseAngle
-                            let rad = angle * .pi / 180
+                // 巨大な円（中心は左の画面外）
+                // 弧の部分だけ描画
+                ForEach(-3...3, id: \.self) { offset in
+                    let index = ((currentIndex - offset) % count + count) % count
+                    if index < options.count {
+                        let option = options[index]
+                        let angle = CGFloat(offset) * itemAngle
+                            - (rotation - CGFloat(currentIndex) * itemAngle)
+                        let rad = angle * .pi / 180
+                        let x = wheelRadius * cos(rad) - wheelRadius + geo.size.width
+                        let y = geo.size.height / 2 - wheelRadius * sin(rad)
+                        let dist = abs(angle)
+                        let maxDist = itemAngle * 3
+                        let fade = max(0, 1 - dist / maxDist)
+                        let scale = 0.6 + fade * 0.4
 
-                            // 文字は常に読める向き（回転させない）
-                            Text(option.name)
-                                .font(.system(size: 8, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white)
-                                .shadow(color: .black.opacity(0.5), radius: 1, x: 0, y: 1)
-                                .offset(
-                                    x: cos(rad) * (dialRadius - 20),
-                                    y: sin(rad) * (dialRadius - 20)
-                                )
-
-                            Circle()
-                                .fill(option.color)
-                                .frame(width: 8)
-                                .overlay(Circle().stroke(.white, lineWidth: 1))
-                                .offset(
-                                    x: cos(rad) * (dialRadius - 6),
-                                    y: sin(rad) * (dialRadius - 6)
-                                )
-                        }
-                    )
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(option.color.opacity(0.3 + fade * 0.5))
+                            .frame(width: geo.size.width - 8, height: 22 * scale)
+                            .overlay(alignment: .leading) {
+                                HStack(spacing: 4) {
+                                    RoundedRectangle(cornerRadius: 2)
+                                        .fill(option.color)
+                                        .frame(width: 4, height: 16 * scale)
+                                    Text(option.name)
+                                        .font(.system(
+                                            size: 11 * scale,
+                                            weight: dist < itemAngle / 2 ? .bold : .regular,
+                                            design: .rounded
+                                        ))
+                                        .lineLimit(1)
+                                }
+                                .padding(.leading, 4)
+                            }
+                            .rotationEffect(.degrees(-angle * 0.3), anchor: .leading)
+                            .position(x: x, y: y)
+                            .opacity(Double(fade))
+                    }
+                }
 
                 // 選択インジケータ
-                Triangle()
-                    .fill(.primary)
-                    .frame(width: 6, height: 10)
-                    .offset(x: -(dialRadius + 2))
+                HStack {
+                    Image(systemName: "arrowtriangle.right.fill")
+                        .font(.system(size: 7))
+                        .foregroundStyle(Color.accentColor)
+                    Spacer()
+                }
+                .padding(.leading, 2)
+
+                // 弧の縁（装飾）
+                ArcEdge(radius: wheelRadius, viewWidth: geo.size.width)
+                    .stroke(.gray.opacity(0.2), lineWidth: 1)
             }
-            // ちょうど半円が見える位置
-            .position(x: geo.size.width + dialRadius - 45, y: geo.size.height / 2)
-            .gesture(
-                DragGesture()
-                    .onChanged { value in
-                        // 上スワイプ→上に回転（符号反転）
-                        dragAngle = -value.translation.height * 0.6
+        }
+        .frame(width: 58)
+        .clipped()
+        .contentShape(Rectangle())
+        .gesture(
+            DragGesture()
+                .onChanged { value in
+                    rotation = dragStart - value.translation.height * 0.15
+                }
+                .onEnded { _ in
+                    let snapped = round(rotation / itemAngle) * itemAngle
+                    withAnimation(.easeOut(duration: 0.15)) {
+                        rotation = snapped
                     }
-                    .onEnded { value in
-                        baseAngle += dragAngle
-                        dragAngle = 0
+                    dragStart = snapped
+                    updateSelection()
+                }
+        )
+        .onAppear {
+            dragStart = rotation
+        }
+    }
 
-                        let totalAngle = baseAngle.truncatingRemainder(dividingBy: 360)
-                        let normalized = totalAngle < 0 ? totalAngle + 360 : totalAngle
-                        let snappedIndex = Int(round(normalized / anglePerItem)) % optionCount
-                        let actualIndex = (optionCount - snappedIndex) % optionCount
-
-                        withAnimation(.easeOut(duration: 0.2)) {
-                            baseAngle = -Double(snappedIndex) * anglePerItem
-                        }
-
-                        if actualIndex < options.count {
-                            let option = options[actualIndex]
-                            selectedTagID = option.id == "none" ? nil : UUID(uuidString: option.id)
-                        }
-                    }
-            )
+    private func updateSelection() {
+        let index = currentIndex
+        if index < options.count {
+            let option = options[index]
+            selectedTagID = option.id == "none" ? nil : UUID(uuidString: option.id)
         }
     }
 }
 
-struct Triangle: Shape {
+// 弧の縁線（装飾用）
+struct ArcEdge: Shape {
+    let radius: CGFloat
+    let viewWidth: CGFloat
+
     func path(in rect: CGRect) -> Path {
         var path = Path()
-        path.move(to: CGPoint(x: rect.maxX, y: rect.midY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.minY))
-        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
-        path.closeSubpath()
+        let centerX = -radius + viewWidth
+        let centerY = rect.midY
+        path.addArc(
+            center: CGPoint(x: centerX, y: centerY),
+            radius: radius,
+            startAngle: .degrees(-30),
+            endAngle: .degrees(30),
+            clockwise: false
+        )
         return path
     }
 }

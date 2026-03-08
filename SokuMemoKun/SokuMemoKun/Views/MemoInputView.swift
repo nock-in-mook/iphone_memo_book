@@ -8,10 +8,10 @@ struct MemoInputView: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            // 左: テキスト入力 + ボタン
-            VStack(spacing: 6) {
+            // 左: テキスト入力 + タイトル + ボタン
+            VStack(spacing: 4) {
                 TextEditor(text: $viewModel.inputText)
-                    .frame(minHeight: 80, maxHeight: 120)
+                    .frame(minHeight: 70, maxHeight: 110)
                     .padding(6)
                     .overlay(
                         RoundedRectangle(cornerRadius: 8)
@@ -26,6 +26,16 @@ struct MemoInputView: View {
                                 .allowsHitTesting(false)
                         }
                     }
+
+                // タイトル入力（小さく）
+                TextField("タイトル（任意）", text: $viewModel.titleText)
+                    .font(.system(size: 12, design: .rounded))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 5)
+                    .background(
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.gray.opacity(0.08))
+                    )
 
                 HStack {
                     Spacer()
@@ -51,11 +61,9 @@ struct MemoInputView: View {
             .padding(.leading)
             .padding(.vertical, 6)
 
-            // 右: ジョグダイヤル
+            // 右: タグルーレット
             TagDialView(selectedTagID: $viewModel.selectedTagID)
-                .frame(width: 55, height: 150)
-                .clipped()
+                .padding(.horizontal, 4)
         }
-        .padding(.trailing, 0)
     }
 }
