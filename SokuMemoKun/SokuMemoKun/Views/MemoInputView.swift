@@ -44,12 +44,18 @@ struct MemoInputView: View {
                         .padding(4)
 
                     if viewModel.inputText.isEmpty {
-                        Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
-                            .foregroundStyle(.gray.opacity(0.5))
-                            .font(.system(size: 14))
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 12)
-                            .allowsHitTesting(false)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
+                                .font(.system(size: 14))
+                            if viewModel.isMarkdown {
+                                Text("(設定でオンオフ切替できます)")
+                                    .font(.system(size: 10))
+                            }
+                        }
+                        .foregroundStyle(.gray.opacity(0.5))
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 12)
+                        .allowsHitTesting(false)
                     }
 
                     // マークダウンON＋空欄のとき、タップで全画面編集へ
