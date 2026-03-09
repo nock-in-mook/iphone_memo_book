@@ -8,10 +8,8 @@ struct MainView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // テキスト入力エリア（右にルーレット付き）
+                // 入力エリア（大枠で囲まれた入力欄+ルーレット）
                 MemoInputView(viewModel: viewModel)
-
-                Divider()
 
                 // 台形タブ付きメモ一覧
                 TabbedMemoListView()
