@@ -64,58 +64,61 @@ struct MemoInputView: View {
                 Divider()
                     .padding(.horizontal, 6)
 
-                // ボタン行: タグ: + タグ表示 + 追加 + コピー + 保存
-                HStack(spacing: 5) {
-                    // 「タグ:」ラベル
+                // ボタン行: 2段（上:タグ: 下:タグパネル+ボタン）
+                VStack(alignment: .leading, spacing: 2) {
+                    // 「タグ:」ラベル（左上に配置）
                     Text("タグ:")
-                        .font(.system(size: 10, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .font(.system(size: 9, design: .rounded))
+                        .foregroundStyle(.tertiary)
 
-                    // タグ表示（リアルタイム反映・ルーレット/タブと色統一）
-                    Text(truncatedTagName)
-                        .font(.system(size: 11, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary.opacity(0.8))
-                        .lineLimit(1)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(selectedTagInfo.color)
-                        )
+                    HStack(spacing: 5) {
+                        // タグ表示（リアルタイム反映・ルーレット/タブと色統一）
+                        Text(truncatedTagName)
+                            .font(.system(size: 11, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary.opacity(0.8))
+                            .lineLimit(1)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 3)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .fill(selectedTagInfo.color)
+                            )
 
-                    // 新規タグ追加ボタン
-                    Button {
-                        showNewTagSheet = true
-                    } label: {
-                        Image(systemName: "plus.circle.fill")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.blue)
+                        // 新規タグ追加ボタン（グレー）
+                        Button {
+                            showNewTagSheet = true
+                        } label: {
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 15))
+                                .foregroundStyle(.gray)
+                        }
+
+                        Spacer()
+
+                        Button {
+                            UIPasteboard.general.string = viewModel.inputText
+                        } label: {
+                            Label("コピー", systemImage: "doc.on.doc")
+                                .font(.system(size: 11))
+                        }
+                        .disabled(viewModel.inputText.isEmpty)
+
+                        Button {
+                            viewModel.save(context: modelContext, tags: tags)
+                            triggerSaveAnimation()
+                        } label: {
+                            Label("保存", systemImage: "square.and.arrow.down.fill")
+                                .font(.system(size: 11, weight: .bold))
+                        }
+                        .buttonStyle(.borderedProminent)
+                        .buttonBorderShape(.capsule)
+                        .controlSize(.small)
+                        .disabled(!viewModel.canSave)
                     }
-
-                    Spacer()
-
-                    Button {
-                        UIPasteboard.general.string = viewModel.inputText
-                    } label: {
-                        Label("コピー", systemImage: "doc.on.doc")
-                            .font(.system(size: 11))
-                    }
-                    .disabled(viewModel.inputText.isEmpty)
-
-                    Button {
-                        viewModel.save(context: modelContext, tags: tags)
-                        triggerSaveAnimation()
-                    } label: {
-                        Label("保存", systemImage: "square.and.arrow.down.fill")
-                            .font(.system(size: 11, weight: .bold))
-                    }
-                    .buttonStyle(.borderedProminent)
-                    .buttonBorderShape(.capsule)
-                    .controlSize(.small)
-                    .disabled(!viewModel.canSave)
                 }
                 .padding(.horizontal, 8)
-                .padding(.vertical, 6)
+                .padding(.top, 3)
+                .padding(.bottom, 5)
             }
 
             // 区切り線
