@@ -47,10 +47,10 @@ struct TabbedMemoListView: View {
     @State private var selectedTabIndex: Int = 0
     @State private var editingMemo: Memo?
 
-    private var tabItems: [(label: String, tag: Tag?)] {
-        var items: [(String, Tag?)] = [("タグ無し", nil)]
+    private var tabItems: [(label: String, tag: Tag?, colorIndex: Int)] {
+        var items: [(String, Tag?, Int)] = [("タグ無し", nil, 0)]
         for tag in tags {
-            items.append((tag.name, tag))
+            items.append((tag.name, tag, tag.colorIndex))
         }
         return items
     }
@@ -67,7 +67,7 @@ struct TabbedMemoListView: View {
     }
 
     private var currentColor: Color {
-        tagColor(for: selectedTabIndex)
+        tagColor(for: tabItems[selectedTabIndex].colorIndex)
     }
 
     private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 4)
@@ -148,7 +148,7 @@ struct TabbedMemoListView: View {
 
     private func tabButton(label: String, index: Int) -> some View {
         let isSelected = selectedTabIndex == index
-        let color = tagColor(for: index)
+        let color = tagColor(for: tabItems[index].colorIndex)
 
         return Button {
             withAnimation(.easeInOut(duration: 0.15)) {

@@ -9,8 +9,8 @@ struct TagDialView: View {
 
     private var options: [(id: String, name: String, color: Color)] {
         var list: [(String, String, Color)] = [("none", "なし", tagColor(for: 0))]
-        for (i, tag) in tags.enumerated() {
-            list.append((tag.id.uuidString, tag.name, tagColor(for: i + 1)))
+        for tag in tags {
+            list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
         }
         return list
     }

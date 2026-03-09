@@ -20,9 +20,9 @@ struct SokuMemoKunApp: App {
         let descriptor = FetchDescriptor<Tag>()
         let count = (try? context.fetchCount(descriptor)) ?? 0
         if count == 0 {
-            let defaults = ["仕事", "趣味", "買い物", "アイデア"]
-            for name in defaults {
-                context.insert(Tag(name: name))
+            let defaults: [(String, Int)] = [("仕事", 1), ("趣味", 2), ("買い物", 3), ("アイデア", 4)]
+            for (name, color) in defaults {
+                context.insert(Tag(name: name, colorIndex: color))
             }
             try? context.save()
         }

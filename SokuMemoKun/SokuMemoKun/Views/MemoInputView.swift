@@ -10,13 +10,25 @@ struct MemoInputView: View {
     @State private var showSaveAnimation = false
     @State private var saveAnimationOffset: CGFloat = 0
 
+    // 新規タグ作成シート
+    @State private var showNewTagSheet = false
+
     // 選択中タグの表示名と色（ルーレット・タブと統一）
     private var selectedTagInfo: (name: String, color: Color) {
         if let tagID = viewModel.selectedTagID,
-           let idx = tags.firstIndex(where: { $0.id == tagID }) {
-            return (tags[idx].name, tagColor(for: idx + 1))
+           let tag = tags.first(where: { $0.id == tagID }) {
+            return (tag.name, tagColor(for: tag.colorIndex))
         }
         return ("タグなし", tagColor(for: 0))
+    }
+
+    // 5文字省略
+    private var truncatedTagName: String {
+        let name = selectedTagInfo.name
+        if name.count > 5 {
+            return String(name.prefix(5)) + "…"
+        }
+        return name
     }
 
     var body: some View {
@@ -52,19 +64,33 @@ struct MemoInputView: View {
                 Divider()
                     .padding(.horizontal, 6)
 
-                // ボタン行: タグ表示 + コピー + 保存
-                HStack(spacing: 6) {
+                // ボタン行: タグ: + タグ表示 + 追加 + コピー + 保存
+                HStack(spacing: 5) {
+                    // 「タグ:」ラベル
+                    Text("タグ:")
+                        .font(.system(size: 10, design: .rounded))
+                        .foregroundStyle(.secondary)
+
                     // タグ表示（リアルタイム反映・ルーレット/タブと色統一）
-                    Text(selectedTagInfo.name)
+                    Text(truncatedTagName)
                         .font(.system(size: 11, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary.opacity(0.8))
                         .lineLimit(1)
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
                         .background(
                             RoundedRectangle(cornerRadius: 8)
                                 .fill(selectedTagInfo.color)
                         )
+
+                    // 新規タグ追加ボタン
+                    Button {
+                        showNewTagSheet = true
+                    } label: {
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(.blue)
+                    }
 
                     Spacer()
 
@@ -111,6 +137,9 @@ struct MemoInputView: View {
         )
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .sheet(isPresented: $showNewTagSheet) {
+            NewTagSheetView()
+        }
     }
 
     private func triggerSaveAnimation() {
