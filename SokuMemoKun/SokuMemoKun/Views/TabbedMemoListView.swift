@@ -196,6 +196,7 @@ struct TabbedMemoListView: View {
                 )
                 .offset(y: isSelected ? 2 : 0)
         }
+        .buttonStyle(.plain)
         .zIndex(isSelected ? 1 : 0)
     }
 }
