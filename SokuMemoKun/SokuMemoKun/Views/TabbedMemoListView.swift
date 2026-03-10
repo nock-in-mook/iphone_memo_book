@@ -199,7 +199,7 @@ struct TabbedMemoListView: View {
                             }
                         }
                         .padding(.horizontal, 10)
-                        .padding(.top, 10)
+                        .padding(.top, 28)
                         .padding(.bottom, 20)
                     }
                 }
