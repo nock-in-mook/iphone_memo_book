@@ -412,19 +412,30 @@ struct MemoCardView: View {
         }
     }
 
+    private var cardHeight: CGFloat {
+        switch gridSize {
+        case .small: return 56
+        case .medium: return 62
+        case .large: return 56
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(memo.title.isEmpty ? "無題" : memo.title)
                 .font(.system(size: titleFont, weight: .semibold, design: .rounded))
                 .lineLimit(1)
+                .truncationMode(.tail)
 
             Text(memo.content)
                 .font(.system(size: bodyFont))
                 .foregroundStyle(.secondary)
                 .lineLimit(bodyLines)
+                .truncationMode(.tail)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
         .padding(cardPadding)
+        .frame(height: cardHeight)
         .background(Color(uiColor: .systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 6))
     }
