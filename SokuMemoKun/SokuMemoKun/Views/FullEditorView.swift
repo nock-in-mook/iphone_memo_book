@@ -6,6 +6,71 @@ enum MarkdownLayout: String, CaseIterable {
     case tab = "タブ切替"
 }
 
+// レイアウトアイコン（上下分割 or タブ切替）
+struct LayoutIcon: View {
+    let layout: MarkdownLayout
+    var size: CGFloat = 16
+
+    var body: some View {
+        Canvas { context, canvasSize in
+            let w = canvasSize.width
+            let h = canvasSize.height
+            let rect = CGRect(x: 0, y: 0, width: w, height: h)
+            let corner: CGFloat = 2
+
+            if layout == .split {
+                // 上下分割: 上にA、下にB
+                let topRect = CGRect(x: 0, y: 0, width: w, height: h * 0.47)
+                let bottomRect = CGRect(x: 0, y: h * 0.53, width: w, height: h * 0.47)
+
+                context.stroke(Path(roundedRect: rect, cornerRadius: corner), with: .color(.primary.opacity(0.5)), lineWidth: 1)
+                // 仕切り線
+                context.stroke(Path { p in
+                    p.move(to: CGPoint(x: 1, y: h * 0.5))
+                    p.addLine(to: CGPoint(x: w - 1, y: h * 0.5))
+                }, with: .color(.primary.opacity(0.4)), lineWidth: 0.5)
+
+                // A
+                context.draw(
+                    Text("A").font(.system(size: size * 0.35, weight: .bold, design: .rounded)).foregroundColor(.primary.opacity(0.6)),
+                    at: CGPoint(x: topRect.midX, y: topRect.midY)
+                )
+                // B
+                context.draw(
+                    Text("B").font(.system(size: size * 0.35, weight: .bold, design: .rounded)).foregroundColor(.primary.opacity(0.6)),
+                    at: CGPoint(x: bottomRect.midX, y: bottomRect.midY)
+                )
+            } else {
+                // タブ切替: 左にA、右にB
+                context.stroke(Path(roundedRect: rect, cornerRadius: corner), with: .color(.primary.opacity(0.5)), lineWidth: 1)
+                // タブ仕切り線（上部）
+                let tabH = h * 0.28
+                context.stroke(Path { p in
+                    p.move(to: CGPoint(x: 1, y: tabH))
+                    p.addLine(to: CGPoint(x: w - 1, y: tabH))
+                }, with: .color(.primary.opacity(0.4)), lineWidth: 0.5)
+                // タブ仕切り（中央縦線）
+                context.stroke(Path { p in
+                    p.move(to: CGPoint(x: w * 0.5, y: 0))
+                    p.addLine(to: CGPoint(x: w * 0.5, y: tabH))
+                }, with: .color(.primary.opacity(0.4)), lineWidth: 0.5)
+
+                // A（左タブ）
+                context.draw(
+                    Text("A").font(.system(size: size * 0.28, weight: .bold, design: .rounded)).foregroundColor(.primary.opacity(0.6)),
+                    at: CGPoint(x: w * 0.25, y: tabH * 0.5)
+                )
+                // B（右タブ）
+                context.draw(
+                    Text("B").font(.system(size: size * 0.28, weight: .bold, design: .rounded)).foregroundColor(.primary.opacity(0.6)),
+                    at: CGPoint(x: w * 0.75, y: tabH * 0.5)
+                )
+            }
+        }
+        .frame(width: size, height: size)
+    }
+}
+
 // 全画面編集モード（マークダウン/ノーマル共通）
 struct FullEditorView: View {
     @Binding var text: String
@@ -72,8 +137,7 @@ struct FullEditorView: View {
                                 }
                             }
                         } label: {
-                            Image(systemName: "rectangle.split.1x2")
-                                .font(.system(size: 14))
+                            LayoutIcon(layout: layout, size: 20)
                         }
                     }
                 }

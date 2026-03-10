@@ -24,7 +24,13 @@ struct SettingsView: View {
 
                     // レイアウト選択
                     HStack {
-                        Label("プレビュー表示", systemImage: "rectangle.split.1x2")
+                        HStack(spacing: 8) {
+                            LayoutIcon(
+                                layout: MarkdownLayout(rawValue: markdownLayout) ?? .split,
+                                size: 20
+                            )
+                            Text("プレビュー表示形式")
+                        }
                         Spacer()
                         Picker("", selection: $markdownLayout) {
                             ForEach(MarkdownLayout.allCases, id: \.rawValue) { layout in
