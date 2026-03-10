@@ -65,6 +65,29 @@ struct PaperTextureOverlay: View {
     }
 }
 
+// グリッドサイズ定義（列数×行数）
+enum GridSizeOption: Int, CaseIterable {
+    case small = 0   // 2×4
+    case medium = 1  // 3×6
+    case large = 2   // 4×8
+
+    var columns: Int {
+        switch self {
+        case .small: return 2
+        case .medium: return 3
+        case .large: return 4
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .small: return "2×4枚"
+        case .medium: return "3×6枚"
+        case .large: return "4×8枚"
+        }
+    }
+}
+
 private let tabWidth: CGFloat = 76
 private let borderColor = Color.primary.opacity(0.45)
 private let borderWidth: CGFloat = 2.0
@@ -75,6 +98,8 @@ struct TabbedMemoListView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var selectedTabIndex: Int = 0
     @State private var editingMemo: Memo?
+    // タグなし用のグリッドサイズ（UserDefaultsで保存）
+    @AppStorage("noTagGridSize") private var noTagGridSize: Int = 2
 
     private var tabItems: [(label: String, tag: Tag?, colorIndex: Int)] {
         var items: [(String, Tag?, Int)] = [("タグなし", nil, 0)]
@@ -82,6 +107,19 @@ struct TabbedMemoListView: View {
             items.append((tag.name, tag, tag.colorIndex))
         }
         return items
+    }
+
+    // 現在のタブのグリッドサイズ
+    private var currentGridSize: GridSizeOption {
+        let item = tabItems[selectedTabIndex]
+        if let tag = item.tag {
+            return GridSizeOption(rawValue: tag.gridSize) ?? .large
+        }
+        return GridSizeOption(rawValue: noTagGridSize) ?? .large
+    }
+
+    private var currentColumns: [GridItem] {
+        Array(repeating: GridItem(.flexible(), spacing: 4), count: currentGridSize.columns)
     }
 
     private var filteredMemos: [Memo] {
@@ -98,8 +136,6 @@ struct TabbedMemoListView: View {
     private var currentColor: Color {
         tagColor(for: tabItems[selectedTabIndex].colorIndex)
     }
-
-    private let columns = Array(repeating: GridItem(.flexible(), spacing: 4), count: 4)
 
     var body: some View {
         VStack(spacing: 0) {
@@ -123,7 +159,7 @@ struct TabbedMemoListView: View {
             }
 
             // メモ一覧（縁取り付き）
-            ZStack {
+            ZStack(alignment: .topTrailing) {
                 currentColor
                     .ignoresSafeArea(edges: .bottom)
 
@@ -142,9 +178,9 @@ struct TabbedMemoListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: columns, spacing: 4) {
+                        LazyVGrid(columns: currentColumns, spacing: 4) {
                             ForEach(filteredMemos) { memo in
-                                MemoCardView(memo: memo)
+                                MemoCardView(memo: memo, gridSize: currentGridSize)
                                     .onTapGesture {
                                         editingMemo = memo
                                     }
@@ -162,16 +198,59 @@ struct TabbedMemoListView: View {
                                     }
                             }
                         }
-                        .padding(.horizontal, 6)
-                        .padding(.top, 6)
+                        .padding(.horizontal, 10)
+                        .padding(.top, 10)
                         .padding(.bottom, 20)
                     }
                 }
+
+                // グリッドサイズ切替ボタン（右上）
+                gridSizeButton
+                    .padding(.trailing, 10)
+                    .padding(.top, 6)
             }
             .animation(.easeInOut(duration: 0.2), value: selectedTabIndex)
+            .animation(.easeInOut(duration: 0.2), value: currentGridSize)
         }
         .sheet(item: $editingMemo) { memo in
             TagTitleSheetView(memo: memo)
+        }
+    }
+
+    // グリッドサイズ切替ボタン
+    private var gridSizeButton: some View {
+        Menu {
+            ForEach(GridSizeOption.allCases, id: \.rawValue) { option in
+                Button {
+                    setGridSize(option)
+                } label: {
+                    HStack {
+                        Text(option.label)
+                        if currentGridSize == option {
+                            Image(systemName: "checkmark")
+                        }
+                    }
+                }
+            }
+        } label: {
+            Text(currentGridSize.label)
+                .font(.system(size: 10, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule()
+                        .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                )
+        }
+    }
+
+    private func setGridSize(_ option: GridSizeOption) {
+        let item = tabItems[selectedTabIndex]
+        if let tag = item.tag {
+            tag.gridSize = option.rawValue
+        } else {
+            noTagGridSize = option.rawValue
         }
     }
 
@@ -201,23 +280,57 @@ struct TabbedMemoListView: View {
     }
 }
 
-// 超コンパクトなメモカード（4列グリッド用）
+// メモカード（グリッドサイズ対応）
 struct MemoCardView: View {
     let memo: Memo
+    var gridSize: GridSizeOption = .large
+
+    // グリッドサイズに応じたスタイル
+    private var titleFont: CGFloat {
+        switch gridSize {
+        case .small: return 15
+        case .medium: return 13
+        case .large: return 12
+        }
+    }
+
+    private var bodyFont: CGFloat {
+        switch gridSize {
+        case .small: return 13
+        case .medium: return 11
+        case .large: return 10
+        }
+    }
+
+    private var bodyLines: Int {
+        switch gridSize {
+        case .small: return 5
+        case .medium: return 3
+        case .large: return 2
+        }
+    }
+
+    private var cardPadding: CGFloat {
+        switch gridSize {
+        case .small: return 10
+        case .medium: return 8
+        case .large: return 6
+        }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 2) {
             Text(memo.title.isEmpty ? "無題" : memo.title)
-                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .font(.system(size: titleFont, weight: .semibold, design: .rounded))
                 .lineLimit(1)
 
             Text(memo.content)
-                .font(.system(size: 10))
+                .font(.system(size: bodyFont))
                 .foregroundStyle(.secondary)
-                .lineLimit(2)
+                .lineLimit(bodyLines)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(6)
+        .padding(cardPadding)
         .background(Color(uiColor: .systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 6))
     }
