@@ -67,23 +67,23 @@ struct PaperTextureOverlay: View {
 
 // グリッドサイズ定義（列数×行数）
 enum GridSizeOption: Int, CaseIterable {
-    case small = 0   // 2×4
-    case medium = 1  // 3×6
-    case large = 2   // 4×8
+    case small = 0   // 1×6
+    case medium = 1  // 2×6
+    case large = 2   // 3×8
 
     var columns: Int {
         switch self {
-        case .small: return 2
-        case .medium: return 3
-        case .large: return 4
+        case .small: return 1
+        case .medium: return 2
+        case .large: return 3
         }
     }
 
     var label: String {
         switch self {
-        case .small: return "2×4枚"
-        case .medium: return "3×6枚"
-        case .large: return "4×8枚"
+        case .small: return "1×6枚"
+        case .medium: return "2×6枚"
+        case .large: return "3×8枚"
         }
     }
 }
@@ -288,7 +288,7 @@ struct MemoCardView: View {
     // グリッドサイズに応じたスタイル
     private var titleFont: CGFloat {
         switch gridSize {
-        case .small: return 15
+        case .small: return 14
         case .medium: return 13
         case .large: return 12
         }
@@ -296,7 +296,7 @@ struct MemoCardView: View {
 
     private var bodyFont: CGFloat {
         switch gridSize {
-        case .small: return 13
+        case .small: return 12
         case .medium: return 11
         case .large: return 10
         }
@@ -304,7 +304,7 @@ struct MemoCardView: View {
 
     private var bodyLines: Int {
         switch gridSize {
-        case .small: return 5
+        case .small: return 2
         case .medium: return 3
         case .large: return 2
         }
