@@ -119,7 +119,7 @@ struct TabbedMemoListView: View {
     }
 
     private var currentColumns: [GridItem] {
-        Array(repeating: GridItem(.flexible(), spacing: 4), count: currentGridSize.columns)
+        Array(repeating: GridItem(.flexible(), spacing: 8), count: currentGridSize.columns)
     }
 
     private var filteredMemos: [Memo] {
@@ -178,7 +178,7 @@ struct TabbedMemoListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        LazyVGrid(columns: currentColumns, spacing: 4) {
+                        LazyVGrid(columns: currentColumns, spacing: 8) {
                             ForEach(filteredMemos) { memo in
                                 MemoCardView(memo: memo, gridSize: currentGridSize)
                                     .onTapGesture {
