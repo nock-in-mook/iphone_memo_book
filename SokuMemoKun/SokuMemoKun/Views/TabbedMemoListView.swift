@@ -455,5 +455,6 @@ struct MemoCardView: View {
         .frame(height: cardHeight)
         .background(Color(uiColor: .systemBackground))
         .clipShape(RoundedRectangle(cornerRadius: 6))
+        .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
     }
 }
