@@ -6,6 +6,8 @@ struct MainView: View {
     @State private var isKeyboardVisible = false
     @State private var showSettings = false
     @State private var focusInput = false
+    @State private var switchToTagID: UUID? = nil
+    @State private var switchTrigger: Int = 0
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @Environment(\.modelContext) private var modelContext
 
@@ -13,10 +15,16 @@ struct MainView: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // 入力エリア（大枠で囲まれた入力欄+ルーレット）
-                MemoInputView(viewModel: viewModel, focusInput: $focusInput)
+                MemoInputView(viewModel: viewModel, focusInput: $focusInput) { savedTagID in
+                    // 保存時に該当タグのタブに切替
+                    switchToTagID = savedTagID
+                    switchTrigger += 1
+                }
 
                 // 台形タブ付きメモ一覧
                 TabbedMemoListView(
+                    switchToTagID: $switchToTagID,
+                    switchTrigger: $switchTrigger,
                     onAddMemo: {
                         viewModel.clearInput()
                         focusInput = true

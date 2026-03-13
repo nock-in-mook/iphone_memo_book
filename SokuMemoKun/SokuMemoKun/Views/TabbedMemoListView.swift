@@ -101,6 +101,9 @@ struct TabbedMemoListView: View {
     @State private var selectedMemoIDs: Set<UUID> = []
     // タグなし用のグリッドサイズ（UserDefaultsで保存）
     @AppStorage("noTagGridSize") private var noTagGridSize: Int = 2
+    // 外部からタブ切替を指示するためのトリガー（UUID? + カウンター）
+    @Binding var switchToTagID: UUID?
+    @Binding var switchTrigger: Int
     // コールバック
     var onAddMemo: (() -> Void)?
     var onEditMemo: ((Memo) -> Void)?
@@ -304,6 +307,16 @@ struct TabbedMemoListView: View {
             } // GeometryReader
         }
         // メモの編集はonEditMemoコールバックで入力欄に読み込む
+        // 外部からのタブ切替指示に反応（トリガーが変わった時だけ実行）
+        .onChange(of: switchTrigger) { _, _ in
+            if let tagID = switchToTagID {
+                if let idx = tabItems.firstIndex(where: { $0.tag?.id == tagID }) {
+                    selectedTabIndex = idx
+                }
+            } else {
+                selectedTabIndex = 0  // タグなしタブ
+            }
+        }
     }
 
     // グリッドサイズ切替ボタン

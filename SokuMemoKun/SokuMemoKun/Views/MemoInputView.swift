@@ -4,6 +4,8 @@ import SwiftData
 struct MemoInputView: View {
     @Bindable var viewModel: MemoInputViewModel
     @Binding var focusInput: Bool
+    // 保存完了時にタグIDを通知するコールバック
+    var onSaved: ((UUID?) -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
     @FocusState private var isTextEditorFocused: Bool
@@ -222,9 +224,11 @@ struct MemoInputView: View {
                         .disabled(viewModel.inputText.isEmpty)
 
                         Button {
+                            let savedTagID = viewModel.selectedTagID
                             viewModel.clearInput()
                             showChildDial = false
                             triggerSaveAnimation()
+                            onSaved?(savedTagID)
                         } label: {
                             Label("保存", systemImage: "square.and.arrow.down.fill")
                                 .font(.system(size: 11, weight: .bold))
