@@ -239,8 +239,9 @@ struct TabbedMemoListView: View {
                     }
                 }
 
-                // メモ枚数（左上）
-                HStack {
+                // ツールバー（左上: メモ枚数、右上: 操作ボタン）
+                HStack(spacing: 8) {
+                    // メモ枚数（左上）
                     Text("\(filteredMemos.count)枚のメモ")
                         .font(.system(size: 10, weight: .medium, design: .rounded))
                         .foregroundStyle(.secondary)
@@ -250,13 +251,8 @@ struct TabbedMemoListView: View {
                             Capsule()
                                 .fill(Color(uiColor: .systemBackground).opacity(0.85))
                         )
-                    Spacer()
-                }
-                .padding(.leading, 10)
-                .padding(.top, 6)
 
-                // ツールバー（右上）
-                HStack(spacing: 8) {
+                    Spacer()
                     // メモ追加ボタン
                     Button {
                         if isSelectMode { isSelectMode = false; selectedMemoIDs.removeAll() }
@@ -318,7 +314,7 @@ struct TabbedMemoListView: View {
 
                     gridSizeButton
                 }
-                .padding(.trailing, 10)
+                .padding(.horizontal, 10)
                 .padding(.top, 6)
             }
             // タブ切替は瞬時（アニメーションなし）
