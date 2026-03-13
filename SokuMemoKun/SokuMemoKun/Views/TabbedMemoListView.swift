@@ -239,6 +239,22 @@ struct TabbedMemoListView: View {
                     }
                 }
 
+                // メモ枚数（左上）
+                HStack {
+                    Text("\(filteredMemos.count)枚のメモ")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                        )
+                    Spacer()
+                }
+                .padding(.leading, 10)
+                .padding(.top, 6)
+
                 // ツールバー（右上）
                 HStack(spacing: 8) {
                     // メモ追加ボタン
