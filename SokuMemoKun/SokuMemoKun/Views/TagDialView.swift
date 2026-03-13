@@ -27,6 +27,9 @@ struct TagDialView: View {
     // rotation=itemAngle → index 1 がセンター
     @State private var rotation: CGFloat = 0
     @State private var dragStart: CGFloat = 0
+    @State private var isDragging = false
+    // 内部操作（ドラッグ/updateSelection）による変更を区別するフラグ
+    @State private var isInternalChange = false
 
     // スナップ後のセンターインデックス
     private var snappedIndex: Int {
@@ -257,6 +260,7 @@ struct TagDialView: View {
         .gesture(
             DragGesture()
                 .onChanged { value in
+                    isDragging = true
                     rotation = dragStart + value.translation.height * -0.3
                 }
                 .onEnded { _ in
@@ -265,7 +269,9 @@ struct TagDialView: View {
                         rotation = snapped
                     }
                     dragStart = snapped
+                    isInternalChange = true
                     updateSelection()
+                    isDragging = false
                 }
         )
         .onAppear {
@@ -273,7 +279,13 @@ struct TagDialView: View {
         }
         // 外部からselectedIDが変わった時にルーレット位置を同期
         .onChange(of: selectedID) { _, _ in
-            syncRotationToSelection()
+            if isInternalChange {
+                // ドラッグ操作による変更 → 同期不要
+                isInternalChange = false
+            } else {
+                // 外部からの変更（新タグ追加等）→ ルーレット位置を同期
+                syncRotationToSelection()
+            }
         }
     }
 

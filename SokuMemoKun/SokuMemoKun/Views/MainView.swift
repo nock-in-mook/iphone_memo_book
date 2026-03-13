@@ -16,20 +16,11 @@ struct MainView: View {
         tags.filter { $0.parentTagID == nil }
     }
 
-    // タグIDからタブインデックスを算出（0=タグなし、1〜=親タグ順）
-    private func tabIndex(for tagID: UUID?) -> Int {
-        guard let tagID = tagID else { return 0 }
-        if let idx = parentTags.firstIndex(where: { $0.id == tagID }) {
-            return idx + 1  // +1 は「タグなし」タブの分
-        }
-        return 0
-    }
-
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
                 // 入力エリア
-                MemoInputView(viewModel: viewModel, focusInput: $focusInput, selectedTabIndex: $selectedTabIndex)
+                MemoInputView(viewModel: viewModel, focusInput: $focusInput)
 
                 // 台形タブ付きメモ一覧
                 TabbedMemoListView(
@@ -70,6 +61,12 @@ struct MainView: View {
             .onChange(of: defaultMarkdown) { _, newValue in
                 if viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     viewModel.isMarkdown = newValue
+                }
+            }
+            // 保存時のタブ切替通知を受信
+            .onReceive(NotificationCenter.default.publisher(for: .switchToTab)) { notification in
+                if let tabIndex = notification.userInfo?["tabIndex"] as? Int {
+                    selectedTabIndex = tabIndex
                 }
             }
             .overlay(alignment: .bottomTrailing) {

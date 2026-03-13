@@ -1,10 +1,13 @@
 import SwiftUI
 import SwiftData
 
+extension Notification.Name {
+    static let switchToTab = Notification.Name("switchToTab")
+}
+
 struct MemoInputView: View {
     @Bindable var viewModel: MemoInputViewModel
     @Binding var focusInput: Bool
-    @Binding var selectedTabIndex: Int
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
     @FocusState private var isTextEditorFocused: Bool
@@ -237,7 +240,12 @@ struct MemoInputView: View {
                             viewModel.clearInput()
                             showChildDial = false
                             triggerSaveAnimation()
-                            selectedTabIndex = targetTab
+                            // NotificationCenterでタブ切替を通知
+                            NotificationCenter.default.post(
+                                name: .switchToTab,
+                                object: nil,
+                                userInfo: ["tabIndex": targetTab]
+                            )
                         } label: {
                             Label("保存", systemImage: "square.and.arrow.down.fill")
                                 .font(.system(size: 11, weight: .bold))
