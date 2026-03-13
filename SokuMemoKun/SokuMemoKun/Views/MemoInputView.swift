@@ -33,8 +33,8 @@ struct MemoInputView: View {
     }
 
     // 子タグオプション（選択中の親タグの子タグ＋「＋追加」）
+    // 親タグ未選択時も「なし」＋「＋追加」を表示
     private var childOptions: [(id: String, name: String, color: Color)] {
-        guard viewModel.selectedTagID != nil else { return [] }
         var list: [(String, String, Color)] = [("none", "なし", tagColor(for: 0))]
         if let parentID = viewModel.selectedTagID {
             for tag in tags where tag.parentTagID == parentID {
@@ -258,81 +258,79 @@ struct MemoInputView: View {
                     }
                 )
 
-                // 子タグエリア（親タグ選択時に常に表示）
-                if viewModel.selectedTagID != nil {
-                    if showChildDial {
-                        // 仕切り線
-                        Rectangle()
-                            .fill(Color.gray.opacity(0.2))
-                            .frame(width: 1)
+                // 子タグエリア（常時表示）
+                if showChildDial {
+                    // 仕切り線
+                    Rectangle()
+                        .fill(Color.gray.opacity(0.2))
+                        .frame(width: 1)
 
-                        // 子タグダイアル
-                        TagDialView(
-                            options: childOptions,
-                            selectedID: $viewModel.selectedChildTagID,
-                            width: 70,
-                            onAddTap: {
-                                newTagIsChild = true
-                                showNewTagSheet = true
-                            }
-                        )
-
-                        // 閉じるタブ（右端、タップ or 右スワイプで閉じる）
-                        Text("‹")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 14, height: 60)
-                            .background(
-                                RoundedRectangle(cornerRadius: 4)
-                                    .fill(Color.gray.opacity(0.1))
-                            )
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.3)) {
-                                    showChildDial = false
-                                }
-                            }
-                            .simultaneousGesture(
-                                DragGesture(minimumDistance: 10)
-                                    .onEnded { value in
-                                        if value.translation.width > 20 {
-                                            withAnimation(.spring(response: 0.3)) {
-                                                showChildDial = false
-                                            }
-                                        }
-                                    }
-                            )
-                    } else {
-                        // 「子」タブ突起（タップ or 左スワイプで展開）
-                        VStack(spacing: 2) {
-                            Text("子")
-                                .font(.system(size: 9, weight: .bold, design: .rounded))
-                            Text("‹")
-                                .font(.system(size: 10, weight: .bold))
+                    // 子タグダイアル
+                    TagDialView(
+                        options: childOptions,
+                        selectedID: $viewModel.selectedChildTagID,
+                        width: 70,
+                        onAddTap: {
+                            newTagIsChild = true
+                            showNewTagSheet = true
                         }
+                    )
+
+                    // 閉じるタブ（右端、タップ or 右スワイプで閉じる）
+                    Text("‹")
+                        .font(.system(size: 14, weight: .bold))
                         .foregroundStyle(.secondary)
-                        .frame(width: 18, height: 60)
+                        .frame(width: 14, height: 60)
                         .background(
                             RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.gray.opacity(0.15))
+                                .fill(Color.gray.opacity(0.1))
                         )
                         .contentShape(Rectangle())
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3)) {
-                                showChildDial = true
+                                showChildDial = false
                             }
                         }
                         .simultaneousGesture(
                             DragGesture(minimumDistance: 10)
                                 .onEnded { value in
-                                    if value.translation.width < -20 {
+                                    if value.translation.width > 20 {
                                         withAnimation(.spring(response: 0.3)) {
-                                            showChildDial = true
+                                            showChildDial = false
                                         }
                                     }
                                 }
                         )
+                } else {
+                    // 「子」タブ突起（タップ or 左スワイプで展開）
+                    VStack(spacing: 2) {
+                        Text("子")
+                            .font(.system(size: 9, weight: .bold, design: .rounded))
+                        Text("‹")
+                            .font(.system(size: 10, weight: .bold))
                     }
+                    .foregroundStyle(.secondary)
+                    .frame(width: 18, height: 60)
+                    .background(
+                        RoundedRectangle(cornerRadius: 4)
+                            .fill(Color.gray.opacity(0.15))
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3)) {
+                            showChildDial = true
+                        }
+                    }
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 10)
+                            .onEnded { value in
+                                if value.translation.width < -20 {
+                                    withAnimation(.spring(response: 0.3)) {
+                                        showChildDial = true
+                                    }
+                                }
+                            }
+                    )
                 }
             }
         }
@@ -377,13 +375,9 @@ struct MemoInputView: View {
             viewModel.onTitleChanged()
         }
         // 自動保存: 親タグ変更
-        .onChange(of: viewModel.selectedTagID) { _, newValue in
+        .onChange(of: viewModel.selectedTagID) { _, _ in
             // 親タグが変わったら子タグをリセット
             viewModel.selectedChildTagID = nil
-            // 「タグなし」に切り替えたら子ダイアルを閉じる
-            if newValue == nil {
-                showChildDial = false
-            }
             viewModel.onTagChanged(tags: tags)
         }
         // 自動保存: 子タグ変更
