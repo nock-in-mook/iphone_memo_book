@@ -45,7 +45,9 @@ struct MemoInputView: View {
                 ZStack(alignment: .topLeading) {
                     TextEditor(text: $viewModel.inputText)
                         .font(.system(size: 14))
-                        .padding(4)
+                        .padding(.leading, 4)
+                        .padding(.trailing, 28) // 右側ボタン(拡大・破棄)との重なり防止
+                        .padding(.vertical, 4)
                         .focused($isTextEditorFocused)
 
                     if viewModel.inputText.isEmpty {
