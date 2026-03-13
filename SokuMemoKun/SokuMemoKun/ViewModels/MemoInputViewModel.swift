@@ -15,6 +15,8 @@ class MemoInputViewModel {
     var openFullEditor: Bool = false
     // loadMemo中フラグ（onChangeでの子タグリセットを防止）
     var isLoadingMemo: Bool = false
+    // loadMemoが呼ばれた回数（Viewが閲覧モードに切り替えるトリガー）
+    var loadMemoCounter: Int = 0
 
     // 入力欄にテキストがあるか（保存ボタンの有効/無効）— 本文かタイトルがあれば保存可
     var canClear: Bool {
@@ -116,6 +118,7 @@ class MemoInputViewModel {
         selectedChildTagID = childTag?.id
         saveLastMemoID(memo.id)
         isLoadingMemo = false
+        loadMemoCounter += 1
     }
 
     // アプリ起動時に前回のメモを復元

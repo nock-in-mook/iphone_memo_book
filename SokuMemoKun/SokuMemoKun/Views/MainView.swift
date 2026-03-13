@@ -50,8 +50,8 @@ struct MainView: View {
                         viewModel.clearInput()
                         focusInput = true
                     } label: {
-                        Image(systemName: "plus")
-                            .font(.system(size: 15))
+                        Image(systemName: "plus.circle")
+                            .font(.system(size: 17))
                     }
                 }
                 // 右: 設定

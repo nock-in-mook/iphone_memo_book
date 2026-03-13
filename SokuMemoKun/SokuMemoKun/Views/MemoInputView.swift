@@ -17,6 +17,8 @@ struct MemoInputView: View {
     @State private var newTagIsChild = false
     // 全画面編集
     @State private var showFullEditor = false
+    // 既存メモ読み込み時は閲覧モード（タップで編集開始）
+    @State private var isEditing = true
     // 削除確認ダイアログ
     @State private var showDeleteAlert = false
     // ルーレット展開状態
@@ -78,16 +80,33 @@ struct MemoInputView: View {
             // 本文 + ルーレット
             HStack(spacing: 0) {
                 ZStack(alignment: .topTrailing) {
-                    // 本文入力（常にTextEditor）
+                    // 本文入力（編集中はTextEditor、閲覧中はText）
                     ZStack(alignment: .topLeading) {
-                        TextEditor(text: $viewModel.inputText)
-                            .font(.system(size: 17))
-                            .padding(.horizontal, 4)
-                            .padding(.top, 4)
-                            .padding(.trailing, 24)
-                            .focused($isTextEditorFocused)
+                        if isEditing {
+                            TextEditor(text: $viewModel.inputText)
+                                .font(.system(size: 17))
+                                .padding(.horizontal, 4)
+                                .padding(.top, 4)
+                                .padding(.trailing, 24)
+                                .focused($isTextEditorFocused)
+                        } else {
+                            ScrollView {
+                                Text(viewModel.inputText.isEmpty ? " " : viewModel.inputText)
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(viewModel.inputText.isEmpty ? .clear : .primary)
+                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                                    .padding(.horizontal, 8)
+                                    .padding(.top, 8)
+                                    .padding(.trailing, 24)
+                            }
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                isEditing = true
+                                isTextEditorFocused = true
+                            }
+                        }
 
-                        if viewModel.inputText.isEmpty {
+                        if viewModel.inputText.isEmpty && isEditing {
                             Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
                                 .font(.system(size: 17))
                                 .foregroundStyle(.gray.opacity(0.5))
@@ -160,7 +179,12 @@ struct MemoInputView: View {
             }
         }
         .onChange(of: focusInput) { _, newValue in
-            if newValue { isTextEditorFocused = true; focusInput = false }
+            if newValue { isEditing = true; isTextEditorFocused = true; focusInput = false }
+        }
+        .onChange(of: viewModel.loadMemoCounter) { _, _ in
+            // 既存メモ読み込み時は閲覧モードで開始
+            isEditing = false
+            isTextEditorFocused = false
         }
         .onChange(of: viewModel.inputText) { _, _ in
             viewModel.onContentChanged(context: modelContext, tags: tags)
@@ -188,7 +212,7 @@ struct MemoInputView: View {
     private var headerRow: some View {
         HStack(spacing: 6) {
             TextField("タイトル（任意）", text: $viewModel.titleText)
-                .font(.system(size: 15, design: .rounded))
+                .font(.system(size: 17, weight: .semibold, design: .rounded))
 
             Spacer()
 
@@ -244,24 +268,22 @@ struct MemoInputView: View {
             }
             .disabled(viewModel.inputText.isEmpty)
 
-            // 右: 保存（入力欄をクリアして新規待ち）
+            // 右: 確定（編集モードを抜けてキーボードを閉じる）
             Button {
-                let targetTab = tabIndex(for: viewModel.selectedTagID)
-                viewModel.clearInput()
-                showParentDial = dialDefault >= 1
-                showChildDial = dialDefault >= 2
-                NotificationCenter.default.post(
-                    name: .switchToTab, object: nil,
-                    userInfo: ["tabIndex": targetTab]
+                isEditing = false
+                isTextEditorFocused = false
+                UIApplication.shared.sendAction(
+                    #selector(UIResponder.resignFirstResponder),
+                    to: nil, from: nil, for: nil
                 )
             } label: {
-                Label("保存", systemImage: "square.and.arrow.down.fill")
+                Label("確定", systemImage: "checkmark.circle.fill")
                     .font(.system(size: 14, weight: .bold))
             }
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
             .controlSize(.small)
-            .disabled(!viewModel.canClear)
+            .disabled(!isEditing || !viewModel.canClear)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
