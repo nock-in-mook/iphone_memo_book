@@ -286,7 +286,7 @@ struct TabbedMemoListView: View {
                             let currentTag = tabItems[selectedTabIndex].tag
                             onAddMemo?(currentTag?.id)
                         } label: {
-                            Label("メモ追加", systemImage: "plus")
+                            Label("ここにメモ追加", systemImage: "plus")
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
