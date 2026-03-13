@@ -107,6 +107,9 @@ struct TabbedMemoListView: View {
     @State private var selectedMemoIDs: Set<UUID> = []
     // 選択削除確認ダイアログ
     @State private var showDeleteConfirm = false
+    // 検索
+    @State private var isSearching = false
+    @State private var searchText = ""
     // スワイプ方向追跡（トランジション用）
     @State private var swipeDirection: SwipeDirection = .none
     enum SwipeDirection { case none, left, right }
@@ -140,6 +143,17 @@ struct TabbedMemoListView: View {
     }
 
     private var filteredMemos: [Memo] {
+        let query = searchText.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+
+        // 検索中は全メモ横断で検索
+        if !query.isEmpty {
+            return allMemos.filter { memo in
+                memo.title.lowercased().contains(query) ||
+                memo.content.lowercased().contains(query)
+            }
+        }
+
+        // 通常のタブフィルタ
         let item = tabItems[selectedTabIndex]
         if let tag = item.tag {
             return allMemos.filter { memo in
@@ -164,7 +178,8 @@ struct TabbedMemoListView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // タブ行
+            // タブ行（検索中は非表示）
+            if !isSearching || searchText.isEmpty {
             ScrollViewReader { proxy in
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: -1) {
@@ -189,6 +204,7 @@ struct TabbedMemoListView: View {
                     selectedMemoIDs.removeAll()
                 }
             }
+            } // if !isSearching
 
             // メモ一覧（縁取り付き）
             GeometryReader { geo in
@@ -270,15 +286,73 @@ struct TabbedMemoListView: View {
                     removal: .move(edge: swipeDirection == .left ? .leading : .trailing)
                 ))
 
-                // 上部ツールバー（メモ枚数・メモ追加・グリッドサイズ）
-                VStack {
+                // 上部ツールバー（検索・メモ枚数・メモ追加・グリッドサイズ）
+                VStack(spacing: 0) {
+                    // 検索バー（表示中のみ）
+                    if isSearching {
+                        HStack(spacing: 6) {
+                            Image(systemName: "magnifyingglass")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.secondary)
+                            TextField("メモを検索...", text: $searchText)
+                                .font(.system(size: 15, design: .rounded))
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                            if !searchText.isEmpty {
+                                Button {
+                                    searchText = ""
+                                } label: {
+                                    Image(systemName: "xmark.circle.fill")
+                                        .font(.system(size: 16))
+                                        .foregroundStyle(.secondary)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                            Button {
+                                searchText = ""
+                                isSearching = false
+                            } label: {
+                                Text("閉じる")
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                        .background(
+                            RoundedRectangle(cornerRadius: 8)
+                                .fill(Color(uiColor: .systemBackground).opacity(0.9))
+                        )
+                        .padding(.horizontal, 8)
+                        .padding(.top, 4)
+                        .padding(.bottom, 2)
+                    }
+
                     HStack(spacing: 8) {
                         // メモ枚数（左上・背景に馴染む色）
-                        Text("\(filteredMemos.count)枚のメモ")
+                        Text(isSearching && !searchText.isEmpty
+                            ? "\(filteredMemos.count)件ヒット"
+                            : "\(filteredMemos.count)枚のメモ")
                             .font(.system(size: 13, weight: .medium, design: .rounded))
                             .foregroundStyle(darkenedColor)
 
                         Spacer()
+
+                        // 検索ボタン
+                        Button {
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                isSearching.toggle()
+                                if !isSearching { searchText = "" }
+                            }
+                        } label: {
+                            Image(systemName: isSearching ? "magnifyingglass.circle.fill" : "magnifyingglass")
+                                .font(.system(size: 15))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 4)
+                        }
+                        .buttonStyle(.plain)
 
                         // メモ追加ボタン
                         Button {
