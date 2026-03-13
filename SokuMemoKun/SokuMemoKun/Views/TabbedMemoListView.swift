@@ -108,7 +108,8 @@ struct TabbedMemoListView: View {
 
     private var tabItems: [(label: String, tag: Tag?, colorIndex: Int)] {
         var items: [(String, Tag?, Int)] = [("タグなし", nil, 0)]
-        for tag in tags {
+        // 親タグのみ表示（子タグはタブに出さない）
+        for tag in tags where tag.parentTagID == nil {
             items.append((tag.name, tag, tag.colorIndex))
         }
         return items
