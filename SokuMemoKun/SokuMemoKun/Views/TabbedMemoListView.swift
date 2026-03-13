@@ -149,6 +149,14 @@ struct TabbedMemoListView: View {
         tagColor(for: tabItems[selectedTabIndex].colorIndex)
     }
 
+    // 背景色を暗くした色（メモ枚数表示用）
+    private var darkenedColor: Color {
+        let uiColor = UIColor(currentColor)
+        var h: CGFloat = 0, s: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+        uiColor.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
+        return Color(hue: Double(h), saturation: Double(min(s * 1.3, 1.0)), brightness: Double(b * 0.55))
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // タブ行
@@ -241,16 +249,10 @@ struct TabbedMemoListView: View {
 
                 // ツールバー（左上: メモ枚数、右上: 操作ボタン）
                 HStack(spacing: 8) {
-                    // メモ枚数（左上）
+                    // メモ枚数（左上・背景に馴染む色）
                     Text("\(filteredMemos.count)枚のメモ")
                         .font(.system(size: 10, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .background(
-                            Capsule()
-                                .fill(Color(uiColor: .systemBackground).opacity(0.85))
-                        )
+                        .foregroundStyle(darkenedColor)
 
                     Spacer()
                     // メモ追加ボタン
