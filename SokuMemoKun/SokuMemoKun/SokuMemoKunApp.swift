@@ -28,9 +28,24 @@ struct SokuMemoKunApp: App {
 
         if existingTags.isEmpty {
             // 新規: デフォルトタグ作成
-            let defaults: [(String, Int)] = [("仕事", 1), ("趣味", 2), ("買い物", 3), ("アイデア", 4)]
-            for (name, color) in defaults {
-                context.insert(Tag(name: name, colorIndex: color))
+            let shigoto = Tag(name: "仕事", colorIndex: 1)
+            let shumi = Tag(name: "趣味", colorIndex: 2)
+            let kaimono = Tag(name: "買い物", colorIndex: 3)
+            let idea = Tag(name: "アイデア", colorIndex: 4)
+            context.insert(shigoto)
+            context.insert(shumi)
+            context.insert(kaimono)
+            context.insert(idea)
+
+            // 子タグ（仕事の下）
+            let childTags1: [(String, Int)] = [("会議", 8), ("タスク", 9), ("経費", 15)]
+            for (name, color) in childTags1 {
+                context.insert(Tag(name: name, colorIndex: color, parentTagID: shigoto.id))
+            }
+            // 子タグ（趣味の下）
+            let childTags2: [(String, Int)] = [("ギター", 22), ("ランニング", 23), ("映画", 24)]
+            for (name, color) in childTags2 {
+                context.insert(Tag(name: name, colorIndex: color, parentTagID: shumi.id))
             }
         } else {
             // 既存タグの色が未設定（全部同じ）なら順番に振り直す

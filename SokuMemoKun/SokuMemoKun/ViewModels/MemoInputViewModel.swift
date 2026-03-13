@@ -5,7 +5,8 @@ import SwiftData
 class MemoInputViewModel {
     var inputText: String = ""
     var titleText: String = ""
-    var selectedTagID: UUID?
+    var selectedTagID: UUID?       // 親タグ
+    var selectedChildTagID: UUID?  // 子タグ
     var isMarkdown: Bool = UserDefaults.standard.bool(forKey: "defaultMarkdown")
 
     // 現在編集中のメモ（自動保存の対象）
@@ -30,9 +31,12 @@ class MemoInputViewModel {
             // 新規メモ自動生成
             let memo = Memo(content: trimmed, isMarkdown: isMarkdown)
             memo.title = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
-            // ルーレットで選択中のタグを付与
+            // ルーレットで選択中の親タグ＋子タグを付与
             if let tagID = selectedTagID, let tag = tags.first(where: { $0.id == tagID }) {
                 memo.tags.append(tag)
+            }
+            if let childID = selectedChildTagID, let childTag = tags.first(where: { $0.id == childID }) {
+                memo.tags.append(childTag)
             }
             context.insert(memo)
             editingMemo = memo
@@ -47,12 +51,17 @@ class MemoInputViewModel {
         memo.updatedAt = Date()
     }
 
-    // タグ変更時の自動保存（現状は単一タグ。将来マルチタグ対応時に要調整）
+    // タグ変更時の自動保存（親タグ＋子タグの両方を反映）
     func onTagChanged(tags: [Tag]) {
         guard let memo = editingMemo else { return }
         memo.tags.removeAll()
+        // 親タグ
         if let tagID = selectedTagID, let tag = tags.first(where: { $0.id == tagID }) {
             memo.tags.append(tag)
+        }
+        // 子タグ
+        if let childID = selectedChildTagID, let childTag = tags.first(where: { $0.id == childID }) {
+            memo.tags.append(childTag)
         }
         memo.updatedAt = Date()
     }
@@ -66,6 +75,7 @@ class MemoInputViewModel {
         inputText = ""
         titleText = ""
         selectedTagID = nil
+        selectedChildTagID = nil
         isMarkdown = UserDefaults.standard.bool(forKey: "defaultMarkdown")
         UserDefaults.standard.removeObject(forKey: "lastEditingMemoID")
     }
@@ -76,6 +86,7 @@ class MemoInputViewModel {
         inputText = ""
         titleText = ""
         selectedTagID = nil
+        selectedChildTagID = nil
         isMarkdown = UserDefaults.standard.bool(forKey: "defaultMarkdown")
         UserDefaults.standard.removeObject(forKey: "lastEditingMemoID")
     }
@@ -86,7 +97,11 @@ class MemoInputViewModel {
         inputText = memo.content
         titleText = memo.title
         isMarkdown = memo.isMarkdown
-        selectedTagID = memo.tags.first?.id
+        // 親タグ = parentTagIDがnilのタグ、子タグ = parentTagIDがあるタグ
+        let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
+        let childTag = memo.tags.first(where: { $0.parentTagID != nil })
+        selectedTagID = parentTag?.id
+        selectedChildTagID = childTag?.id
         saveLastMemoID(memo.id)
     }
 

@@ -3,17 +3,13 @@ import SwiftData
 
 // カジノルーレット風タグ選択（巨大な円の左端の弧だけ見える）
 // Canvas1本で描画。rotation値から直接全て計算し、ワープを防ぐ。
+// 親ダイアル・子ダイアル両方で再利用可能。
 struct TagDialView: View {
-    @Query(sort: \Tag.name) private var tags: [Tag]
-    @Binding var selectedTagID: UUID?
-
-    private var options: [(id: String, name: String, color: Color)] {
-        var list: [(String, String, Color)] = [("none", "タグなし", tagColor(for: 0))]
-        for tag in tags {
-            list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
-        }
-        return list
-    }
+    // 外部から渡されるオプションリスト
+    var options: [(id: String, name: String, color: Color)]
+    @Binding var selectedID: UUID?
+    // ダイアルの幅（親子並列表示時に狭める）
+    var width: CGFloat = 100
 
     // 円の半径
     private let wheelRadius: CGFloat = 300
@@ -21,9 +17,8 @@ struct TagDialView: View {
     private let sectorThickness: CGFloat = 82
     // 各タグ間の角度（度）
     private let itemAngle: CGFloat = 8
-    // ダイヤルのサイズ
+    // ダイヤルの高さ
     private let dialHeight: CGFloat = 160
-    private let dialWidth: CGFloat = 100
 
     // rotation: 上にスワイプ→正、下にスワイプ→負
     // rotation=0 → index 0 がセンター
@@ -49,29 +44,16 @@ struct TagDialView: View {
             let cx = wheelRadius + 2
             let outerR = wheelRadius
             let innerR = wheelRadius - sectorThickness
-            let textR = wheelRadius - sectorThickness / 2
+            let midR = (innerR + outerR) / 2
 
             guard count > 0 else { return }
 
-            // rotation から「センターからの端数角度」を求める
-            // 例: rotation=5, itemAngle=8 → 基準index=0, 端数=5度
-            // 例: rotation=12, itemAngle=8 → 基準index=2(≒round(12/8)), 端数=12-16=-4度
-            // 各アイテムi の表示角度 = (i * itemAngle - rotation) 度
-            // angle=0が中央、正が下、負が上
-
             for slotOffset in -8...8 {
-                // このスロットに表示するアイテムのindex
-                // rotation=0のとき: slotOffset=0 → index 0, slotOffset=1 → index 1
-                // rotation=itemAngleのとき: 全体が1つ上にずれるので slotOffset=0 → index 1
                 let baseIndex = Int(floor(rot / itemAngle + 0.5))
                 let rawIndex = baseIndex + slotOffset
                 let index = ((rawIndex % count) + count) % count
                 guard index < opts.count else { continue }
 
-                // このアイテムの表示角度（度）
-                // rawIndex * itemAngle が「このアイテムのホーム角度」
-                // rotation がスクロール量
-                // 画面上の角度 = rawIndex * itemAngle - rotation
                 let displayAngle = CGFloat(rawIndex) * itemAngle - rot
 
                 let dist = abs(displayAngle)
@@ -80,7 +62,6 @@ struct TagDialView: View {
                 guard fade > 0 else { continue }
 
                 let halfAngle = itemAngle / 2
-                // CG座標: 180°=左。displayAngle正=下だがCGは反時計回りなので符号反転
                 let cgStart = 180.0 - Double(displayAngle + halfAngle)
                 let cgEnd = 180.0 - Double(displayAngle - halfAngle)
 
@@ -128,7 +109,7 @@ struct TagDialView: View {
                     )
                 }
 
-                // 仕切り線（セクターの上辺 = cgEnd側）
+                // 仕切り線
                 let divCG = cgEnd * .pi / 180
                 var divLine = Path()
                 divLine.move(to: CGPoint(
@@ -145,24 +126,20 @@ struct TagDialView: View {
                     lineWidth: 0.8
                 )
 
-                // テキスト（セクターの中央に配置）
-                let rad = displayAngle * .pi / 180
-                // セクター中央の半径位置
-                let midR = (innerR + outerR) / 2
-                // CG座標でのセクター中央点
+                // テキスト
                 let cgMid = (180.0 - Double(displayAngle)) * .pi / 180
                 let textX = cx + midR * cos(cgMid)
                 let textY = cy + midR * sin(cgMid)
 
-                // 5文字を超えたら省略
+                // 幅に応じて省略文字数を調整
+                let maxChars = width < 80 ? 3 : 5
                 let displayName: String = {
-                    if option.name.count > 5 {
-                        return String(option.name.prefix(5)) + "…"
+                    if option.name.count > maxChars {
+                        return String(option.name.prefix(maxChars)) + "…"
                     }
                     return option.name
                 }()
 
-                // センター: 黒太字で拡大、それ以外: 小さく控えめ
                 let fontSize: CGFloat = isSelected ? 13 : 9
                 let resolved = context.resolve(
                     Text(displayName)
@@ -231,7 +208,7 @@ struct TagDialView: View {
             // 選択ポインター（赤い三角、左端に配置）
             let pw: CGFloat = 10
             let ph: CGFloat = 16
-            let pLeft: CGFloat = -2  // 左端からの位置
+            let pLeft: CGFloat = -2
             var shadow = Path()
             shadow.move(to: CGPoint(x: pLeft + 1, y: cy - ph / 2 + 1))
             shadow.addLine(to: CGPoint(x: pLeft + pw + 1, y: cy + 1))
@@ -260,13 +237,12 @@ struct TagDialView: View {
             hl.addLine(to: CGPoint(x: pLeft + pw - 3, y: cy))
             context.stroke(hl, with: .color(.white.opacity(0.5)), lineWidth: 1)
         }
-        .frame(width: dialWidth, height: dialHeight)
+        .frame(width: width, height: dialHeight)
         .clipped()
         .contentShape(Rectangle())
         .gesture(
             DragGesture()
                 .onChanged { value in
-                    // 上にスワイプ(translation.height < 0) → rotation増加 → 次のアイテムへ
                     rotation = dragStart + value.translation.height * -0.3
                 }
                 .onEnded { _ in
@@ -287,7 +263,7 @@ struct TagDialView: View {
         let index = snappedIndex
         if index < options.count {
             let option = options[index]
-            selectedTagID = option.id == "none" ? nil : UUID(uuidString: option.id)
+            selectedID = option.id == "none" ? nil : UUID(uuidString: option.id)
         }
     }
 }

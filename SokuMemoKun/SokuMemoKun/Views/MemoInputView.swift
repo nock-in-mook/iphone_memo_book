@@ -18,6 +18,33 @@ struct MemoInputView: View {
     @State private var showFullEditor = false
     // 破棄確認ダイアログ
     @State private var showDiscardAlert = false
+    // 子タグダイアル展開
+    @State private var showChildDial = false
+
+    // 親タグオプション（parentTagID == nil のタグのみ）
+    private var parentOptions: [(id: String, name: String, color: Color)] {
+        var list: [(String, String, Color)] = [("none", "タグなし", tagColor(for: 0))]
+        for tag in tags where tag.parentTagID == nil {
+            list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
+        }
+        return list
+    }
+
+    // 子タグオプション（選択中の親タグの子タグのみ）
+    private var childOptions: [(id: String, name: String, color: Color)] {
+        guard let parentID = viewModel.selectedTagID else { return [] }
+        var list: [(String, String, Color)] = [("none", "なし", tagColor(for: 0))]
+        for tag in tags where tag.parentTagID == parentID {
+            list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
+        }
+        return list
+    }
+
+    // 選択中の親タグに子タグが存在するか
+    private var hasChildTags: Bool {
+        guard let parentID = viewModel.selectedTagID else { return false }
+        return tags.contains { $0.parentTagID == parentID }
+    }
 
     // 選択中タグの表示名と色（ルーレット・タブと統一）
     private var selectedTagInfo: (name: String, color: Color) {
@@ -28,6 +55,15 @@ struct MemoInputView: View {
         return ("タグなし", tagColor(for: 0))
     }
 
+    // 子タグ情報
+    private var selectedChildTagInfo: (name: String, color: Color)? {
+        if let childID = viewModel.selectedChildTagID,
+           let tag = tags.first(where: { $0.id == childID }) {
+            return (tag.name, tagColor(for: tag.colorIndex))
+        }
+        return nil
+    }
+
     // 5文字省略
     private var truncatedTagName: String {
         let name = selectedTagInfo.name
@@ -35,6 +71,14 @@ struct MemoInputView: View {
             return String(name.prefix(5)) + "…"
         }
         return name
+    }
+
+    private var truncatedChildTagName: String? {
+        guard let info = selectedChildTagInfo else { return nil }
+        if info.name.count > 4 {
+            return String(info.name.prefix(4)) + "…"
+        }
+        return info.name
     }
 
     var body: some View {
@@ -138,7 +182,7 @@ struct MemoInputView: View {
                         .foregroundStyle(.tertiary)
 
                     HStack(spacing: 5) {
-                        // タグ表示（リアルタイム反映・ルーレット/タブと色統一）
+                        // 親タグ表示
                         Text(truncatedTagName)
                             .font(.system(size: 11, weight: .bold, design: .rounded))
                             .foregroundStyle(.primary)
@@ -149,6 +193,24 @@ struct MemoInputView: View {
                                 RoundedRectangle(cornerRadius: 8)
                                     .fill(selectedTagInfo.color)
                             )
+
+                        // 子タグ表示
+                        if let childName = truncatedChildTagName,
+                           let childInfo = selectedChildTagInfo {
+                            Text("›")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.tertiary)
+                            Text(childName)
+                                .font(.system(size: 10, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.primary)
+                                .lineLimit(1)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 6)
+                                        .fill(childInfo.color)
+                                )
+                        }
 
                         Spacer()
 
@@ -197,8 +259,68 @@ struct MemoInputView: View {
                 .fill(Color.gray.opacity(0.2))
                 .frame(width: 1)
 
-            // 右1/4: タグルーレット
-            TagDialView(selectedTagID: $viewModel.selectedTagID)
+            // 右側: 親タグダイアル + 子タグダイアル
+            HStack(spacing: 0) {
+                // 親タグダイアル
+                TagDialView(
+                    options: parentOptions,
+                    selectedID: $viewModel.selectedTagID,
+                    width: showChildDial ? 70 : 100
+                )
+
+                // 子タグエリア
+                if hasChildTags {
+                    if showChildDial {
+                        // 仕切り線
+                        Rectangle()
+                            .fill(Color.gray.opacity(0.2))
+                            .frame(width: 1)
+
+                        // 子タグダイアル
+                        TagDialView(
+                            options: childOptions,
+                            selectedID: $viewModel.selectedChildTagID,
+                            width: 70
+                        )
+
+                        // 閉じるタブ（右端）
+                        Button {
+                            withAnimation(.spring(response: 0.3)) {
+                                showChildDial = false
+                            }
+                        } label: {
+                            Text("›")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 14, height: 50)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 4)
+                                        .fill(Color.gray.opacity(0.1))
+                                )
+                        }
+                    } else {
+                        // 「子」タブ突起（タップで子ダイアル展開）
+                        Button {
+                            withAnimation(.spring(response: 0.3)) {
+                                showChildDial = true
+                            }
+                        } label: {
+                            VStack(spacing: 2) {
+                                Text("子")
+                                    .font(.system(size: 9, weight: .bold, design: .rounded))
+                                Text("›")
+                                    .font(.system(size: 10, weight: .bold))
+                            }
+                            .foregroundStyle(.secondary)
+                            .frame(width: 18, height: 50)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.gray.opacity(0.15))
+                            )
+                        }
+                    }
+                }
+            }
         }
         .frame(height: 160)
         .background(
@@ -240,8 +362,18 @@ struct MemoInputView: View {
         .onChange(of: viewModel.titleText) { _, _ in
             viewModel.onTitleChanged()
         }
-        // 自動保存: タグ変更
+        // 自動保存: 親タグ変更
         .onChange(of: viewModel.selectedTagID) { _, _ in
+            // 親タグが変わったら子タグをリセット
+            viewModel.selectedChildTagID = nil
+            // 子タグがない親に切り替えたら子ダイアルを閉じる
+            if !hasChildTags {
+                showChildDial = false
+            }
+            viewModel.onTagChanged(tags: tags)
+        }
+        // 自動保存: 子タグ変更
+        .onChange(of: viewModel.selectedChildTagID) { _, _ in
             viewModel.onTagChanged(tags: tags)
         }
         // マークダウンメモ読み込み時にFullEditorを自動起動
