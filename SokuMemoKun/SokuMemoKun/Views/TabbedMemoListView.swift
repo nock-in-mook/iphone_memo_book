@@ -910,7 +910,7 @@ struct TabDropDelegate: DropDelegate {
     }
 }
 
-// 無限ループするタブバー（5セット繰り返し＋端でリセット）
+// 無限ループするタブバー（大量セット繰り返しで実質無限）
 struct InfiniteTabBarView: View {
     let tabItems: [(label: String, tag: Tag?, colorIndex: Int)]
     @Binding var selectedTabIndex: Int
@@ -920,12 +920,9 @@ struct InfiniteTabBarView: View {
     var onReorder: (Int, Int) -> Void
 
     private let tabW: CGFloat = 76
-    // セット数（中央の前後にバッファ）
-    private let setCount = 5
-    private let centerSet = 2  // 0始まりで中央
-
-    // リセット抑制フラグ
-    @State private var isResetting = false
+    // 大量セットで実質無限（中央から左右50セット分 = 事実上到達不可能）
+    private let setCount = 101
+    private let centerSet = 50
 
     var body: some View {
         let count = tabItems.count
@@ -936,13 +933,12 @@ struct InfiniteTabBarView: View {
                 ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: -1) {
                         ForEach(0..<setCount, id: \.self) { setIndex in
-                            // セット間の区切り線（最初のセットの前には不要）
+                            // セット間の区切り線
                             if setIndex > 0 {
                                 Rectangle()
                                     .fill(Color.primary.opacity(0.12))
                                     .frame(width: 1.5, height: 22)
                                     .padding(.horizontal, 4)
-                                    .id("sep_\(setIndex)")
                             }
 
                             ForEach(0..<count, id: \.self) { i in
@@ -982,7 +978,7 @@ struct InfiniteTabBarView: View {
 
         return Button {
             selectedTabIndex = realIndex
-            // タップしたのが中央セット以外なら、中央にリセット
+            // タップしたのが中央セット以外なら、アニメーションなしで中央にリセット
             if setIndex != centerSet {
                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
                     proxy.scrollTo("s\(centerSet)_\(realIndex)", anchor: .center)
@@ -1005,18 +1001,6 @@ struct InfiniteTabBarView: View {
         .buttonStyle(.plain)
         .zIndex(isSelected ? 1 : 0)
         .id(loopID)
-        // 端のセット（0番目 or 最後）のタブが画面に現れたらリセット
-        .onAppear {
-            if (setIndex == 0 || setIndex == setCount - 1) && !isResetting {
-                isResetting = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    proxy.scrollTo("s\(centerSet)_\(selectedTabIndex)", anchor: .center)
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        isResetting = false
-                    }
-                }
-            }
-        }
         .onDrag {
             draggingTabIndex = realIndex
             return NSItemProvider(object: "\(realIndex)" as NSString)
