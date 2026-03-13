@@ -480,15 +480,14 @@ struct TabbedMemoListView: View {
                         gridSizeButton
                     }
                     .padding(.horizontal, 10)
-                    .padding(.top, 6)
-                    .padding(.bottom, 8)
+                    .padding(.vertical, 6)
                     .background(
                         LinearGradient(
-                            colors: [currentColor, currentColor, currentColor.opacity(0.95), currentColor.opacity(0.0)],
+                            colors: [currentColor, currentColor, currentColor.opacity(0.0)],
                             startPoint: .top,
                             endPoint: .bottom
                         )
-                        .padding(.bottom, -16)
+                        .padding(.bottom, -8)
                     )
 
                     Spacer()
