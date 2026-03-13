@@ -9,7 +9,8 @@ struct SokuMemoKunApp: App {
         let container = try! ModelContainer(for: Memo.self, Tag.self)
         self.sharedContainer = container
         Self.setupDefaultTags(container: container)
-        Self.insertDummyMemos(container: container)
+        // ダミーメモ投入は無効化（テスト完了）
+        // Self.insertDummyMemos(container: container)
     }
 
     var body: some Scene {

@@ -57,6 +57,19 @@ class MemoInputViewModel {
         memo.updatedAt = Date()
     }
 
+    // メモを破棄（データベースから削除して入力欄をクリア）
+    func discardMemo(context: ModelContext) {
+        if let memo = editingMemo {
+            context.delete(memo)
+        }
+        editingMemo = nil
+        inputText = ""
+        titleText = ""
+        selectedTagID = nil
+        isMarkdown = UserDefaults.standard.bool(forKey: "defaultMarkdown")
+        UserDefaults.standard.removeObject(forKey: "lastEditingMemoID")
+    }
+
     // 保存ボタン（入力欄をクリアして新規入力待ちに）
     func clearInput() {
         editingMemo = nil

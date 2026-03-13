@@ -16,6 +16,8 @@ struct MemoInputView: View {
     @State private var showNewTagSheet = false
     // 全画面編集
     @State private var showFullEditor = false
+    // 破棄確認ダイアログ
+    @State private var showDiscardAlert = false
 
     // 選択中タグの表示名と色（ルーレット・タブと統一）
     private var selectedTagInfo: (name: String, color: Color) {
@@ -142,6 +144,16 @@ struct MemoInputView: View {
                             .fill(Color.gray.opacity(0.25))
                             .frame(width: 1, height: 18)
 
+                        // 破棄ボタン
+                        Button {
+                            showDiscardAlert = true
+                        } label: {
+                            Image(systemName: "trash")
+                                .font(.system(size: 12))
+                                .foregroundStyle(.red.opacity(0.6))
+                        }
+                        .disabled(!viewModel.canClear)
+
                         Button {
                             UIPasteboard.general.string = viewModel.inputText
                         } label: {
@@ -187,6 +199,12 @@ struct MemoInputView: View {
         )
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .alert("書きかけのメモを破棄します。よろしいですか？", isPresented: $showDiscardAlert) {
+            Button("破棄", role: .destructive) {
+                viewModel.discardMemo(context: modelContext)
+            }
+            Button("キャンセル", role: .cancel) {}
+        }
         .sheet(isPresented: $showNewTagSheet) {
             NewTagSheetView()
         }
