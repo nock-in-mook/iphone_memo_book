@@ -276,7 +276,7 @@ struct TabbedMemoListView: View {
     // MARK: - 検索結果コンテンツ
 
     private var searchResultContent: some View {
-        let searchColor = Color(red: 0.85, green: 0.90, blue: 0.95)
+        let searchColor = Color(red: 0.88, green: 0.91, blue: 0.95)
         let resultSections = searchResultsByTag
         let totalHits = searchResultMemos.count
         let searchColumns = Array(repeating: GridItem(.flexible(), spacing: 8), count: 2)
@@ -300,33 +300,37 @@ struct TabbedMemoListView: View {
                     .frame(maxWidth: .infinity, maxHeight: .infinity)
                 } else {
                     ScrollView {
-                        VStack(alignment: .leading, spacing: 16) {
+                        VStack(alignment: .leading, spacing: 12) {
                             // ヒット件数
                             Text("\(totalHits)件ヒット")
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 10)
+                                .padding(.top, 4)
 
                             // タグ別セクション
                             ForEach(resultSections, id: \.name) { section in
-                                VStack(alignment: .leading, spacing: 6) {
+                                let sectionColor = tagColor(for: section.colorIndex)
+                                VStack(alignment: .leading, spacing: 8) {
                                     // セクションヘッダー（タグ名 + 件数）
                                     HStack(spacing: 6) {
                                         Circle()
-                                            .fill(tagColor(for: section.colorIndex))
+                                            .fill(sectionColor)
                                             .frame(width: 10, height: 10)
                                         Text(section.name)
                                             .font(.system(size: 14, weight: .semibold, design: .rounded))
                                         Text("\(section.memos.count)件")
                                             .font(.system(size: 12, design: .rounded))
                                             .foregroundStyle(.secondary)
+                                        Spacer()
                                     }
                                     .padding(.horizontal, 10)
+                                    .padding(.top, 8)
 
                                     // メモグリッド（2列）
                                     LazyVGrid(columns: searchColumns, spacing: 8) {
                                         ForEach(section.memos) { memo in
-                                            MemoCardView(memo: memo, gridSize: .grid2x3, availableHeight: geo.size.height)
+                                            SearchMemoCardView(memo: memo, query: searchQuery)
                                                 .onTapGesture {
                                                     onEditMemo?(memo)
                                                 }
@@ -346,10 +350,16 @@ struct TabbedMemoListView: View {
                                         }
                                     }
                                     .padding(.horizontal, 10)
+                                    .padding(.bottom, 8)
                                 }
+                                .background(
+                                    RoundedRectangle(cornerRadius: 10)
+                                        .fill(sectionColor.opacity(0.25))
+                                )
+                                .padding(.horizontal, 6)
                             }
                         }
-                        .padding(.top, 10)
+                        .padding(.top, 6)
                         .padding(.bottom, 40)
                     }
                 }
@@ -619,6 +629,95 @@ struct TabbedMemoListView: View {
         }
         .buttonStyle(.plain)
         .zIndex(isSelected ? 1 : 0)
+    }
+}
+
+// 検索結果用メモカード（ハイライト＋マッチ行中心表示）
+struct SearchMemoCardView: View {
+    let memo: Memo
+    let query: String
+
+    // マッチした文字列をハイライトしたAttributedStringを生成
+    private func highlighted(_ text: String, fontSize: CGFloat, weight: Font.Weight = .regular) -> AttributedString {
+        var result = AttributedString(text)
+        result.font = .system(size: fontSize, design: .rounded)
+        result.foregroundColor = .secondary
+
+        let lowerText = text.lowercased()
+        let lowerQuery = query.lowercased()
+        var searchStart = lowerText.startIndex
+
+        while let range = lowerText.range(of: lowerQuery, range: searchStart..<lowerText.endIndex) {
+            let attrStart = AttributedString.Index(range.lowerBound, within: result)!
+            let attrEnd = AttributedString.Index(range.upperBound, within: result)!
+            result[attrStart..<attrEnd].backgroundColor = .yellow.opacity(0.5)
+            result[attrStart..<attrEnd].foregroundColor = .primary
+            result[attrStart..<attrEnd].font = .system(size: fontSize, weight: .semibold, design: .rounded)
+            searchStart = range.upperBound
+        }
+
+        return result
+    }
+
+    // 本文からマッチ行の前後を抜き出す（マッチ行が中心になるように）
+    private var contextSnippet: String {
+        let lines = memo.content.components(separatedBy: .newlines)
+        let lowerQuery = query.lowercased()
+
+        // マッチする最初の行を見つける
+        if let matchIndex = lines.firstIndex(where: { $0.lowercased().contains(lowerQuery) }) {
+            // マッチ行の前後1行を含めて最大3行
+            let start = max(0, matchIndex - 1)
+            let end = min(lines.count - 1, matchIndex + 1)
+            return lines[start...end].joined(separator: "\n")
+        }
+
+        // タイトルにだけマッチした場合は先頭3行
+        return lines.prefix(3).joined(separator: "\n")
+    }
+
+    // タイトルにマッチがあるか
+    private var titleHasMatch: Bool {
+        !memo.title.isEmpty && memo.title.lowercased().contains(query.lowercased())
+    }
+
+    var body: some View {
+        ZStack(alignment: .topTrailing) {
+            VStack(alignment: .leading, spacing: 2) {
+                // タイトル
+                if !memo.title.isEmpty {
+                    if titleHasMatch {
+                        Text(highlighted(memo.title, fontSize: 15, weight: .semibold))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    } else {
+                        Text(memo.title)
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+                }
+
+                // 本文（マッチ行中心のスニペット + ハイライト）
+                Text(highlighted(contextSnippet, fontSize: 13))
+                    .lineLimit(4)
+                    .truncationMode(.tail)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+            .padding(8)
+
+            // マークダウンマーク（右上）
+            if memo.isMarkdown {
+                Text("M↓")
+                    .font(.system(size: 9, weight: .bold, design: .monospaced))
+                    .foregroundStyle(.gray.opacity(0.5))
+                    .padding(3)
+            }
+        }
+        .frame(height: 90)
+        .background(Color(uiColor: .systemBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 6))
+        .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
     }
 }
 

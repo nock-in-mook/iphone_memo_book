@@ -84,18 +84,13 @@ struct MainView: View {
                             .fill(Color(uiColor: .secondarySystemBackground))
                     )
                 }
-                // 右: ロゴ + 設定
+                // 右: 設定
                 ToolbarItem(placement: .topBarTrailing) {
-                    HStack(spacing: 10) {
-                        Text("即メモ君")
-                            .font(.system(size: 13, weight: .bold, design: .rounded))
-                            .foregroundStyle(.secondary)
-                        Button {
-                            showSettings = true
-                        } label: {
-                            Image(systemName: "gearshape")
-                                .font(.system(size: 15))
-                        }
+                    Button {
+                        showSettings = true
+                    } label: {
+                        Image(systemName: "gearshape")
+                            .font(.system(size: 15))
                     }
                 }
             }
