@@ -414,11 +414,18 @@ struct MemoInputView: View {
         .onChange(of: viewModel.titleText) { _, _ in
             viewModel.onTitleChanged()
         }
-        // 自動保存: 親タグ変更
-        .onChange(of: viewModel.selectedTagID) { _, _ in
+        // 自動保存: 親タグ変更 + タブ同期
+        .onChange(of: viewModel.selectedTagID) { _, newTagID in
             // 親タグが変わったら子タグをリセット
             viewModel.selectedChildTagID = nil
             viewModel.onTagChanged(tags: tags)
+            // 下のタブも連動して切替
+            let idx = tabIndex(for: newTagID)
+            NotificationCenter.default.post(
+                name: .switchToTab,
+                object: nil,
+                userInfo: ["tabIndex": idx]
+            )
         }
         // 自動保存: 子タグ変更
         .onChange(of: viewModel.selectedChildTagID) { _, _ in
