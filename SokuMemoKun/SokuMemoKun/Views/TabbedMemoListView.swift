@@ -113,7 +113,7 @@ struct TabbedMemoListView: View {
     // タグなし用のグリッドサイズ（UserDefaultsで保存）
     @AppStorage("noTagGridSize") private var noTagGridSize: Int = 2
     // コールバック
-    var onAddMemo: (() -> Void)?
+    var onAddMemo: ((UUID?) -> Void)?
     var onEditMemo: ((Memo) -> Void)?
     var onDeleteMemo: ((Memo) -> Void)?
 
@@ -283,7 +283,8 @@ struct TabbedMemoListView: View {
                         // メモ追加ボタン
                         Button {
                             if isSelectMode { isSelectMode = false; selectedMemoIDs.removeAll() }
-                            onAddMemo?()
+                            let currentTag = tabItems[selectedTabIndex].tag
+                            onAddMemo?(currentTag?.id)
                         } label: {
                             Label("メモ追加", systemImage: "plus")
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -402,7 +403,7 @@ struct TabbedMemoListView: View {
     // グリッドサイズ切替ボタン
     private var gridSizeButton: some View {
         Menu {
-            ForEach(GridSizeOption.allCases, id: \.rawValue) { option in
+            ForEach(GridSizeOption.allCases.reversed(), id: \.rawValue) { option in
                 Button {
                     setGridSize(option)
                 } label: {

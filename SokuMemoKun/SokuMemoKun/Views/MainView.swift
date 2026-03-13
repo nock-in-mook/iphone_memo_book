@@ -24,8 +24,9 @@ struct MainView: View {
                     // 下半分: フォルダ付きメモ一覧
                     TabbedMemoListView(
                         selectedTabIndex: $selectedTabIndex,
-                        onAddMemo: {
+                        onAddMemo: { tagID in
                             viewModel.clearInput()
+                            viewModel.selectedTagID = tagID
                             focusInput = true
                         },
                         onEditMemo: { memo in
