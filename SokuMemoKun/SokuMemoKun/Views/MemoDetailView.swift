@@ -81,7 +81,7 @@ struct MemoDetailView: View {
                 }
 
                 Divider()
-                // フッター: 日付（左下・右下）
+                // フッター: 日付（左下・右下のみ）
                 footerRow
             }
             .navigationTitle(isEditing ? "編集中" : "メモ")
@@ -94,7 +94,23 @@ struct MemoDetailView: View {
                     }
                 }
 
-                ToolbarItem(placement: .primaryAction) {
+                ToolbarItemGroup(placement: .primaryAction) {
+                    // コピーボタン
+                    Button {
+                        UIPasteboard.general.string = isEditing ? editText : memo.content
+                    } label: {
+                        Image(systemName: "doc.on.doc")
+                            .font(.system(size: 14))
+                    }
+
+                    // 削除ボタン
+                    Button { showDeleteAlert = true } label: {
+                        Image(systemName: "trash")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.red.opacity(0.6))
+                    }
+
+                    // 完了ボタン（編集中のみ）
                     if isEditing {
                         Button("完了") {
                             saveEdits()
@@ -125,8 +141,7 @@ struct MemoDetailView: View {
                 }
             )
         }
-        .onChange(of: selectedTagID) { _, newTagID in
-            // 親タグ変更時に子タグリセット
+        .onChange(of: selectedTagID) { _, _ in
             selectedChildTagID = nil
             syncTagsToMemo()
         }
@@ -136,7 +151,6 @@ struct MemoDetailView: View {
         .onAppear {
             editText = memo.content
             editTitle = memo.title
-            // メモのタグからルーレット初期値をセット
             if let parent = memo.tags.first(where: { $0.parentTagID == nil }) {
                 selectedTagID = parent.id
             }
@@ -150,7 +164,7 @@ struct MemoDetailView: View {
 
     private var headerRow: some View {
         HStack(spacing: 6) {
-            // タイトル — タップで編集モードへ
+            // タイトル — タップで即編集モード
             if isEditing {
                 TextField("タイトル（任意）", text: $editTitle)
                     .font(.system(size: 18, weight: .semibold, design: .rounded))
@@ -160,6 +174,7 @@ struct MemoDetailView: View {
                     Text(memo.title)
                         .font(.system(size: 20, weight: .bold, design: .rounded))
                         .lineLimit(1)
+                        .onTapGesture { startEditing() }
                 }
             }
 
@@ -189,11 +204,6 @@ struct MemoDetailView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 8)
-        .contentShape(Rectangle())
-        .onTapGesture {
-            // タイトル行タップで編集モードへ
-            if !isEditing { startEditing() }
-        }
     }
 
     // MARK: - 本文
@@ -208,7 +218,7 @@ struct MemoDetailView: View {
                 .focused($isBodyFocused)
                 .frame(maxHeight: .infinity)
         } else {
-            // 閲覧モード — タップで即編集
+            // 閲覧モード — タップで即編集（textSelection なし→1タップで反応）
             ScrollView {
                 if memo.isMarkdown {
                     markdownContent
@@ -219,7 +229,6 @@ struct MemoDetailView: View {
                     Text(memo.content)
                         .font(.system(size: 17))
                         .foregroundStyle(.primary)
-                        .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .topLeading)
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
@@ -231,23 +240,11 @@ struct MemoDetailView: View {
         }
     }
 
-    // MARK: - フッター（日付: 左下・右下）
+    // MARK: - フッター（日付のみ: 左下・右下）
 
     private var footerRow: some View {
         HStack {
             Text("作成: \(memo.createdAt.formatted(date: .abbreviated, time: .shortened))")
-            Spacer()
-            // コピー・削除
-            Button {
-                UIPasteboard.general.string = memo.content
-            } label: {
-                Image(systemName: "doc.on.doc").font(.system(size: 14))
-            }
-            Button { showDeleteAlert = true } label: {
-                Image(systemName: "trash")
-                    .font(.system(size: 13))
-                    .foregroundStyle(.red.opacity(0.5))
-            }
             Spacer()
             Text("更新: \(memo.updatedAt.formatted(date: .abbreviated, time: .shortened))")
         }
@@ -257,100 +254,104 @@ struct MemoDetailView: View {
         .padding(.vertical, 6)
     }
 
-    // MARK: - ルーレット（収納式、全画面用）
+    // MARK: - ルーレット（収納式、全画面用 — タブを上寄せ）
 
     private var dialArea: some View {
-        HStack(spacing: 0) {
-            if showParentDial {
-                Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
+        VStack(spacing: 0) {
+            HStack(spacing: 0) {
+                if showParentDial {
+                    Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
 
-                TagDialView(
-                    options: parentOptions,
-                    selectedID: $selectedTagID,
-                    width: showChildDial ? 80 : 100,
-                    onAddTap: { newTagIsChild = false; showNewTagSheet = true },
-                    externalDragY: .constant(nil)
-                )
+                    TagDialView(
+                        options: parentOptions,
+                        selectedID: $selectedTagID,
+                        width: showChildDial ? 80 : 100,
+                        onAddTap: { newTagIsChild = false; showNewTagSheet = true },
+                        externalDragY: .constant(nil)
+                    )
 
-                // 子タグエリア
-                ZStack {
-                    if showChildDial {
-                        HStack(spacing: 0) {
-                            Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
-                            TagDialView(
-                                options: childOptions,
-                                selectedID: $selectedChildTagID,
-                                width: 75,
-                                onAddTap: { newTagIsChild = true; showNewTagSheet = true },
-                                externalDragY: $childExternalDragY
-                            )
-                            Text("›")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 14, height: 60)
-                                .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.3)) { showChildDial = false }
-                                }
-                        }
-                    } else {
-                        VStack(spacing: 2) {
-                            Text("子").font(.system(size: 11, weight: .bold, design: .rounded))
-                            Text("‹").font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundStyle(.secondary)
-                        .frame(width: 20, height: 60)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.15)))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.3)) { showChildDial = true }
-                        }
-                    }
-                }
-                .contentShape(Rectangle())
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 5)
-                        .onChanged { value in
-                            if !showChildDial { showChildDial = true }
-                            childExternalDragY = value.translation.height
-                        }
-                        .onEnded { _ in childExternalDragY = nil }
-                )
-
-                // 全収納ボタン
-                Text("›")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 12, height: 50)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3)) {
-                            showParentDial = false; showChildDial = false
-                        }
-                    }
-            } else {
-                // 収納状態
-                VStack(spacing: 3) {
-                    Text("タグ").font(.system(size: 11, weight: .bold, design: .rounded))
-                    Text("‹").font(.system(size: 14, weight: .bold))
-                }
-                .foregroundStyle(.secondary)
-                .frame(width: 28, height: 80)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.12)))
-                .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.3)) { showParentDial = true }
-                }
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 5)
-                        .onChanged { _ in
-                            if !showParentDial {
-                                withAnimation(.spring(response: 0.3)) { showParentDial = true }
+                    // 子タグエリア
+                    ZStack {
+                        if showChildDial {
+                            HStack(spacing: 0) {
+                                Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
+                                TagDialView(
+                                    options: childOptions,
+                                    selectedID: $selectedChildTagID,
+                                    width: 75,
+                                    onAddTap: { newTagIsChild = true; showNewTagSheet = true },
+                                    externalDragY: $childExternalDragY
+                                )
+                                Text("›")
+                                    .font(.system(size: 14, weight: .bold))
+                                    .foregroundStyle(.secondary)
+                                    .frame(width: 14, height: 60)
+                                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
+                                    .contentShape(Rectangle())
+                                    .onTapGesture {
+                                        withAnimation(.spring(response: 0.3)) { showChildDial = false }
+                                    }
+                            }
+                        } else {
+                            VStack(spacing: 2) {
+                                Text("子").font(.system(size: 11, weight: .bold, design: .rounded))
+                                Text("‹").font(.system(size: 12, weight: .bold))
+                            }
+                            .foregroundStyle(.secondary)
+                            .frame(width: 20, height: 60)
+                            .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.15)))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.3)) { showChildDial = true }
                             }
                         }
-                )
+                    }
+                    .contentShape(Rectangle())
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 5)
+                            .onChanged { value in
+                                if !showChildDial { showChildDial = true }
+                                childExternalDragY = value.translation.height
+                            }
+                            .onEnded { _ in childExternalDragY = nil }
+                    )
+
+                    // 全収納ボタン
+                    Text("›")
+                        .font(.system(size: 12, weight: .bold))
+                        .foregroundStyle(.tertiary)
+                        .frame(width: 12, height: 50)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) {
+                                showParentDial = false; showChildDial = false
+                            }
+                        }
+                } else {
+                    // 収納状態（上寄せ）
+                    VStack(spacing: 3) {
+                        Text("タグ").font(.system(size: 11, weight: .bold, design: .rounded))
+                        Text("‹").font(.system(size: 14, weight: .bold))
+                    }
+                    .foregroundStyle(.secondary)
+                    .frame(width: 28, height: 60)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.12)))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3)) { showParentDial = true }
+                    }
+                    .simultaneousGesture(
+                        DragGesture(minimumDistance: 5)
+                            .onChanged { _ in
+                                if !showParentDial {
+                                    withAnimation(.spring(response: 0.3)) { showParentDial = true }
+                                }
+                            }
+                    )
+                }
             }
+            // ルーレットは上寄せ、残りの空間は空白
+            Spacer()
         }
     }
 
@@ -423,7 +424,6 @@ struct MemoDetailView: View {
         } else {
             Text(line)
                 .font(.system(size: 16))
-                .textSelection(.enabled)
         }
     }
 }

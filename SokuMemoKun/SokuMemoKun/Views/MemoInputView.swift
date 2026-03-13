@@ -93,47 +93,40 @@ struct MemoInputView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topLeading) {
-            // メインコンテンツ — ヘッダー/フッターはフル幅、本文のみルーレットで縮む
-            VStack(spacing: 0) {
-                headerRow
-                Divider()
-                // 本文 + ルーレットの横並び
-                HStack(spacing: 0) {
+        // メインコンテンツ — ヘッダー/フッターはフル幅、本文のみルーレットで縮む
+        VStack(spacing: 0) {
+            headerRow
+            Divider()
+            // 本文 + ルーレットの横並び（最大化ボタンは本文右上にオーバーレイ）
+            HStack(spacing: 0) {
+                ZStack(alignment: .topTrailing) {
                     contentArea
-                    dialArea
-                }
-                Divider()
-                footerRow
-            }
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .fill(Color(uiColor: .systemBackground))
-            )
-            .overlay(
-                RoundedRectangle(cornerRadius: 10)
-                    .stroke(Color.gray.opacity(0.25), lineWidth: 1)
-            )
-
-            // 戻るボタン（枠の上に配置、閲覧/編集時のみ）
-            if mode != .newInput {
-                Button {
-                    if isEditingExisting, let memo = previewingMemo {
-                        memo.content = editText
-                        memo.title = editTitle
-                        memo.updatedAt = Date()
+                    // 最大化ボタン（テキスト入力欄の右上）
+                    Button {
+                        showFullEditor = true
+                    } label: {
+                        Image(systemName: "viewfinder")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.gray.opacity(0.5))
+                            .padding(6)
+                            .background(Circle().fill(Color(uiColor: .systemBackground).opacity(0.9)))
                     }
-                    previewingMemo = nil
-                    isEditingExisting = false
-                } label: {
-                    Image(systemName: "arrow.backward.circle.fill")
-                        .font(.system(size: 26))
-                        .foregroundStyle(.blue)
-                        .background(Circle().fill(Color(uiColor: .systemBackground)).padding(2))
+                    .padding(.trailing, 6)
+                    .padding(.top, 4)
                 }
-                .offset(x: -4, y: -8)
+                dialArea
             }
+            Divider()
+            footerRow
         }
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(uiColor: .systemBackground))
+        )
+        .overlay(
+            RoundedRectangle(cornerRadius: 10)
+                .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+        )
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .alert("このメモを破棄します。よろしいですか？", isPresented: $showDiscardAlert) {
@@ -194,7 +187,6 @@ struct MemoInputView: View {
         .onChange(of: viewModel.selectedTagID) { _, newTagID in
             if !viewModel.isLoadingMemo { viewModel.selectedChildTagID = nil }
             if mode == .newInput { viewModel.onTagChanged(tags: tags) }
-            // 編集モードではルーレットのタグ変更を既存メモに反映
             if mode == .editing, let memo = previewingMemo {
                 memo.tags.removeAll()
                 if let tagID = newTagID, let tag = tags.first(where: { $0.id == tagID }) {
@@ -238,17 +230,11 @@ struct MemoInputView: View {
 
     private var headerRow: some View {
         HStack(spacing: 6) {
-            // 左: 戻るボタン分のスペース（閲覧/編集時）
-            if mode != .newInput {
-                Spacer().frame(width: 20)
-            }
-
             // タイトル — プレビュー時もタップで編集モードへ
             if mode == .editing {
                 TextField("タイトル（任意）", text: $editTitle)
                     .font(.system(size: 15, weight: .semibold, design: .rounded))
             } else if mode == .preview {
-                // タイトルがあれば表示、なければ空（「無題」表示なし）
                 if let title = previewingMemo?.title, !title.isEmpty {
                     Text(title)
                         .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -269,23 +255,12 @@ struct MemoInputView: View {
                         showParentDial = true
                     }
                 }
-
-            // 最大化ボタン（右端寄せ）
-            Button {
-                showFullEditor = true
-            } label: {
-                Image(systemName: "arrow.up.left.and.arrow.down.right")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.gray.opacity(0.6))
-                    .padding(5)
-                    .background(Circle().fill(Color(uiColor: .systemBackground).opacity(0.8)))
-            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
     }
 
-    // タグ表示（ヘッダー右側）— 全モードでviewModelのタグを表示
+    // タグ表示（ヘッダー右側）
     private var tagDisplay: some View {
         HStack(spacing: 3) {
             let info = selectedTagInfo
@@ -334,6 +309,7 @@ struct MemoInputView: View {
                 .font(.system(size: 17))
                 .padding(.horizontal, 4)
                 .padding(.top, 4)
+                .padding(.trailing, 28) // 最大化ボタンとかぶらないように
                 .focused($isTextEditorFocused)
 
             if viewModel.inputText.isEmpty {
@@ -353,10 +329,10 @@ struct MemoInputView: View {
             Text(previewingMemo?.content ?? "（内容なし）")
                 .font(.system(size: 16))
                 .foregroundStyle(.primary)
-                .textSelection(.enabled)
                 .frame(maxWidth: .infinity, alignment: .topLeading)
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
+                .padding(.trailing, 24) // 最大化ボタン分
         }
         .frame(maxHeight: .infinity)
         .contentShape(Rectangle())
@@ -368,6 +344,7 @@ struct MemoInputView: View {
             .font(.system(size: 17))
             .padding(.horizontal, 4)
             .padding(.top, 4)
+            .padding(.trailing, 28) // 最大化ボタン分
             .focused($isTextEditorFocused)
             .frame(maxHeight: .infinity)
             .onChange(of: editText) { _, newValue in

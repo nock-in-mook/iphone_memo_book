@@ -50,6 +50,18 @@ struct MainView: View {
             .navigationTitle("即メモ君")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
+                // 左: 戻るボタン（閲覧/編集中のみ）
+                ToolbarItem(placement: .topBarLeading) {
+                    if previewingMemo != nil {
+                        Button {
+                            previewingMemo = nil
+                        } label: {
+                            Image(systemName: "arrow.backward")
+                                .font(.system(size: 15))
+                        }
+                    }
+                }
+                // 右: 設定
                 ToolbarItem(placement: .topBarTrailing) {
                     Button {
                         showSettings = true
