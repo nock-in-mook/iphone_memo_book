@@ -47,7 +47,8 @@ struct MemoInputView: View {
                         .font(.system(size: 14))
                         .padding(.leading, 4)
                         .padding(.trailing, 28) // 右側ボタン(拡大・破棄)との重なり防止
-                        .padding(.vertical, 4)
+                        .padding(.top, 4)
+                        .padding(.bottom, 20) // 最下行の余白（スクロール時に窮屈にならないように）
                         .focused($isTextEditorFocused)
 
                     if viewModel.inputText.isEmpty {
