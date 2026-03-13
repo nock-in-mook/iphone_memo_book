@@ -226,29 +226,20 @@ struct TabbedMemoListView: View {
                 searchResultTabBar
                 searchResultContent
             } else {
-                // ── 通常モード: タブ行 ──
-                ScrollViewReader { proxy in
-                    ScrollView(.horizontal, showsIndicators: false) {
-                        HStack(spacing: -1) {
-                            ForEach(Array(tabItems.enumerated()), id: \.offset) { index, item in
-                                tabButton(label: item.label, index: index)
-                                    .id(index)
-                            }
-                        }
-                        .padding(.horizontal, 8)
-                        .padding(.top, 4)
-                    }
-                    .onChange(of: selectedTabIndex) { oldValue, newValue in
-                        if swipeDirection == .none {
-                            swipeDirection = newValue > oldValue ? .left : .right
-                        }
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            proxy.scrollTo(newValue, anchor: .center)
-                        }
+                // ── 通常モード: タブ行（無限ループ）──
+                InfiniteTabBarView(
+                    tabItems: tabItems,
+                    selectedTabIndex: $selectedTabIndex,
+                    draggingTabIndex: $draggingTabIndex,
+                    noTagSortOrder: $noTagSortOrder,
+                    onSelectModeReset: {
                         isSelectMode = false
                         selectedMemoIDs.removeAll()
+                    },
+                    onReorder: { from, to in
+                        reorderTabs(from: from, to: to)
                     }
-                }
+                )
 
                 // ── 通常モード: メモ一覧 ──
                 normalMemoContent
@@ -916,5 +907,103 @@ struct TabDropDelegate: DropDelegate {
 
     func dropUpdated(info: DropInfo) -> DropProposal? {
         DropProposal(operation: .move)
+    }
+}
+
+// 無限ループするタブバー（3倍繰り返し方式）
+struct InfiniteTabBarView: View {
+    let tabItems: [(label: String, tag: Tag?, colorIndex: Int)]
+    @Binding var selectedTabIndex: Int
+    @Binding var draggingTabIndex: Int?
+    @Binding var noTagSortOrder: Int
+    var onSelectModeReset: () -> Void
+    var onReorder: (Int, Int) -> Void
+
+    // ScrollViewのオフセットを管理
+    @State private var scrollOffset: CGFloat = 0
+    @State private var contentWidth: CGFloat = 0
+
+    private let tabW: CGFloat = 76
+
+    var body: some View {
+        let count = tabItems.count
+        guard count > 0 else { return AnyView(EmptyView()) }
+
+        return AnyView(
+            GeometryReader { geo in
+                let viewWidth = geo.size.width
+                // 1セットの幅
+                let oneSetWidth = CGFloat(count) * (tabW - 1) + 16  // spacing=-1, padding=8*2
+                // スクロール可能なビュー
+                ScrollViewReader { proxy in
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: -1) {
+                            // 前のセット
+                            ForEach(0..<count, id: \.self) { i in
+                                loopTabButton(label: tabItems[i].label, realIndex: i, loopID: "pre_\(i)")
+                            }
+                            // 本体セット
+                            ForEach(0..<count, id: \.self) { i in
+                                loopTabButton(label: tabItems[i].label, realIndex: i, loopID: "main_\(i)")
+                            }
+                            // 後のセット
+                            ForEach(0..<count, id: \.self) { i in
+                                loopTabButton(label: tabItems[i].label, realIndex: i, loopID: "post_\(i)")
+                            }
+                        }
+                        .padding(.horizontal, 8)
+                        .padding(.top, 4)
+                    }
+                    .onChange(of: selectedTabIndex) { oldValue, newValue in
+                        onSelectModeReset()
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            proxy.scrollTo("main_\(newValue)", anchor: .center)
+                        }
+                    }
+                    .onAppear {
+                        // 初期位置を本体セットの選択タブに
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            proxy.scrollTo("main_\(selectedTabIndex)", anchor: .center)
+                        }
+                    }
+                }
+            }
+            .frame(height: 36)
+        )
+    }
+
+    private func loopTabButton(label: String, realIndex: Int, loopID: String) -> some View {
+        let isSelected = selectedTabIndex == realIndex
+        let color = tagColor(for: tabItems[realIndex].colorIndex)
+        let isDragging = draggingTabIndex == realIndex
+
+        return Button {
+            selectedTabIndex = realIndex
+        } label: {
+            Text(label)
+                .font(.system(size: 14, weight: isSelected ? .bold : .medium, design: .rounded))
+                .foregroundStyle(isSelected ? .primary : .secondary)
+                .lineLimit(1)
+                .frame(width: tabW)
+                .padding(.vertical, 9)
+                .background(
+                    TrapezoidTabShape()
+                        .fill(color)
+                )
+                .offset(y: isSelected ? 2 : 0)
+                .opacity(isDragging ? 0.5 : 1.0)
+        }
+        .buttonStyle(.plain)
+        .zIndex(isSelected ? 1 : 0)
+        .id(loopID)
+        .onDrag {
+            draggingTabIndex = realIndex
+            return NSItemProvider(object: "\(realIndex)" as NSString)
+        }
+        .onDrop(of: [.text], delegate: TabDropDelegate(
+            targetIndex: realIndex,
+            draggingIndex: $draggingTabIndex,
+            reorderAction: onReorder
+        ))
     }
 }
