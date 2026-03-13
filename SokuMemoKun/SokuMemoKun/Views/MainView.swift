@@ -6,11 +6,24 @@ struct MainView: View {
     @State private var isKeyboardVisible = false
     @State private var showSettings = false
     @State private var focusInput = false
-    // タブ切替指示: (タグID, トリガーカウンター) をセットで管理
-    @State private var switchToTagID: UUID? = nil
-    @State private var switchTrigger: Int = 0
+    @State private var selectedTabIndex: Int = 0
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Tag.name) private var tags: [Tag]
+
+    // 親タグのみ（タブ順序と一致させる）
+    private var parentTags: [Tag] {
+        tags.filter { $0.parentTagID == nil }
+    }
+
+    // タグIDからタブインデックスを算出（0=タグなし、1〜=親タグ順）
+    private func tabIndex(for tagID: UUID?) -> Int {
+        guard let tagID = tagID else { return 0 }
+        if let idx = parentTags.firstIndex(where: { $0.id == tagID }) {
+            return idx + 1  // +1 は「タグなし」タブの分
+        }
+        return 0
+    }
 
     var body: some View {
         NavigationStack {
@@ -20,18 +33,14 @@ struct MainView: View {
                     viewModel: viewModel,
                     focusInput: $focusInput,
                     onSaved: { savedTagID in
-                        // 保存時に該当タグのタブに切替（次フレームで実行し確実に反映）
-                        DispatchQueue.main.async {
-                            switchToTagID = savedTagID
-                            switchTrigger += 1
-                        }
+                        // 保存時に該当タグのタブに切替
+                        selectedTabIndex = tabIndex(for: savedTagID)
                     }
                 )
 
                 // 台形タブ付きメモ一覧
                 TabbedMemoListView(
-                    switchToTagID: $switchToTagID,
-                    switchTrigger: $switchTrigger,
+                    selectedTabIndex: $selectedTabIndex,
                     onAddMemo: {
                         viewModel.clearInput()
                         focusInput = true
