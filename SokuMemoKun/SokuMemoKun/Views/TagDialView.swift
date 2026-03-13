@@ -269,7 +269,26 @@ struct TagDialView: View {
                 }
         )
         .onAppear {
-            dragStart = rotation
+            syncRotationToSelection()
+        }
+        // 外部からselectedIDが変わった時にルーレット位置を同期
+        .onChange(of: selectedID) { _, _ in
+            syncRotationToSelection()
+        }
+    }
+
+    // selectedIDに対応するoptionsのインデックスにrotationを合わせる
+    private func syncRotationToSelection() {
+        let targetID: String = {
+            if let id = selectedID { return id.uuidString }
+            return "none"
+        }()
+        if let index = options.firstIndex(where: { $0.id == targetID }) {
+            let target = CGFloat(index) * itemAngle
+            withAnimation(.easeOut(duration: 0.2)) {
+                rotation = target
+            }
+            dragStart = target
         }
     }
 

@@ -352,7 +352,17 @@ struct MemoInputView: View {
             Button("キャンセル", role: .cancel) {}
         }
         .sheet(isPresented: $showNewTagSheet) {
-            NewTagSheetView(parentTagID: newTagIsChild ? viewModel.selectedTagID : nil)
+            NewTagSheetView(
+                parentTagID: newTagIsChild ? viewModel.selectedTagID : nil,
+                onTagCreated: { newTagID in
+                    // 新タグ追加後、即座にルーレット＆タグ表示に反映
+                    if newTagIsChild {
+                        viewModel.selectedChildTagID = newTagID
+                    } else {
+                        viewModel.selectedTagID = newTagID
+                    }
+                }
+            )
         }
         .fullScreenCover(isPresented: $showFullEditor) {
             FullEditorView(

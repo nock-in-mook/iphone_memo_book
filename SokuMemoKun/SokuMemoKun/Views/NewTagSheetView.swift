@@ -5,6 +5,8 @@ import SwiftData
 struct NewTagSheetView: View {
     // nil = 親タグ追加、UUID = その親の子タグ追加
     var parentTagID: UUID? = nil
+    // 追加完了時に新タグIDを返すコールバック
+    var onTagCreated: ((UUID) -> Void)? = nil
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -78,6 +80,7 @@ struct NewTagSheetView: View {
         guard !trimmed.isEmpty else { return }
         let tag = Tag(name: trimmed, colorIndex: selectedColorIndex, parentTagID: parentTagID)
         modelContext.insert(tag)
+        onTagCreated?(tag.id)
         dismiss()
     }
 }
