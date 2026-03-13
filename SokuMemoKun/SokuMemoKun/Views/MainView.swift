@@ -28,15 +28,8 @@ struct MainView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // 入力エリア（大枠で囲まれた入力欄+ルーレット）
-                MemoInputView(
-                    viewModel: viewModel,
-                    focusInput: $focusInput,
-                    onSaved: { savedTagID in
-                        // 保存時に該当タグのタブに切替
-                        selectedTabIndex = tabIndex(for: savedTagID)
-                    }
-                )
+                // 入力エリア
+                MemoInputView(viewModel: viewModel, focusInput: $focusInput, selectedTabIndex: $selectedTabIndex)
 
                 // 台形タブ付きメモ一覧
                 TabbedMemoListView(
@@ -53,7 +46,6 @@ struct MainView: View {
                         focusInput = true
                     },
                     onDeleteMemo: { memo in
-                        // 編集中のメモが削除された場合は入力欄をクリア
                         if viewModel.editingMemo?.id == memo.id {
                             viewModel.clearInput()
                         }
@@ -76,7 +68,6 @@ struct MainView: View {
                 SettingsView()
             }
             .onChange(of: defaultMarkdown) { _, newValue in
-                // 入力欄が空のときだけデフォルト設定を即反映
                 if viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     viewModel.isMarkdown = newValue
                 }
@@ -109,7 +100,6 @@ struct MainView: View {
                 isKeyboardVisible = false
             }
             .onAppear {
-                // 起動時に前回のメモを復元（設定に応じて）
                 viewModel.restoreLastMemo(context: modelContext)
             }
         }

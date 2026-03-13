@@ -4,8 +4,7 @@ import SwiftData
 struct MemoInputView: View {
     @Bindable var viewModel: MemoInputViewModel
     @Binding var focusInput: Bool
-    // 保存完了時にタグIDを通知するコールバック
-    var onSaved: ((UUID?) -> Void)? = nil
+    @Binding var selectedTabIndex: Int
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
     @FocusState private var isTextEditorFocused: Bool
@@ -23,6 +22,16 @@ struct MemoInputView: View {
     @State private var showDiscardAlert = false
     // 子タグダイアル展開
     @State private var showChildDial = false
+
+    // タグIDからタブインデックスを算出（0=タグなし、1〜=親タグ順）
+    private func tabIndex(for tagID: UUID?) -> Int {
+        guard let tagID = tagID else { return 0 }
+        let parentTags = tags.filter { $0.parentTagID == nil }
+        if let idx = parentTags.firstIndex(where: { $0.id == tagID }) {
+            return idx + 1
+        }
+        return 0
+    }
 
     // 親タグオプション（parentTagID == nil のタグ＋「＋追加」）
     private var parentOptions: [(id: String, name: String, color: Color)] {
@@ -224,11 +233,11 @@ struct MemoInputView: View {
                         .disabled(viewModel.inputText.isEmpty)
 
                         Button {
-                            let savedTagID = viewModel.selectedTagID
+                            let targetTab = tabIndex(for: viewModel.selectedTagID)
                             viewModel.clearInput()
                             showChildDial = false
                             triggerSaveAnimation()
-                            onSaved?(savedTagID)
+                            selectedTabIndex = targetTab
                         } label: {
                             Label("保存", systemImage: "square.and.arrow.down.fill")
                                 .font(.system(size: 11, weight: .bold))
