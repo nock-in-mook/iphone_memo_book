@@ -156,18 +156,19 @@ struct MemoInputView: View {
                 // 仕切り線直下・右端からタグタブを生やす
                 dialArea
                     .padding(.trailing, -10)
+                    .offset(y: -1)
             }
             Divider()
             // フッター: 左=削除 右=コピー+保存
             footerRow
         }
         .background(
-            RoundedRectangle(cornerRadius: 10)
-                .fill(Color(uiColor: .systemBackground))
-        )
-        .overlay(
-            RoundedRectangle(cornerRadius: 10)
-                .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+            ZStack {
+                RoundedRectangle(cornerRadius: 10)
+                    .fill(Color(uiColor: .systemBackground))
+                RoundedRectangle(cornerRadius: 10)
+                    .stroke(Color.gray.opacity(0.25), lineWidth: 1)
+            }
         )
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
@@ -370,7 +371,10 @@ struct MemoInputView: View {
                         }
                         .foregroundStyle(.secondary)
                         .frame(width: 20, height: 60)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.15)))
+                        .background(
+                            RoundedRectangle(cornerRadius: 4)
+                                .fill(Color(red: 0.90, green: 0.90, blue: 0.92))
+                        )
                         .contentShape(Rectangle())
                         .onTapGesture {
                             withAnimation(.spring(response: 0.3)) { showChildDial = true }
@@ -408,13 +412,31 @@ struct MemoInputView: View {
                             }
                     )
             } else {
-                HStack(spacing: 2) {
-                    Text("◀").font(.system(size: 10))
-                    Text("タグ").font(.system(size: 11, weight: .bold, design: .rounded))
+                // 逆さL字タブ（上=横タブ、下=縦グリップ）
+                VStack(alignment: .trailing, spacing: 0) {
+                    // 上部: 横長タブ（今まで通り）
+                    HStack(spacing: 2) {
+                        Text("◀").font(.system(size: 12))
+                        Text("タグ").font(.system(size: 13, weight: .bold, design: .rounded))
+                    }
+                    .foregroundStyle(.white)
+                    .frame(width: 60, height: 22, alignment: .leading)
+                    .padding(.leading, 6)
+                    .background(
+                        UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, bottomTrailingRadius: 0, topTrailingRadius: 0)
+                            .fill(Color(red: 0.45, green: 0.45, blue: 0.48))
+                    )
+
+                    // 下部: 縦長グリップ（包丁の刃先カーブ）
+                    HStack(spacing: 0) {
+                        Spacer(minLength: 0)
+                        GripShape()
+                            .fill(Color(red: 0.45, green: 0.45, blue: 0.48))
+                            .frame(width: 35, height: 70)
+                    }
+                    .frame(width: 60)
                 }
-                .foregroundStyle(.secondary)
-                .frame(width: 60, height: 22)
-                .background(RoundedRectangle(cornerRadius: 4).fill(Color(uiColor: .systemGray5)))
+                .shadow(color: .black.opacity(0.3), radius: 3, x: -2, y: 2)
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 5)
@@ -426,5 +448,38 @@ struct MemoInputView: View {
                 )
             }
         }
+    }
+}
+
+// グリップの包丁刃先シェイプ
+// 上部は幅16ptの長方形、下端が左に向かってカーブしながら広がり刃先のように消える
+struct GripShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let gripWidth: CGFloat = 8
+        let left = rect.maxX - gripWidth  // グリップ左端
+        let right = rect.maxX             // グリップ右端（画面端）
+
+        let filletR: CGFloat = 7  // L字内側の丸み半径
+
+        var path = Path()
+        // 左上: フィレットの開始点（上辺から）
+        path.move(to: CGPoint(x: left - filletR, y: 0))
+        // 内側の丸みカーブ（水平→垂直へ滑らかに）
+        path.addQuadCurve(
+            to: CGPoint(x: left, y: filletR),
+            control: CGPoint(x: left, y: 0)
+        )
+        // 左辺をまっすぐ途中まで下へ
+        path.addLine(to: CGPoint(x: left, y: rect.height * 0.5))
+        // 左辺がカーブして右へ→最後は水平に右辺と合流
+        path.addCurve(
+            to: CGPoint(x: right, y: rect.height),
+            control1: CGPoint(x: left, y: rect.height * 0.85),
+            control2: CGPoint(x: right - gripWidth * 0.6, y: rect.height)
+        )
+        // 右辺をまっすぐ上へ
+        path.addLine(to: CGPoint(x: right, y: 0))
+        path.closeSubpath()
+        return path
     }
 }
