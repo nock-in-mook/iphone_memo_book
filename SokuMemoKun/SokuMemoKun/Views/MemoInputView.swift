@@ -419,7 +419,7 @@ struct MemoInputView: View {
                         Text("◀").font(.system(size: 12))
                         Text("タグ").font(.system(size: 13, weight: .bold, design: .rounded))
                     }
-                    .foregroundStyle(Color(white: 0.3))
+                    .foregroundStyle(.white)
                     .frame(width: 60, height: 22, alignment: .leading)
                     .padding(.leading, 6)
                     .background(
