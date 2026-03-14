@@ -117,6 +117,7 @@ struct MemoInputView: View {
                                 .padding(.leading, 15)
                                 .padding(.trailing, 9)
                                 .padding(.top, 24)
+                                .padding(.bottom, 40)
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
