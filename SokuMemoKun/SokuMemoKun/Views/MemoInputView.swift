@@ -424,14 +424,14 @@ struct MemoInputView: View {
                     .padding(.leading, 6)
                     .background(
                         UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, bottomTrailingRadius: 0, topTrailingRadius: 0)
-                            .fill(Color(red: 0.70, green: 0.70, blue: 0.72))
+                            .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
                     )
 
                     // 下部: 縦長グリップ（包丁の刃先カーブ）
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
                         GripShape()
-                            .fill(Color(red: 0.70, green: 0.70, blue: 0.72))
+                            .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
                             .frame(width: 35, height: 70)
                     }
                     .frame(width: 60)
