@@ -3,8 +3,8 @@
 ## 現在の状況
 - feature/input-area-expand-and-view-mode ブランチで作業中
 - 入力欄の展開/縮小機能を実装（全画面エディタ廃止→入力欄が下に伸びる方式）
-- ルーレット（タグダイアル）の位置を割合ベースで固定（展開しても位置不変）
-- タグタブを枠線の外（画面右端）から生やす方式に変更
+- タグタブを横長に変更（60×22pt、「◀タグ」表示）、仕切り線直下に配置
+- ルーレット展開時も上端がタイトル/本文仕切り線に沿う
 - タグタブはドラッグでのみ開く（タップ誤操作防止）
 - タブインデックスをsortOrderベースに修正（ルーレット↔タブの同期修正）
 - 「タグなし」選択時のタブ遷移バグ修正
@@ -12,7 +12,7 @@
 - テキスト位置をTextEditor/Text間で揃え済み
 
 ## 主要ファイル
-- MemoInputView.swift: 展開/縮小、ルーレット位置固定、タグタブ枠外配置、ドラッグオンリータブ
+- MemoInputView.swift: 展開/縮小、タグタブ横長化・仕切り線直下配置、ドラッグオンリータブ
 - MemoInputViewModel.swift: loadMemoCounter（閲覧モード切替トリガー）
 - MainView.swift: isInputExpanded状態管理、高さ0.48/0.92切替
 - FullEditorView.swift: 空（EmptyView）— 互換用に残存
@@ -44,4 +44,4 @@
 - SourceKitの偽陽性エラー多発（tagColor, UIPasteboard, UIResponder等）→ビルドは成功する
 - NotificationCenter(.switchToTab)でルーレット↔タブ間のクロスビュー通信
 - タブインデックスはsortOrderベース（name sortではない）
-- タグタブのoverlayはpadding前に配置（枠外に伸ばすため）
+- タグタブのoverlayは本文ZStackの.topTrailingに配置（仕切り線直下）

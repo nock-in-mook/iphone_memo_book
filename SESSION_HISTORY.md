@@ -725,3 +725,13 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - TextEditor/Text間のテキスト位置揃え
 - タグタブをドラッグオンリーで開くように変更（誤タップ防止）
 - FullEditorView.swiftを空に（互換用EmptyView）
+
+---
+## 即メモ_013_タグタブ形状位置変更 (2026-03-14)
+
+タグタブの形状と位置を変更。
+- タグタブを縦長(28×80)→横長(60×22)に変更、テキスト「◀タグ」
+- タブ位置をテキストエリア中央→タイトル/本文仕切り線の直下に移動
+- ルーレット展開時も上端が仕切り線に沿うように配置
+- overlayを外側VStack→本文ZStack(.topTrailing)に移動
+- 不要なbaseTextAreaHeight/dialTopRatio/GeometryReaderを削除
