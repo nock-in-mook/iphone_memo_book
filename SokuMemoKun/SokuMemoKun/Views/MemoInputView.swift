@@ -419,24 +419,24 @@ struct MemoInputView: View {
                         Text("◀").font(.system(size: 12))
                         Text("タグ").font(.system(size: 13, weight: .bold, design: .rounded))
                     }
-                    .foregroundStyle(.white)
+                    .foregroundStyle(Color(white: 0.3))
                     .frame(width: 60, height: 22, alignment: .leading)
                     .padding(.leading, 6)
                     .background(
                         UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, bottomTrailingRadius: 0, topTrailingRadius: 0)
-                            .fill(Color(red: 0.45, green: 0.45, blue: 0.48))
+                            .fill(Color(red: 0.70, green: 0.70, blue: 0.72))
                     )
 
                     // 下部: 縦長グリップ（包丁の刃先カーブ）
                     HStack(spacing: 0) {
                         Spacer(minLength: 0)
                         GripShape()
-                            .fill(Color(red: 0.45, green: 0.45, blue: 0.48))
+                            .fill(Color(red: 0.70, green: 0.70, blue: 0.72))
                             .frame(width: 35, height: 70)
                     }
                     .frame(width: 60)
                 }
-                .shadow(color: .black.opacity(0.3), radius: 3, x: -2, y: 2)
+                .shadow(color: .black.opacity(0.15), radius: 2, x: -1, y: 1)
                 .contentShape(Rectangle())
                 .gesture(
                     DragGesture(minimumDistance: 5)
