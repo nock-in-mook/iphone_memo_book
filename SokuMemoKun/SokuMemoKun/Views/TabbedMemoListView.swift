@@ -1102,9 +1102,10 @@ struct TabBarView: View {
                 .font(.system(size: 14, weight: isSelected ? .bold : .medium, design: .rounded))
                 .foregroundStyle(isSelected ? .primary : .secondary)
                 .lineLimit(1)
+                .truncationMode(.tail)
                 .padding(.horizontal, 14)
                 .padding(.vertical, 9)
-                .frame(minWidth: 52)
+                .frame(minWidth: 52, maxWidth: 150)
                 .background(
                     TrapezoidTabShape()
                         .fill(color)
