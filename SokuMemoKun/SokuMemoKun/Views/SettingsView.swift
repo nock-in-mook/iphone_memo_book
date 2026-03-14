@@ -5,7 +5,7 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("markdownEnabled") private var markdownEnabled = false
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
-    @AppStorage("markdownLayout") private var markdownLayout: String = MarkdownLayout.split.rawValue
+    @AppStorage("markdownLayout") private var markdownLayout: String = MarkdownLayout.inline.rawValue
     @AppStorage("restoreLastMemo") private var restoreLastMemo = false
 
     var body: some View {

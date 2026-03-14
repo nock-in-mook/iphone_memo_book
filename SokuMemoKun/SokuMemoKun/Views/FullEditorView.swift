@@ -2,6 +2,7 @@ import SwiftUI
 
 // マークダウンプレビューレイアウト
 enum MarkdownLayout: String, CaseIterable {
+    case inline = "インライン"
     case split = "上下分割"
     case tab = "タブ切替"
 }
@@ -18,7 +19,19 @@ struct LayoutIcon: View {
             let rect = CGRect(x: 0, y: 0, width: w, height: h)
             let corner: CGFloat = 2
 
-            if layout == .split {
+            if layout == .inline {
+                // インライン: テキストアイコン風
+                context.stroke(Path(roundedRect: rect, cornerRadius: corner), with: .color(.primary.opacity(0.5)), lineWidth: 1)
+                // テキスト行を模した横線
+                for i in 0..<3 {
+                    let y = h * (0.25 + CGFloat(i) * 0.25)
+                    let lineW = i == 0 ? w * 0.5 : w * 0.7
+                    context.stroke(Path { p in
+                        p.move(to: CGPoint(x: w * 0.15, y: y))
+                        p.addLine(to: CGPoint(x: w * 0.15 + lineW, y: y))
+                    }, with: .color(.primary.opacity(0.4)), lineWidth: 1)
+                }
+            } else if layout == .split {
                 // 上下分割: 上にA、下にB
                 let topRect = CGRect(x: 0, y: 0, width: w, height: h * 0.47)
                 let bottomRect = CGRect(x: 0, y: h * 0.53, width: w, height: h * 0.47)
@@ -79,7 +92,7 @@ struct FullEditorView: View {
 
     // マークダウン設定
     @AppStorage("markdownEnabled") private var markdownEnabled = false
-    @AppStorage("markdownLayout") private var layoutRaw: String = MarkdownLayout.split.rawValue
+    @AppStorage("markdownLayout") private var layoutRaw: String = MarkdownLayout.inline.rawValue
 
     // タブ切替時の表示モード
     @State private var showPreview = false
@@ -153,12 +166,16 @@ struct FullEditorView: View {
         }
     }
 
-    // マークダウンエディタ（分割 or タブ）
+    // マークダウンエディタ（インライン / 分割 / タブ）
     @ViewBuilder
     private var markdownEditor: some View {
-        let currentLayout = MarkdownLayout(rawValue: layoutRaw) ?? .split
+        let currentLayout = MarkdownLayout(rawValue: layoutRaw) ?? .inline
 
-        if currentLayout == .split {
+        if currentLayout == .inline {
+            // Bear風インラインプレビュー: 記号を薄く表示しつつリアルタイムスタイリング
+            MarkdownTextEditor(text: $text)
+                .padding(4)
+        } else if currentLayout == .split {
             // 上下分割: 上がエディタ、下がプレビュー
             VStack(spacing: 0) {
                 TextEditor(text: $text)

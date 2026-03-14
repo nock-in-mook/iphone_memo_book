@@ -27,6 +27,7 @@
 		B1000000000000000000B7 /* FullEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B7 /* FullEditorView.swift */; };
 		E20F22AC7EBE4432A424C594 /* MemoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863DCF5D059F41899ADDD158 /* MemoDetailView.swift */; };
 		B1000000000000000000B8 /* MarkdownToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B8 /* MarkdownToolbar.swift */; };
+		B1000000000000000000B9 /* MarkdownTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B9 /* MarkdownTextEditor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -50,6 +51,7 @@
 		A1000000000000000000B6 /* TagEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagEditView.swift; sourceTree = "<group>"; };
 		A1000000000000000000B7 /* FullEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullEditorView.swift; sourceTree = "<group>"; };
 		A1000000000000000000B8 /* MarkdownToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownToolbar.swift; sourceTree = "<group>"; };
+		A1000000000000000000B9 /* MarkdownTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTextEditor.swift; sourceTree = "<group>"; };
 		863DCF5D059F41899ADDD158 /* MemoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoDetailView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -110,6 +112,7 @@
 				A1000000000000000000B6 /* TagEditView.swift */,
 				A1000000000000000000B7 /* FullEditorView.swift */,
 				A1000000000000000000B8 /* MarkdownToolbar.swift */,
+				A1000000000000000000B9 /* MarkdownTextEditor.swift */,
 				863DCF5D059F41899ADDD158 /* MemoDetailView.swift */,
 			);
 			path = Views;
@@ -219,6 +222,7 @@
 				B1000000000000000000B6 /* TagEditView.swift in Sources */,
 				B1000000000000000000B7 /* FullEditorView.swift in Sources */,
 				B1000000000000000000B8 /* MarkdownToolbar.swift in Sources */,
+				B1000000000000000000B9 /* MarkdownTextEditor.swift in Sources */,
 				E20F22AC7EBE4432A424C594 /* MemoDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
