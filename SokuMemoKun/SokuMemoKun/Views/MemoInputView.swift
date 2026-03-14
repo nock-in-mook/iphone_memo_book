@@ -17,6 +17,8 @@ struct MemoInputView: View {
     @State private var newTagIsChild = false
     // 全画面編集
     @State private var showFullEditor = false
+    // 全画面を開いた時点で既存メモだったか（途中で切り替わらないように記録）
+    @State private var fullEditorIsExistingMemo = false
     // 既存メモ読み込み時は閲覧モード（タップで編集開始）
     @State private var isEditing = true
     // 削除確認ダイアログ
@@ -119,6 +121,7 @@ struct MemoInputView: View {
 
                     // 最大化ボタン（右上ぴったり）
                     Button {
+                        fullEditorIsExistingMemo = (viewModel.editingMemo != nil)
                         showFullEditor = true
                     } label: {
                         Image(systemName: "viewfinder")
@@ -172,7 +175,8 @@ struct MemoInputView: View {
             )
         }
         .fullScreenCover(isPresented: $showFullEditor) {
-            if let memo = viewModel.editingMemo {
+            // 開いた時点のモードで固定（途中でeditingMemoが変わっても切り替わらない）
+            if fullEditorIsExistingMemo, let memo = viewModel.editingMemo {
                 MemoDetailView(memo: memo)
             } else {
                 FullEditorView(text: $viewModel.inputText, isMarkdown: $viewModel.isMarkdown)
