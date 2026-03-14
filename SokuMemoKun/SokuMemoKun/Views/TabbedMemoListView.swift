@@ -1004,6 +1004,8 @@ struct TabReorderSheet: View {
 }
 
 // タブバー（長押しメニュー＋右端に＋ボタン）
+// 画面内のタブをタップしてもスクロール位置は変わらない
+// 画面外（一部だけ見えている）タブをタップした場合のみ、タブ全体が見える位置まで最小限スクロール
 struct TabBarView: View {
     let tabItems: [(label: String, tag: Tag?, colorIndex: Int)]
     @Binding var selectedTabIndex: Int
@@ -1012,6 +1014,12 @@ struct TabBarView: View {
     var onAddTag: () -> Void
 
     private let tabW: CGFloat = 76
+    // 各タブのスクロール内での位置を記録
+    @State private var tabFrames: [Int: CGRect] = [:]
+    // スクロールビューの可視領域
+    @State private var scrollViewFrame: CGRect = .zero
+    // プログラム的なスクロールオフセット
+    @State private var scrollOffset: CGFloat = 0
 
     var body: some View {
         let count = tabItems.count
@@ -1046,12 +1054,42 @@ struct TabBarView: View {
                 }
                 .onChange(of: selectedTabIndex) { oldValue, newValue in
                     onSelectModeReset()
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        proxy.scrollTo("tab_\(newValue)", anchor: .center)
+                    // 画面外のタブの場合のみ、端が見える位置までスクロール
+                    // ScrollViewReaderでは細かい制御が難しいので、
+                    // 左端寄せ/右端寄せ/スクロールなしを判定
+                    if let frame = tabFrames[newValue] {
+                        let visibleMin = scrollViewFrame.minX
+                        let visibleMax = scrollViewFrame.maxX
+                        let tabMin = frame.minX
+                        let tabMax = frame.maxX
+
+                        if tabMin >= visibleMin && tabMax <= visibleMax {
+                            // タブ全体が画面内 → スクロールしない
+                        } else if tabMin < visibleMin {
+                            // 左にはみ出し → 左端寄せ
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                proxy.scrollTo("tab_\(newValue)", anchor: .leading)
+                            }
+                        } else {
+                            // 右にはみ出し → 右端寄せ
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                proxy.scrollTo("tab_\(newValue)", anchor: .trailing)
+                            }
+                        }
                     }
                 }
             }
             .frame(height: 36)
+            .background(
+                GeometryReader { geo in
+                    Color.clear.onAppear {
+                        scrollViewFrame = geo.frame(in: .global)
+                    }
+                    .onChange(of: geo.frame(in: .global)) { _, newFrame in
+                        scrollViewFrame = newFrame
+                    }
+                }
+            )
         )
     }
 
@@ -1077,6 +1115,15 @@ struct TabBarView: View {
         .buttonStyle(.plain)
         .zIndex(isSelected ? 1 : 0)
         .id("tab_\(index)")
+        .background(
+            GeometryReader { geo in
+                Color.clear
+                    .onAppear { tabFrames[index] = geo.frame(in: .global) }
+                    .onChange(of: geo.frame(in: .global)) { _, newFrame in
+                        tabFrames[index] = newFrame
+                    }
+            }
+        )
         .contextMenu {
             Button {
                 onShowReorderSheet()
