@@ -139,8 +139,9 @@ struct MemoInputView: View {
                 .frame(maxHeight: .infinity)
 
             }
-            .padding(.trailing, showParentDial ? 70 : 0)
+            .padding(.trailing, showParentDial ? (showChildDial ? 155 : 115) : 0)
             .animation(.spring(response: 0.3), value: showParentDial)
+            .animation(.spring(response: 0.3), value: showChildDial)
             .overlay(alignment: .bottomTrailing) {
                 // 展開/縮小ボタン
                 Button {
