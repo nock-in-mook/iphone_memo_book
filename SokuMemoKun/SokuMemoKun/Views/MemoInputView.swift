@@ -268,9 +268,10 @@ struct MemoInputView: View {
             }
             .disabled(viewModel.inputText.isEmpty)
 
-            // 右: 確定（編集モードを抜けてキーボードを閉じる）
+            // 右: 確定（メモは自動保存済み→入力欄をクリアして次のメモへ）
             Button {
-                isEditing = false
+                viewModel.clearInput()
+                isEditing = true
                 isTextEditorFocused = false
                 UIApplication.shared.sendAction(
                     #selector(UIResponder.resignFirstResponder),
@@ -283,7 +284,7 @@ struct MemoInputView: View {
             .buttonStyle(.borderedProminent)
             .buttonBorderShape(.capsule)
             .controlSize(.small)
-            .disabled(!isEditing || !viewModel.canClear)
+            .disabled(!viewModel.canClear)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)

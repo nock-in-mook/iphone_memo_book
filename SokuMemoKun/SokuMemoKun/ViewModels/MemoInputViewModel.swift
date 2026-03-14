@@ -121,15 +121,11 @@ class MemoInputViewModel {
         loadMemoCounter += 1
     }
 
-    // アプリ起動時に前回のメモを復元
+    // アプリ起動時は常に空の入力欄で開始（書きかけメモは自動保存済みでリストにある）
     func restoreLastMemo(context: ModelContext) {
-        guard UserDefaults.standard.bool(forKey: "restoreLastMemo") else { return }
-        guard let idString = UserDefaults.standard.string(forKey: "lastEditingMemoID"),
-              let id = UUID(uuidString: idString) else { return }
-        let descriptor = FetchDescriptor<Memo>(predicate: #Predicate { memo in memo.id == id })
-        if let memo = try? context.fetch(descriptor).first {
-            loadMemo(memo)
-        }
+        // 自動保存により前回のメモは既にリストに保存されているので、
+        // 起動時は新規入力待ち状態にする
+        clearInput()
     }
 
     private func saveLastMemoID(_ id: UUID) {
