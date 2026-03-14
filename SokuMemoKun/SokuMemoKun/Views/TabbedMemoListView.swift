@@ -141,7 +141,6 @@ enum GridSizeOption: Int, CaseIterable {
     }
 }
 
-private let tabWidth: CGFloat = 76
 private let borderColor = Color.primary.opacity(0.45)
 private let borderWidth: CGFloat = 2.0
 
@@ -1013,7 +1012,6 @@ struct TabBarView: View {
     var onShowReorderSheet: () -> Void
     var onAddTag: () -> Void
 
-    private let tabW: CGFloat = 76
     // 各タブのスクロール内での位置を記録
     @State private var tabFrames: [Int: CGRect] = [:]
     // スクロールビューの可視領域
@@ -1104,8 +1102,9 @@ struct TabBarView: View {
                 .font(.system(size: 14, weight: isSelected ? .bold : .medium, design: .rounded))
                 .foregroundStyle(isSelected ? .primary : .secondary)
                 .lineLimit(1)
-                .frame(width: tabW)
+                .padding(.horizontal, 14)
                 .padding(.vertical, 9)
+                .frame(minWidth: 52)
                 .background(
                     TrapezoidTabShape()
                         .fill(color)
