@@ -14,6 +14,10 @@ struct NewTagSheetView: View {
     @State private var tagName = ""
     @State private var selectedColorIndex = 1
 
+    private var trimmedName: String {
+        tagName.trimmingCharacters(in: .whitespaces)
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
@@ -36,13 +40,31 @@ struct NewTagSheetView: View {
                             }
                         }
 
-                    Text("\(tagName.count)/20")
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundStyle(.tertiary)
-                        .frame(maxWidth: .infinity, alignment: .trailing)
+                    HStack {
+                        // プレビュー（1文字以上入力で表示）
+                        if !trimmedName.isEmpty {
+                            Text(trimmedName)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(.primary.opacity(0.8))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(tagColor(for: selectedColorIndex))
+                                )
+                                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                        }
+
+                        Spacer()
+
+                        Text("\(tagName.count)/20")
+                            .font(.system(size: 11, design: .rounded))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .animation(.easeOut(duration: 0.2), value: trimmedName.isEmpty)
                 }
 
-                // カラー選択（コンパクト28色）
+                // カラー選択
                 VStack(alignment: .leading, spacing: 6) {
                     Text("カラー")
                         .font(.system(size: 13, weight: .medium, design: .rounded))
@@ -51,13 +73,10 @@ struct NewTagSheetView: View {
                     ColorPaletteGrid(selectedIndex: $selectedColorIndex)
                 }
 
-                // プレビュー枠
-                TagPreviewBox(name: tagName, colorIndex: selectedColorIndex)
-
                 Spacer()
             }
             .padding(20)
-            .navigationTitle(parentTagID != nil ? "新規子タグ" : "新規タグ")
+            .navigationTitle(parentTagID != nil ? "新規子タグの追加" : "新規タグ(フォルダ)の追加")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
@@ -67,7 +86,7 @@ struct NewTagSheetView: View {
                     Button("追加") {
                         saveTag()
                     }
-                    .disabled(tagName.trimmingCharacters(in: .whitespaces).isEmpty)
+                    .disabled(trimmedName.isEmpty)
                     .bold()
                 }
             }
@@ -76,9 +95,8 @@ struct NewTagSheetView: View {
     }
 
     private func saveTag() {
-        let trimmed = tagName.trimmingCharacters(in: .whitespaces)
-        guard !trimmed.isEmpty else { return }
-        let tag = Tag(name: trimmed, colorIndex: selectedColorIndex, parentTagID: parentTagID)
+        guard !trimmedName.isEmpty else { return }
+        let tag = Tag(name: trimmedName, colorIndex: selectedColorIndex, parentTagID: parentTagID)
         modelContext.insert(tag)
         onTagCreated?(tag.id)
         dismiss()

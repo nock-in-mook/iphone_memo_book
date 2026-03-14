@@ -1,7 +1,7 @@
 import SwiftUI
 import SwiftData
 
-// タグの色パレット（0=タグなし、1〜28=選択可能カラー）
+// タグの色パレット（0=タグなし、1〜56=選択可能カラー）
 private let tabColors: [Color] = [
     // 0: タグなし
     Color(red: 0.82, green: 0.80, blue: 0.76),
@@ -37,6 +37,38 @@ private let tabColors: [Color] = [
     Color(red: 0.90, green: 0.80, blue: 0.50),  // ゴールド
     Color(red: 0.85, green: 0.45, blue: 0.55),  // ローズ
     Color(red: 0.50, green: 0.65, blue: 0.85),  // スレートブルー
+    // 29〜35: ナチュラル系
+    Color(red: 0.85, green: 0.78, blue: 0.68),  // サンド
+    Color(red: 0.72, green: 0.82, blue: 0.75),  // セージ
+    Color(red: 0.78, green: 0.72, blue: 0.65),  // モカ
+    Color(red: 0.88, green: 0.85, blue: 0.78),  // アイボリー
+    Color(red: 0.68, green: 0.75, blue: 0.70),  // オリーブグレー
+    Color(red: 0.82, green: 0.70, blue: 0.62),  // キャメル
+    Color(red: 0.75, green: 0.80, blue: 0.82),  // ブルーグレー
+    // 36〜42: ビビッド系
+    Color(red: 0.98, green: 0.45, blue: 0.52),  // ホットピンク
+    Color(red: 0.30, green: 0.75, blue: 0.93),  // スカイブルー
+    Color(red: 0.55, green: 0.88, blue: 0.45),  // ブライトグリーン
+    Color(red: 0.98, green: 0.75, blue: 0.30),  // マンゴー
+    Color(red: 0.60, green: 0.40, blue: 0.90),  // バイオレット
+    Color(red: 0.98, green: 0.42, blue: 0.30),  // トマト
+    Color(red: 0.25, green: 0.82, blue: 0.75),  // エメラルド
+    // 43〜49: くすみ系（ニュアンスカラー）
+    Color(red: 0.75, green: 0.68, blue: 0.72),  // モーヴ
+    Color(red: 0.68, green: 0.78, blue: 0.75),  // ダスティミント
+    Color(red: 0.82, green: 0.75, blue: 0.72),  // ダスティローズ
+    Color(red: 0.72, green: 0.72, blue: 0.80),  // ダスティブルー
+    Color(red: 0.78, green: 0.80, blue: 0.68),  // カーキ
+    Color(red: 0.80, green: 0.68, blue: 0.68),  // ベージュピンク
+    Color(red: 0.68, green: 0.75, blue: 0.82),  // ストーンブルー
+    // 50〜56: ダーク系
+    Color(red: 0.28, green: 0.45, blue: 0.60),  // ネイビー
+    Color(red: 0.55, green: 0.30, blue: 0.30),  // マルーン
+    Color(red: 0.30, green: 0.50, blue: 0.38),  // ダークフォレスト
+    Color(red: 0.45, green: 0.35, blue: 0.55),  // ダークパープル
+    Color(red: 0.55, green: 0.48, blue: 0.30),  // ダークゴールド
+    Color(red: 0.40, green: 0.45, blue: 0.50),  // チャコール
+    Color(red: 0.50, green: 0.35, blue: 0.45),  // ダークローズ
 ]
 
 // 「すべて」タブ用の色（薄い黄色）
