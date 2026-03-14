@@ -135,22 +135,6 @@ struct MemoInputView: View {
                 .frame(maxHeight: .infinity)
                 .padding(.trailing, 20)
 
-                // 展開/縮小ボタン（ルーレット展開中は非表示）
-                if !showParentDial {
-                    Button {
-                        withAnimation(.spring(response: 0.35)) {
-                            isExpanded.toggle()
-                        }
-                    } label: {
-                        Image(systemName: isExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
-                            .font(.system(size: 12))
-                            .foregroundStyle(.gray.opacity(0.5))
-                            .padding(5)
-                            .background(Circle().fill(Color(uiColor: .systemBackground).opacity(0.9)))
-                    }
-                    .padding(.trailing, 2)
-                    .padding(.top, 2)
-                }
             }
             .overlay(alignment: .topTrailing) {
                 // 仕切り線直下・右端からタグタブを生やす
@@ -311,6 +295,21 @@ struct MemoInputView: View {
             .buttonBorderShape(.capsule)
             .controlSize(.small)
             .disabled(!viewModel.canClear)
+
+            // 展開/縮小ボタン
+            Button {
+                withAnimation(.spring(response: 0.35)) {
+                    isExpanded.toggle()
+                }
+            } label: {
+                Image(systemName: isExpanded ? "arrow.down.forward.and.arrow.up.backward" : "arrow.up.backward.and.arrow.down.forward")
+                    .font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(.white)
+                    .frame(width: 28, height: 28)
+                    .background(
+                        Circle().fill(Color.blue.opacity(0.6))
+                    )
+            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
