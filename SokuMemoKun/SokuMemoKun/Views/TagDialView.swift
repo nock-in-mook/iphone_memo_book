@@ -318,12 +318,19 @@ struct TagDialView: View {
         radius: CGFloat, lineWidth: CGFloat,
         brightness: (CGFloat, CGFloat, CGFloat)
     ) {
+        // Canvas高さに収まる角度範囲を計算（はみ出し防止）
+        let halfHeight = dialHeight / 2 - lineWidth
+        let maxSinAngle = min(1.0, Double(halfHeight / radius))
+        let maxAngle = asin(maxSinAngle) * 180.0 / .pi
+        let startDeg = 180.0 - maxAngle
+        let endDeg = 180.0 + maxAngle
+
         var edge = Path()
         edge.addArc(
             center: CGPoint(x: cx, y: cy),
             radius: radius,
-            startAngle: .degrees(150),
-            endAngle: .degrees(210),
+            startAngle: .degrees(startDeg),
+            endAngle: .degrees(endDeg),
             clockwise: false
         )
         context.stroke(
