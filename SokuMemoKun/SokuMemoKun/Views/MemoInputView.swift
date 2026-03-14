@@ -279,7 +279,7 @@ struct MemoInputView: View {
             // 左: 削除
             Button { showDeleteAlert = true } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 16))
+                    .font(.system(size: 15))
                     .foregroundStyle(.red.opacity(0.5))
             }
             .disabled(!viewModel.canClear)
