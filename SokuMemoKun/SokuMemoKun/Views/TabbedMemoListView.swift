@@ -680,15 +680,19 @@ struct TabbedMemoListView: View {
                 }
             }
         } label: {
-            Text(currentGridSize.label)
-                .font(.system(size: 13, weight: .medium, design: .rounded))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(
-                    Capsule()
-                        .fill(Color(uiColor: .systemBackground).opacity(0.85))
-                )
+            HStack(spacing: 4) {
+                Image(systemName: "square.grid.2x2")
+                    .font(.system(size: 12))
+                Text(currentGridSize.label)
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+            }
+            .foregroundStyle(.secondary)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+            .background(
+                Capsule()
+                    .fill(Color(uiColor: .systemBackground).opacity(0.85))
+            )
         }
     }
 
