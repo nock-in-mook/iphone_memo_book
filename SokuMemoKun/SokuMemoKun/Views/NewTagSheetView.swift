@@ -21,11 +21,31 @@ struct NewTagSheetView: View {
     var body: some View {
         NavigationStack {
             VStack(spacing: 16) {
-                // タグ名入力
+                // タグ名ラベル + プレビュー（同じ行）
                 VStack(alignment: .leading, spacing: 6) {
-                    Text("タグ名")
-                        .font(.system(size: 13, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary)
+                    HStack {
+                        Text("タグ名")
+                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .foregroundStyle(.secondary)
+
+                        Spacer()
+
+                        // プレビュー（1文字以上入力で表示）
+                        if !trimmedName.isEmpty {
+                            Text(trimmedName)
+                                .font(.system(size: 11, weight: .bold, design: .rounded))
+                                .foregroundStyle(tagTextColor(for: selectedColorIndex))
+                                .padding(.horizontal, 8)
+                                .padding(.vertical, 3)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .fill(tagColor(for: selectedColorIndex))
+                                )
+                                .transition(.opacity.combined(with: .scale(scale: 0.8)))
+                        }
+                    }
+                    .animation(.easeOut(duration: 0.2), value: trimmedName.isEmpty)
+                    .animation(.easeOut(duration: 0.15), value: selectedColorIndex)
 
                     TextField("タグ名を入力（20文字まで）", text: $tagName)
                         .font(.system(size: 16, design: .rounded))
@@ -40,28 +60,10 @@ struct NewTagSheetView: View {
                             }
                         }
 
-                    HStack {
-                        // プレビュー（1文字以上入力で表示）
-                        if !trimmedName.isEmpty {
-                            Text(trimmedName)
-                                .font(.system(size: 11, weight: .bold, design: .rounded))
-                                .foregroundStyle(.primary.opacity(0.8))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 3)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 8)
-                                        .fill(tagColor(for: selectedColorIndex))
-                                )
-                                .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                        }
-
-                        Spacer()
-
-                        Text("\(tagName.count)/20")
-                            .font(.system(size: 11, design: .rounded))
-                            .foregroundStyle(.tertiary)
-                    }
-                    .animation(.easeOut(duration: 0.2), value: trimmedName.isEmpty)
+                    Text("\(tagName.count)/20")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                        .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
                 // カラー選択

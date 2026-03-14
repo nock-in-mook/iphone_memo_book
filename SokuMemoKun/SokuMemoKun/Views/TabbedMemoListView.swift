@@ -82,6 +82,17 @@ func tagColor(for index: Int) -> Color {
     return tabColors[index]
 }
 
+// 背景色の明るさに応じてテキスト色を白/黒に自動切替
+func tagTextColor(for colorIndex: Int) -> Color {
+    let bg = tagColor(for: colorIndex)
+    let uiColor = UIColor(bg)
+    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
+    uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
+    // 相対輝度（W3C基準）
+    let luminance = 0.299 * r + 0.587 * g + 0.114 * b
+    return luminance > 0.55 ? .primary : .white
+}
+
 // 紙の質感を表現するオーバーレイ
 struct PaperTextureOverlay: View {
     var body: some View {

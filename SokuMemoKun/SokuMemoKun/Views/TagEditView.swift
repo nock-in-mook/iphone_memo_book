@@ -270,7 +270,7 @@ struct TagDetailEditView: View {
                     HStack {
                         Text(editName.trimmingCharacters(in: .whitespaces))
                             .font(.system(size: 11, weight: .bold, design: .rounded))
-                            .foregroundStyle(.primary.opacity(0.8))
+                            .foregroundStyle(tagTextColor(for: editColorIndex))
                             .padding(.horizontal, 8)
                             .padding(.vertical, 3)
                             .background(
