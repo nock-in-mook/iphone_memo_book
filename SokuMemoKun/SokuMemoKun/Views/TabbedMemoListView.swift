@@ -39,8 +39,8 @@ private let tabColors: [Color] = [
     Color(red: 0.50, green: 0.65, blue: 0.85),  // スレートブルー
 ]
 
-// 「すべて」タブ用の色（薄い白系）
-private let allTabColor = Color(red: 0.92, green: 0.92, blue: 0.92)
+// 「すべて」タブ用の色（薄い黄色）
+private let allTabColor = Color(red: 0.98, green: 0.96, blue: 0.82)
 
 func tagColor(for index: Int) -> Color {
     if index == -1 { return allTabColor }
