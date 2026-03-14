@@ -8,6 +8,7 @@ struct FullEditorView: View {
 
     // マークダウン設定
     @AppStorage("markdownEnabled") private var markdownEnabled = false
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -22,20 +23,12 @@ struct FullEditorView: View {
                         .padding(8)
                 }
 
-                // キーボード上のツールバー
+                // マークダウン時のみ記号バー + キーボード閉じる
                 if isMarkdown && markdownEnabled {
-                    // マークダウン記号バー + キーボード閉じる
                     HStack(spacing: 0) {
                         MarkdownToolbar(text: $text)
                         dismissKeyboardButton
                     }
-                } else {
-                    // ノーマルモード: キーボード閉じるボタンのみ
-                    HStack {
-                        Spacer()
-                        dismissKeyboardButton
-                    }
-                    .background(Color(uiColor: .secondarySystemBackground))
                 }
             }
             .navigationTitle(isMarkdown ? "マークダウン編集" : "テキスト編集")
@@ -46,7 +39,6 @@ struct FullEditorView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    // マークダウンON/OFFトグル（設定でマークダウン有効時のみ）
                     if markdownEnabled {
                         HStack(spacing: 6) {
                             Image(systemName: isMarkdown ? "text.quote" : "text.alignleft")
@@ -60,6 +52,13 @@ struct FullEditorView: View {
                     }
                 }
 
+                // ノーマルモード時: キーボード上に閉じるボタン
+                if !isMarkdown || !markdownEnabled {
+                    ToolbarItemGroup(placement: .keyboard) {
+                        Spacer()
+                        dismissKeyboardButton
+                    }
+                }
             }
         }
     }
