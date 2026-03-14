@@ -249,12 +249,10 @@ struct MemoInputView: View {
     private var tagDisplay: some View {
         HStack(spacing: 3) {
             if viewModel.selectedTagID == nil {
-                // タグ未選択時はプレースホルダー
-                Text("タグ")
-                    .font(.system(size: 11, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
+                // タグ未選択時はアイコンのみ
+                Image(systemName: "tag")
+                    .font(.system(size: 13))
+                    .foregroundStyle(.tertiary)
             } else {
                 let info = selectedTagInfo
                 Text(info.name.prefix(4) + (info.name.count > 4 ? "…" : ""))
