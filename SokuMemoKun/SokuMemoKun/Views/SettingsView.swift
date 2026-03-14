@@ -5,7 +5,6 @@ struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
     @AppStorage("markdownEnabled") private var markdownEnabled = false
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
-    @AppStorage("markdownLayout") private var markdownLayout: String = MarkdownLayout.inline.rawValue
     @AppStorage("restoreLastMemo") private var restoreLastMemo = false
 
     var body: some View {
@@ -40,25 +39,6 @@ struct SettingsView: View {
                                 Text("新規メモでデフォルトON")
                                     .font(.system(size: 15))
                             }
-                        }
-                        .padding(.leading, 8)
-
-                        // レイアウト選択
-                        HStack {
-                            HStack(spacing: 8) {
-                                LayoutIcon(
-                                    layout: MarkdownLayout(rawValue: markdownLayout) ?? .split,
-                                    size: 20
-                                )
-                                Text("プレビュー表示形式")
-                            }
-                            Spacer()
-                            Picker("", selection: $markdownLayout) {
-                                ForEach(MarkdownLayout.allCases, id: \.rawValue) { layout in
-                                    Text(layout.rawValue).tag(layout.rawValue)
-                                }
-                            }
-                            .pickerStyle(.menu)
                         }
                         .padding(.leading, 8)
                     }

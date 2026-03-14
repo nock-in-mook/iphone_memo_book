@@ -1,5 +1,10 @@
 import SwiftUI
 
+// カーソル位置通知
+extension Notification.Name {
+    static let markdownCursorFromEnd = Notification.Name("markdownCursorFromEnd")
+}
+
 // マークダウン記号入力バー（キーボード上部に表示）
 struct MarkdownToolbar: View {
     @Binding var text: String
@@ -45,17 +50,24 @@ struct MarkdownToolbar: View {
     }
 
     private func insertSymbol(prefix: String, suffix: String) {
+        // 挟む系は先にカーソル位置を通知
+        let offset = suffix.count
         if suffix.isEmpty {
-            // 行頭挿入系（見出し、リスト、引用）
-            // 改行の直後またはテキスト先頭に挿入
             if text.isEmpty || text.hasSuffix("\n") {
                 text += prefix
             } else {
                 text += "\n" + prefix
             }
         } else {
-            // 囲み系（太字、斜体、コード、取消線）
             text += prefix + suffix
+        }
+        // テキスト変更後にカーソル位置を通知
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            NotificationCenter.default.post(
+                name: .markdownCursorFromEnd,
+                object: nil,
+                userInfo: ["offset": offset]
+            )
         }
     }
 }

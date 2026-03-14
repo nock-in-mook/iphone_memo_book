@@ -3,7 +3,6 @@ import SwiftData
 
 struct MainView: View {
     @State private var viewModel = MemoInputViewModel()
-    @State private var isKeyboardVisible = false
     @State private var showSettings = false
     @State private var focusInput = false
     @State private var selectedTabIndex: Int = 0
@@ -93,6 +92,20 @@ struct MainView: View {
                             .font(.system(size: 15))
                     }
                 }
+                // キーボード上: 閉じるボタン
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button {
+                        UIApplication.shared.sendAction(
+                            #selector(UIResponder.resignFirstResponder),
+                            to: nil, from: nil, for: nil
+                        )
+                    } label: {
+                        Image(systemName: "keyboard.chevron.compact.down")
+                            .font(.system(size: 16))
+                            .foregroundStyle(.secondary)
+                    }
+                }
             }
             .sheet(isPresented: $showSettings) {
                 SettingsView()
@@ -106,33 +119,6 @@ struct MainView: View {
                 if let tabIndex = notification.userInfo?["tabIndex"] as? Int {
                     selectedTabIndex = tabIndex
                 }
-            }
-            .overlay(alignment: .bottomTrailing) {
-                if isKeyboardVisible {
-                    Button {
-                        UIApplication.shared.sendAction(
-                            #selector(UIResponder.resignFirstResponder),
-                            to: nil, from: nil, for: nil
-                        )
-                    } label: {
-                        Image(systemName: "keyboard.chevron.compact.down")
-                            .font(.title2)
-                            .foregroundStyle(.white)
-                            .padding(12)
-                            .background(Circle().fill(.blue))
-                            .shadow(radius: 3)
-                    }
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 16)
-                    .transition(.scale.combined(with: .opacity))
-                }
-            }
-            .animation(.easeInOut(duration: 0.2), value: isKeyboardVisible)
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
-                isKeyboardVisible = true
-            }
-            .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-                isKeyboardVisible = false
             }
             .onAppear {
                 viewModel.restoreLastMemo(context: modelContext)
