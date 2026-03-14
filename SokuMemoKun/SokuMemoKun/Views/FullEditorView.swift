@@ -77,7 +77,8 @@ struct FullEditorView: View {
     @Binding var isMarkdown: Bool
     @Environment(\.dismiss) private var dismiss
 
-    // マークダウンレイアウト設定（アプリ全体で記憶）
+    // マークダウン設定
+    @AppStorage("markdownEnabled") private var markdownEnabled = false
     @AppStorage("markdownLayout") private var layoutRaw: String = MarkdownLayout.split.rawValue
 
     // タブ切替時の表示モード
@@ -99,6 +100,11 @@ struct FullEditorView: View {
                         .font(.system(size: 16))
                         .padding(8)
                 }
+
+                // マークダウン記号入力バー（マークダウンON時のみ）
+                if isMarkdown && markdownEnabled {
+                    MarkdownToolbar(text: $text)
+                }
             }
             .navigationTitle(isMarkdown ? "マークダウン編集" : "テキスト編集")
             .navigationBarTitleDisplayMode(.inline)
@@ -108,15 +114,17 @@ struct FullEditorView: View {
                 }
 
                 ToolbarItem(placement: .principal) {
-                    // マークダウンON/OFFトグル
-                    HStack(spacing: 6) {
-                        Image(systemName: isMarkdown ? "text.quote" : "text.alignleft")
-                            .font(.system(size: 12))
-                            .foregroundStyle(isMarkdown ? .blue : .secondary)
-                        Toggle("", isOn: $isMarkdown)
-                            .toggleStyle(.switch)
-                            .scaleEffect(0.7)
-                            .labelsHidden()
+                    // マークダウンON/OFFトグル（設定でマークダウン有効時のみ）
+                    if markdownEnabled {
+                        HStack(spacing: 6) {
+                            Image(systemName: isMarkdown ? "text.quote" : "text.alignleft")
+                                .font(.system(size: 12))
+                                .foregroundStyle(isMarkdown ? .blue : .secondary)
+                            Toggle("", isOn: $isMarkdown)
+                                .toggleStyle(.switch)
+                                .scaleEffect(0.7)
+                                .labelsHidden()
+                        }
                     }
                 }
 

@@ -3,6 +3,7 @@ import SwiftUI
 // 設定画面
 struct SettingsView: View {
     @Environment(\.dismiss) private var dismiss
+    @AppStorage("markdownEnabled") private var markdownEnabled = false
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @AppStorage("markdownLayout") private var markdownLayout: String = MarkdownLayout.split.rawValue
     @AppStorage("restoreLastMemo") private var restoreLastMemo = false
@@ -28,27 +29,45 @@ struct SettingsView: View {
                 }
 
                 // マークダウン設定
-                Section("マークダウン") {
-                    Toggle(isOn: $defaultMarkdown) {
-                        Label("新規メモでデフォルトON", systemImage: "text.quote")
+                Section {
+                    Toggle(isOn: $markdownEnabled) {
+                        Label("マークダウンモード", systemImage: "text.quote")
                     }
 
-                    // レイアウト選択
-                    HStack {
-                        HStack(spacing: 8) {
-                            LayoutIcon(
-                                layout: MarkdownLayout(rawValue: markdownLayout) ?? .split,
-                                size: 20
-                            )
-                            Text("プレビュー表示形式")
-                        }
-                        Spacer()
-                        Picker("", selection: $markdownLayout) {
-                            ForEach(MarkdownLayout.allCases, id: \.rawValue) { layout in
-                                Text(layout.rawValue).tag(layout.rawValue)
+                    if markdownEnabled {
+                        Toggle(isOn: $defaultMarkdown) {
+                            HStack {
+                                Text("新規メモでデフォルトON")
+                                    .font(.system(size: 15))
                             }
                         }
-                        .pickerStyle(.menu)
+                        .padding(.leading, 8)
+
+                        // レイアウト選択
+                        HStack {
+                            HStack(spacing: 8) {
+                                LayoutIcon(
+                                    layout: MarkdownLayout(rawValue: markdownLayout) ?? .split,
+                                    size: 20
+                                )
+                                Text("プレビュー表示形式")
+                            }
+                            Spacer()
+                            Picker("", selection: $markdownLayout) {
+                                ForEach(MarkdownLayout.allCases, id: \.rawValue) { layout in
+                                    Text(layout.rawValue).tag(layout.rawValue)
+                                }
+                            }
+                            .pickerStyle(.menu)
+                        }
+                        .padding(.leading, 8)
+                    }
+                } header: {
+                    Text("マークダウン")
+                } footer: {
+                    if !markdownEnabled {
+                        Text("ONにすると記号入力バーやプレビュー機能が使えます")
+                            .font(.system(size: 12))
                     }
                 }
 
