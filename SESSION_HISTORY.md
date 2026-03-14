@@ -710,3 +710,18 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - メモカードにdraggable追加
 - ignoresSafeArea(.keyboard)をGeometryReaderに移動（キーボード問題修正）
 - loadMemoCounter追加（閲覧モード切替トリガー）
+
+---
+## 即メモ_012_入力欄展開とドラッグタブ (2026-03-14)
+
+入力欄の展開/縮小機能とタグタブUI改善。
+- 全画面エディタ廃止→入力欄が下に伸びる方式に変更（isExpanded: 0.48→0.92）
+- ルーレット位置を割合ベースで固定（baseTextAreaHeight × dialTopRatio）
+- タグタブを枠線の外（画面右端）から生やすように変更（overlay + negative padding）
+- タグタブを不透明に（systemGray5）
+- タブインデックスをsortOrderベースに修正（ルーレット↔タブ同期）
+- 「タグなし」選択時のタブ遷移バグ修正
+- テキストエリア右余白調整（20pt）
+- TextEditor/Text間のテキスト位置揃え
+- タグタブをドラッグオンリーで開くように変更（誤タップ防止）
+- FullEditorView.swiftを空に（互換用EmptyView）
