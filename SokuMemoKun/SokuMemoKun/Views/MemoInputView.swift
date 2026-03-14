@@ -136,6 +136,25 @@ struct MemoInputView: View {
                 .padding(.trailing, 20)
 
             }
+            .overlay(alignment: .bottomTrailing) {
+                // 展開/縮小ボタン
+                Button {
+                    withAnimation(.spring(response: 0.35)) {
+                        isExpanded.toggle()
+                    }
+                } label: {
+                    Image(systemName: isExpanded ? "arrow.down.forward.and.arrow.up.backward" : "arrow.up.backward.and.arrow.down.forward")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.white)
+                        .frame(width: 28, height: 28)
+                        .background(
+                            Circle().fill(Color.blue.opacity(0.6))
+                        )
+                        .shadow(color: .black.opacity(0.2), radius: 2, x: -1, y: 1)
+                }
+                .padding(.trailing, 8)
+                .padding(.bottom, 8)
+            }
             .overlay(alignment: .topTrailing) {
                 // 仕切り線直下・右端からタグタブを生やす
                 dialArea
@@ -295,21 +314,6 @@ struct MemoInputView: View {
             .buttonBorderShape(.capsule)
             .controlSize(.small)
             .disabled(!viewModel.canClear)
-
-            // 展開/縮小ボタン
-            Button {
-                withAnimation(.spring(response: 0.35)) {
-                    isExpanded.toggle()
-                }
-            } label: {
-                Image(systemName: isExpanded ? "arrow.down.forward.and.arrow.up.backward" : "arrow.up.backward.and.arrow.down.forward")
-                    .font(.system(size: 14, weight: .semibold))
-                    .foregroundStyle(.white)
-                    .frame(width: 28, height: 28)
-                    .background(
-                        Circle().fill(Color.blue.opacity(0.6))
-                    )
-            }
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
