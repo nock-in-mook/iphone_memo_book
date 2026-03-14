@@ -8,6 +8,7 @@ struct MainView: View {
     @State private var focusInput = false
     @State private var selectedTabIndex: Int = 0
     @State private var searchText = ""
+    @State private var isInputExpanded = false
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @AppStorage("markdownEnabled") private var markdownEnabled = false
     @Environment(\.modelContext) private var modelContext
@@ -16,14 +17,15 @@ struct MainView: View {
         NavigationStack {
             GeometryReader { geo in
                 VStack(spacing: 0) {
-                    // 上半分: 入力欄（常に同じ画面）
+                    // 上: 入力欄（展開時は画面いっぱいに伸びる）
                     MemoInputView(
                         viewModel: viewModel,
-                        focusInput: $focusInput
+                        focusInput: $focusInput,
+                        isExpanded: $isInputExpanded
                     )
-                    .frame(height: geo.size.height * 0.48)
+                    .frame(height: geo.size.height * (isInputExpanded ? 0.92 : 0.48))
 
-                    // 下半分: フォルダ付きメモ一覧
+                    // 下: フォルダ付きメモ一覧
                     TabbedMemoListView(
                         selectedTabIndex: $selectedTabIndex,
                         searchText: $searchText,

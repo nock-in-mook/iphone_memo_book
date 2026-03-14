@@ -8,6 +8,7 @@ extension Notification.Name {
 struct MemoInputView: View {
     @Bindable var viewModel: MemoInputViewModel
     @Binding var focusInput: Bool
+    @Binding var isExpanded: Bool
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
     @FocusState private var isTextEditorFocused: Bool
@@ -15,10 +16,6 @@ struct MemoInputView: View {
     // 新規タグ作成シート
     @State private var showNewTagSheet = false
     @State private var newTagIsChild = false
-    // 全画面編集
-    @State private var showFullEditor = false
-    // 全画面を開いた時点で既存メモだったか（途中で切り替わらないように記録）
-    @State private var fullEditorIsExistingMemo = false
     // 既存メモ読み込み時は閲覧モード（タップで編集開始）
     @State private var isEditing = true
     // 削除確認ダイアログ
@@ -29,11 +26,31 @@ struct MemoInputView: View {
     @State private var childExternalDragY: CGFloat? = nil
     @AppStorage("dialDefault") private var dialDefault: Int = 0
 
+    @AppStorage("allTagSortOrder") private var allTagSortOrder: Int = -1
+    @AppStorage("noTagSortOrder") private var noTagSortOrder: Int = 9999
+
     private func tabIndex(for tagID: UUID?) -> Int {
-        guard let tagID = tagID else { return 0 }
-        let parentTags = tags.filter { $0.parentTagID == nil }
-        if let idx = parentTags.firstIndex(where: { $0.id == tagID }) {
-            return idx + 1
+        // TabbedMemoListViewのtabItemsと同じ並び順で計算
+        // label: "all"=すべて, "none"=タグなし, それ以外=タグID
+        struct TabEntry: Comparable {
+            let key: String
+            let order: Int
+            static func < (lhs: TabEntry, rhs: TabEntry) -> Bool { lhs.order < rhs.order }
+        }
+        var entries: [TabEntry] = []
+        entries.append(TabEntry(key: "all", order: allTagSortOrder))
+        entries.append(TabEntry(key: "none", order: noTagSortOrder))
+        for tag in tags where tag.parentTagID == nil {
+            entries.append(TabEntry(key: tag.id.uuidString, order: tag.sortOrder))
+        }
+        entries.sort()
+
+        // タグなし選択時は「タグなし」タブへ
+        guard let tagID = tagID else {
+            return entries.firstIndex(where: { $0.key == "none" }) ?? 0
+        }
+        if let idx = entries.firstIndex(where: { $0.key == tagID.uuidString }) {
+            return idx
         }
         return 0
     }
@@ -79,53 +96,63 @@ struct MemoInputView: View {
             // ヘッダー: タイトル + タグ
             headerRow
             Divider()
-            // 本文 + ルーレット
-            HStack(spacing: 0) {
-                ZStack(alignment: .topTrailing) {
-                    // 本文入力（編集中はTextEditor、閲覧中はText）
-                    ZStack(alignment: .topLeading) {
-                        if isEditing {
-                            TextEditor(text: $viewModel.inputText)
+            // 本文（右端はタグタブ分空ける）
+            ZStack(alignment: .topTrailing) {
+                // 本文入力（編集中はTextEditor、閲覧中はText）
+                ZStack(alignment: .topLeading) {
+                    if isEditing {
+                        TextEditor(text: $viewModel.inputText)
+                            .font(.system(size: 17))
+                            .padding(.leading, 4)
+                            .padding(.top, 4)
+                            .focused($isTextEditorFocused)
+                    } else {
+                        ScrollView {
+                            Text(viewModel.inputText.isEmpty ? " " : viewModel.inputText)
                                 .font(.system(size: 17))
-                                .padding(.horizontal, 4)
-                                .padding(.top, 4)
-                                .padding(.trailing, 24)
-                                .focused($isTextEditorFocused)
-                        } else {
-                            ScrollView {
-                                Text(viewModel.inputText.isEmpty ? " " : viewModel.inputText)
-                                    .font(.system(size: 17))
-                                    .foregroundStyle(viewModel.inputText.isEmpty ? .clear : .primary)
-                                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                                    .padding(.horizontal, 8)
-                                    .padding(.top, 8)
-                                    .padding(.trailing, 24)
-                            }
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                isEditing = true
-                                isTextEditorFocused = true
-                            }
+                                .foregroundStyle(viewModel.inputText.isEmpty ? .clear : .primary)
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                                .padding(.leading, 9)
+                                .padding(.trailing, 5)
+                                .padding(.top, 12)
                         }
-
-                        if viewModel.inputText.isEmpty && isEditing {
-                            Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
-                                .font(.system(size: 17))
-                                .foregroundStyle(.gray.opacity(0.5))
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 12)
-                                .allowsHitTesting(false)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            isEditing = true
+                            isTextEditorFocused = true
                         }
                     }
-                    .frame(maxHeight: .infinity)
 
-                    // 最大化ボタン（右上ぴったり）
+                    if viewModel.inputText.isEmpty && isEditing {
+                        Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
+                            .font(.system(size: 17))
+                            .foregroundStyle(.gray.opacity(0.5))
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 12)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .frame(maxHeight: .infinity)
+                .padding(.trailing, 20)
+                .background(
+                    GeometryReader { geo in
+                        Color.clear
+                            .onAppear { baseTextAreaHeight = geo.size.height }
+                            .onChange(of: geo.size.height) { _, h in
+                                if !isExpanded { baseTextAreaHeight = h }
+                            }
+                    }
+                )
+
+                // 展開/縮小ボタン（ルーレット展開中は非表示）
+                if !showParentDial {
                     Button {
-                        fullEditorIsExistingMemo = (viewModel.editingMemo != nil)
-                        showFullEditor = true
+                        withAnimation(.spring(response: 0.35)) {
+                            isExpanded.toggle()
+                        }
                     } label: {
-                        Image(systemName: "viewfinder")
-                            .font(.system(size: 14))
+                        Image(systemName: isExpanded ? "arrow.down.right.and.arrow.up.left" : "arrow.up.left.and.arrow.down.right")
+                            .font(.system(size: 12))
                             .foregroundStyle(.gray.opacity(0.5))
                             .padding(5)
                             .background(Circle().fill(Color(uiColor: .systemBackground).opacity(0.9)))
@@ -133,7 +160,6 @@ struct MemoInputView: View {
                     .padding(.trailing, 2)
                     .padding(.top, 2)
                 }
-                dialArea
             }
             Divider()
             // フッター: 左=削除 右=コピー+保存
@@ -147,6 +173,11 @@ struct MemoInputView: View {
             RoundedRectangle(cornerRadius: 10)
                 .stroke(Color.gray.opacity(0.25), lineWidth: 1)
         )
+        .overlay(alignment: .trailing) {
+            // 枠線の外（右端）からタグを生やす
+            dialArea
+                .padding(.trailing, -10)
+        }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
         .alert("このメモを削除します。よろしいですか？", isPresented: $showDeleteAlert) {
@@ -173,14 +204,6 @@ struct MemoInputView: View {
                     }
                 }
             )
-        }
-        .fullScreenCover(isPresented: $showFullEditor) {
-            // 開いた時点のモードで固定（途中でeditingMemoが変わっても切り替わらない）
-            if fullEditorIsExistingMemo, let memo = viewModel.editingMemo {
-                MemoDetailView(memo: memo)
-            } else {
-                FullEditorView(text: $viewModel.inputText, isMarkdown: $viewModel.isMarkdown)
-            }
         }
         .onChange(of: focusInput) { _, newValue in
             if newValue { isEditing = true; isTextEditorFocused = true; focusInput = false }
@@ -296,7 +319,26 @@ struct MemoInputView: View {
 
     // MARK: - ルーレット（収納式）
 
+    // ルーレットの固定高さ
+    private let dialFixedHeight: CGFloat = 160
+    // 画面上端からの割合（テキストエリア内での位置）
+    private let dialTopRatio: CGFloat = 0.5
+
+    // 縮小時のテキストエリア高さを記録（展開時は更新しない）
+    @State private var baseTextAreaHeight: CGFloat = 0
+
     private var dialArea: some View {
+        let topOffset = max(0, baseTextAreaHeight * dialTopRatio - dialFixedHeight / 2)
+        return VStack(spacing: 0) {
+            Spacer().frame(height: topOffset)
+            dialContent
+                .frame(height: dialFixedHeight)
+            Spacer(minLength: 0)
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private var dialContent: some View {
         HStack(spacing: 0) {
             if showParentDial {
                 Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
@@ -381,12 +423,9 @@ struct MemoInputView: View {
                 }
                 .foregroundStyle(.secondary)
                 .frame(width: 28, height: 80)
-                .background(RoundedRectangle(cornerRadius: 6).fill(Color.gray.opacity(0.12)))
+                .background(RoundedRectangle(cornerRadius: 6).fill(Color(uiColor: .systemGray5)))
                 .contentShape(Rectangle())
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.3)) { showParentDial = true }
-                }
-                .simultaneousGesture(
+                .gesture(
                     DragGesture(minimumDistance: 5)
                         .onChanged { _ in
                             if !showParentDial {
