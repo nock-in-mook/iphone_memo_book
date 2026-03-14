@@ -256,21 +256,18 @@ struct TagDetailEditView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
-                // プレビュー（タグ名と色選択の間、中央寄せ・大きめ）
-                if !editName.trimmingCharacters(in: .whitespaces).isEmpty {
-                    Text(editName.trimmingCharacters(in: .whitespaces))
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(tagTextColor(for: editColorIndex))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(tagColor(for: editColorIndex))
-                        )
-                        .frame(maxWidth: .infinity, alignment: .center)
-                        .animation(.easeOut(duration: 0.15), value: editColorIndex)
-                        .transition(.opacity.combined(with: .scale(scale: 0.8)))
-                }
+                // プレビュー（常にスペース確保、入力中のみ表示）
+                Text(editName.trimmingCharacters(in: .whitespaces).isEmpty ? " " : editName.trimmingCharacters(in: .whitespaces))
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundStyle(editName.trimmingCharacters(in: .whitespaces).isEmpty ? .clear : tagTextColor(for: editColorIndex))
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(editName.trimmingCharacters(in: .whitespaces).isEmpty ? Color.clear : tagColor(for: editColorIndex))
+                    )
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .animation(.easeOut(duration: 0.15), value: editColorIndex)
 
                 // カラー選択（コンパクト）
                 VStack(alignment: .leading, spacing: 6) {
