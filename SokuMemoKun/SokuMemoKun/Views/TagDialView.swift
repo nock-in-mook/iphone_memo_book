@@ -257,8 +257,7 @@ struct TagDialView: View {
             hl.addLine(to: CGPoint(x: pLeft + pw - 3, y: cy))
             context.stroke(hl, with: .color(.white.opacity(0.5)), lineWidth: 1)
         }
-        .frame(width: sectorThickness + 10, height: dialHeight)
-        .frame(width: width, alignment: .leading)
+        .frame(width: width, height: dialHeight)
         .clipped()
         .contentShape(Rectangle())
         .gesture(

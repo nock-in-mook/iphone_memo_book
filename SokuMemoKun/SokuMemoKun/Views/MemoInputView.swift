@@ -139,7 +139,7 @@ struct MemoInputView: View {
                 .frame(maxHeight: .infinity)
 
             }
-            .padding(.trailing, showParentDial ? (showChildDial ? 155 : 115) : 0)
+            .padding(.trailing, showParentDial ? (showChildDial ? 185 : 135) : 0)
             .animation(.spring(response: 0.3), value: showParentDial)
             .animation(.spring(response: 0.3), value: showChildDial)
             .overlay(alignment: .bottomTrailing) {
@@ -347,7 +347,7 @@ struct MemoInputView: View {
                 TagDialView(
                     options: parentOptions,
                     selectedID: $viewModel.selectedTagID,
-                    width: showChildDial ? 70 : 90,
+                    width: showChildDial ? 85 : 110,
                     onAddTap: { newTagIsChild = false; showNewTagSheet = true },
                     externalDragY: .constant(nil)
                 )
@@ -359,7 +359,7 @@ struct MemoInputView: View {
                             TagDialView(
                                 options: childOptions,
                                 selectedID: $viewModel.selectedChildTagID,
-                                width: 65,
+                                width: 80,
                                 onAddTap: { newTagIsChild = true; showNewTagSheet = true },
                                 externalDragY: $childExternalDragY
                             )
