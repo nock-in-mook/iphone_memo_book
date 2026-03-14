@@ -103,7 +103,7 @@ struct MemoInputView: View {
                     if isEditing {
                         TextEditor(text: $viewModel.inputText)
                             .font(.system(size: 17))
-                            .padding(.leading, 4)
+                            .padding(.leading, 10)
                             .padding(.trailing, 4)
                             .padding(.top, 16)
                             .focused($isTextEditorFocused)
@@ -113,7 +113,7 @@ struct MemoInputView: View {
                                 .font(.system(size: 17))
                                 .foregroundStyle(viewModel.inputText.isEmpty ? .clear : .primary)
                                 .frame(maxWidth: .infinity, alignment: .topLeading)
-                                .padding(.leading, 9)
+                                .padding(.leading, 15)
                                 .padding(.trailing, 9)
                                 .padding(.top, 24)
                         }
@@ -128,7 +128,8 @@ struct MemoInputView: View {
                         Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
                             .font(.system(size: 17))
                             .foregroundStyle(.gray.opacity(0.5))
-                            .padding(.horizontal, 8)
+                            .padding(.leading, 14)
+                            .padding(.trailing, 8)
                             .padding(.vertical, 24)
                             .allowsHitTesting(false)
                     }
