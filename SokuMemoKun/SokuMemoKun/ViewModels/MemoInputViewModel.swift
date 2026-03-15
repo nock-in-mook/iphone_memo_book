@@ -15,8 +15,6 @@ class MemoInputViewModel {
     var openFullEditor: Bool = false
     // loadMemo中フラグ（onChangeでの子タグリセットを防止）
     var isLoadingMemo: Bool = false
-    // clearInput中フラグ（onChangeでのタブ移動を防止）
-    var isClearingInput: Bool = false
     // loadMemoが呼ばれた回数（Viewが閲覧モードに切り替えるトリガー）
     var loadMemoCounter: Int = 0
 
@@ -97,7 +95,6 @@ class MemoInputViewModel {
 
     // 保存ボタン（入力欄をクリアして新規入力待ちに）
     func clearInput() {
-        isClearingInput = true
         editingMemo = nil
         inputText = ""
         titleText = ""
@@ -105,10 +102,6 @@ class MemoInputViewModel {
         selectedChildTagID = nil
         isMarkdown = UserDefaults.standard.bool(forKey: "defaultMarkdown")
         UserDefaults.standard.removeObject(forKey: "lastEditingMemoID")
-        // onChangeは次のレンダリングサイクルで発火するので、次サイクルでフラグを戻す
-        DispatchQueue.main.async { [weak self] in
-            self?.isClearingInput = false
-        }
     }
 
     // 既存メモを入力欄に読み込む

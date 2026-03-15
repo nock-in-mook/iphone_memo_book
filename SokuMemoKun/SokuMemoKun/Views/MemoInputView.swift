@@ -222,11 +222,7 @@ struct MemoInputView: View {
         .onChange(of: viewModel.selectedTagID) { _, newTagID in
             if !viewModel.isLoadingMemo { viewModel.selectedChildTagID = nil }
             viewModel.onTagChanged(tags: tags)
-            // clearInput中はフォルダ移動しない（今いるフォルダに留まる）
-            if !viewModel.isClearingInput {
-                let idx = tabIndex(for: newTagID)
-                NotificationCenter.default.post(name: .switchToTab, object: nil, userInfo: ["tabIndex": idx])
-            }
+            // フォルダ移動はルーレット操作時のみ（switchToTabはTagDialViewから直接発火）
         }
         .onChange(of: viewModel.selectedChildTagID) { _, _ in
             viewModel.onTagChanged(tags: tags)

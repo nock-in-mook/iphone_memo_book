@@ -395,7 +395,8 @@ struct TagDialView: View {
         let index = snappedIndex(rotation: parentRotation, count: parentOptions.count)
         if index < parentOptions.count {
             let option = parentOptions[index]
-            parentSelectedID = option.id == "none" ? nil : UUID(uuidString: option.id)
+            let newID = option.id == "none" ? nil : UUID(uuidString: option.id)
+            parentSelectedID = newID
         }
     }
 
