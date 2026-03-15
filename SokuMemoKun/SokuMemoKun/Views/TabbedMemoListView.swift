@@ -167,6 +167,8 @@ struct TabbedMemoListView: View {
     var onDeleteMemo: ((Memo) -> Void)?
     // 入力欄展開時はコンパクト表示（選択削除等を非表示）
     var isCompact = false
+    // 「記入中のメモをここに追加」コールバック
+    var onAddToCurrentTab: ((UUID?) -> Void)?
 
     // 並び替えシート表示
     @State private var showReorderSheet = false
@@ -550,8 +552,30 @@ struct TabbedMemoListView: View {
                     removal: .move(edge: swipeDirection == .left ? .leading : .trailing)
                 ))
 
-                // 上部ツールバー（メモ枚数・メモ追加・グリッドサイズ）コンパクト時は非表示
-                if !isCompact {
+                // 上部ツールバー
+                if isCompact {
+                    // コンパクト時: 「記入中のメモをここに追加」ボタンだけ
+                    HStack {
+                        Button {
+                            let currentTag = tabItems[selectedTabIndex].tag
+                            onAddToCurrentTab?(currentTag?.id)
+                        } label: {
+                            Label("記入中のメモをここに追加", systemImage: "arrow.down.doc")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .foregroundStyle(.blue)
+                                .padding(.horizontal, 10)
+                                .padding(.vertical, 5)
+                                .background(
+                                    Capsule()
+                                        .fill(Color(uiColor: .systemBackground).opacity(0.9))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                        Spacer()
+                    }
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 4)
+                } else {
                 ZStack(alignment: .top) {
                     HStack(spacing: 8) {
                         Text("\(filteredMemos.count)枚のメモ")

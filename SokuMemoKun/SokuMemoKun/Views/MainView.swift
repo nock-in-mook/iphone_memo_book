@@ -43,7 +43,12 @@ struct MainView: View {
                                 viewModel.clearInput()
                             }
                         },
-                        isCompact: isInputExpanded
+                        isCompact: isInputExpanded,
+                        onAddToCurrentTab: { tagID in
+                            // 記入中のメモのタグを現在のタブに設定して確定
+                            viewModel.selectedTagID = tagID
+                            viewModel.clearInput()
+                        }
                     )
                 }
             }
