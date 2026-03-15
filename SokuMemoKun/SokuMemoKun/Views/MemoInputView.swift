@@ -222,8 +222,11 @@ struct MemoInputView: View {
         .onChange(of: viewModel.selectedTagID) { _, newTagID in
             if !viewModel.isLoadingMemo { viewModel.selectedChildTagID = nil }
             viewModel.onTagChanged(tags: tags)
-            let idx = tabIndex(for: newTagID)
-            NotificationCenter.default.post(name: .switchToTab, object: nil, userInfo: ["tabIndex": idx])
+            // clearInput中はフォルダ移動しない（今いるフォルダに留まる）
+            if !viewModel.isClearingInput {
+                let idx = tabIndex(for: newTagID)
+                NotificationCenter.default.post(name: .switchToTab, object: nil, userInfo: ["tabIndex": idx])
+            }
         }
         .onChange(of: viewModel.selectedChildTagID) { _, _ in
             viewModel.onTagChanged(tags: tags)
