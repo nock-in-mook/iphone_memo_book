@@ -707,14 +707,14 @@ struct TabbedMemoListView: View {
                                 selectedMemoIDs.removeAll()
                             } label: {
                                 Text("取消")
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
                                     .background(
                                         Capsule()
-                                            .fill(Color(uiColor: .systemBackground).opacity(0.9))
-                                            .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                                            .fill(Color.blue.opacity(0.7))
+                                            .shadow(color: .black.opacity(0.2), radius: 3, y: 1)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -727,15 +727,18 @@ struct TabbedMemoListView: View {
                                 selectedMemoIDs.removeAll()
                             }
                         } label: {
-                            Label(isSelectMode ? "削除" : "選択削除", systemImage: "trash")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                            Image(systemName: isSelectMode ? "trash.fill" : "trash")
+                                .font(.system(size: 17))
                                 .foregroundStyle(isSelectMode && !selectedMemoIDs.isEmpty ? .red : .secondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
+                                .padding(10)
                                 .background(
                                     Capsule()
-                                        .fill(Color(uiColor: .systemBackground).opacity(0.9))
-                                        .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                                        .fill(.ultraThinMaterial)
+                                        .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.gray.opacity(0.4), lineWidth: 1.5)
                                 )
                         }
                         .buttonStyle(.plain)
@@ -952,18 +955,23 @@ struct TabbedMemoListView: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 12))
+                    .font(.system(size: 15))
                 Text(currentGridSize.label)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
             }
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .background(
                 Capsule()
-                    .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                    .fill(currentColor.opacity(0.85))
+                    .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.gray.opacity(0.4), lineWidth: 1.5)
             )
         }
     }
