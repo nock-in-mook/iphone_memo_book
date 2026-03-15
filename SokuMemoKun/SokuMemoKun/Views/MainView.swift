@@ -50,6 +50,7 @@ struct MainView: View {
                             let savedMemoID = viewModel.editingMemo?.id
                             viewModel.selectedTagID = tagID
                             viewModel.onTagChanged(tags: tags)
+                            try? modelContext.save()
                             viewModel.clearInput()
                             // フラッシュ通知
                             if let memoID = savedMemoID {
