@@ -586,7 +586,7 @@ struct TabbedMemoListView: View {
 
                         Spacer()
 
-                        // 記入中のメモをここに保存
+                        // 記入中のメモをここに保存（中央配置）
                         Button {
                             if isSelectMode { isSelectMode = false; selectedMemoIDs.removeAll() }
                             let currentTag = tabItems[selectedTabIndex].tag
@@ -603,6 +603,8 @@ struct TabbedMemoListView: View {
                                 )
                         }
                         .buttonStyle(.plain)
+
+                        Spacer()
 
                         gridSizeButton
                     }
