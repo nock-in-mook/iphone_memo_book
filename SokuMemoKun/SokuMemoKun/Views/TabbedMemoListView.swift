@@ -165,6 +165,8 @@ struct TabbedMemoListView: View {
     var onAddMemo: ((UUID?) -> Void)?
     var onEditMemo: ((Memo) -> Void)?
     var onDeleteMemo: ((Memo) -> Void)?
+    // 入力欄展開時はコンパクト表示（選択削除等を非表示）
+    var isCompact = false
 
     // 並び替えシート表示
     @State private var showReorderSheet = false
@@ -588,7 +590,8 @@ struct TabbedMemoListView: View {
                         .padding(.bottom, -8)
                     )
 
-                    // 右下: 選択削除ボタン
+                    // 右下: 選択削除ボタン（コンパクト時は非表示）
+                    if !isCompact {
                     VStack {
                         Spacer()
                         HStack {
@@ -635,6 +638,7 @@ struct TabbedMemoListView: View {
                     }
                     .padding(.horizontal, 10)
                     .padding(.bottom, 8)
+                    }
                     }
                 }
             }

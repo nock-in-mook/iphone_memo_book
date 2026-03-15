@@ -42,7 +42,8 @@ struct MainView: View {
                             if viewModel.editingMemo?.id == memo.id {
                                 viewModel.clearInput()
                             }
-                        }
+                        },
+                        isCompact: isInputExpanded
                     )
                 }
             }
