@@ -550,7 +550,8 @@ struct TabbedMemoListView: View {
                     removal: .move(edge: swipeDirection == .left ? .leading : .trailing)
                 ))
 
-                // 上部ツールバー（メモ枚数・メモ追加・グリッドサイズ）
+                // 上部ツールバー（メモ枚数・メモ追加・グリッドサイズ）コンパクト時は非表示
+                if !isCompact {
                 ZStack(alignment: .top) {
                     HStack(spacing: 8) {
                         Text("\(filteredMemos.count)枚のメモ")
@@ -640,6 +641,7 @@ struct TabbedMemoListView: View {
                     .padding(.bottom, 8)
                     }
                     }
+                }
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: currentGridSize)
