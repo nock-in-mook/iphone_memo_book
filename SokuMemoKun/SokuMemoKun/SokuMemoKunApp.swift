@@ -23,7 +23,7 @@ struct SokuMemoKunApp: App {
 
     // 全データ削除→バリエーション豊富なサンプル投入
     private static func resetAndInsertSamples(container: ModelContainer) {
-        let key = "sampleDataV6"
+        let key = "sampleDataV7"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
 
         let context = ModelContext(container)
@@ -70,6 +70,7 @@ struct SokuMemoKunApp: App {
             (shumi, [("ギター", 22), ("ランニング", 23), ("映画", 24)]),
             (idea, [("アプリ", 10), ("ビジネス", 11)]),
             (kenkou, [("食事", 16), ("運動", 17)]),
+            (shigoto, [("企画", 12), ("営業", 13), ("開発", 14), ("人事", 6), ("総務", 7), ("広報", 18), ("法務", 19), ("経理", 20), ("品質", 21), ("教育", 25), ("海外", 26), ("保守", 27)]),
         ]
         for (parent, defs) in childDefs {
             var childTags: [Tag] = []

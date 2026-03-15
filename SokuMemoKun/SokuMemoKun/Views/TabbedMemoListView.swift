@@ -796,7 +796,7 @@ struct TabbedMemoListView: View {
 
     private var childTagDrawer: some View {
         GeometryReader { geo in
-            let screenMaxReveal = geo.size.width - 10
+            let screenMaxReveal = geo.size.width - 10 - 30  // 取っ手幅（30pt）を確保
             // コンテンツ幅 or 画面幅の小さい方が最大引き出し量
             let contentMax = min(drawerContentWidth, screenMaxReveal)
             let reveal = min(max(0, effectiveDrawerReveal), contentMax)
@@ -812,6 +812,7 @@ struct TabbedMemoListView: View {
                         Image(systemName: "arrowtriangle.right.fill")
                             .font(.system(size: 14))
                             .foregroundStyle(.white.opacity(0.8))
+                            .padding(.leading, 4)
                     } else {
                         HStack(spacing: 2) {
                             Image(systemName: "arrowtriangle.left.fill")
@@ -825,7 +826,7 @@ struct TabbedMemoListView: View {
                         }
                     }
                 }
-                .frame(width: reveal > 0 ? 30 : drawerHandleTextWidth, height: drawerHandleHeight)
+                .frame(width: reveal > 0 ? 30 : drawerHandleTextWidth, height: reveal > 0 ? drawerBandHeight : drawerHandleHeight)
                 .contentShape(Rectangle())
                 .onTapGesture {
                     withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
