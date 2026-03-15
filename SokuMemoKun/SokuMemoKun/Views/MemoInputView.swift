@@ -426,7 +426,7 @@ struct MemoInputView: View {
                     // 上部: 横長タブ（今まで通り）
                     HStack(spacing: 2) {
                         Text("◀").font(.system(size: 12))
-                        Text("タグ").font(.system(size: 13, weight: .bold, design: .rounded))
+                        Text("タグ付").font(.system(size: 13, weight: .bold, design: .rounded))
                     }
                     .foregroundStyle(.white)
                     .frame(width: 60, height: 22, alignment: .leading)
