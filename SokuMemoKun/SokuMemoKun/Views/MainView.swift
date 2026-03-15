@@ -23,7 +23,7 @@ struct MainView: View {
                         focusInput: $focusInput,
                         isExpanded: $isInputExpanded
                     )
-                    .frame(height: geo.size.height * (isInputExpanded ? 0.92 : 0.48))
+                    .frame(height: geo.size.height * (isInputExpanded ? 0.85 : 0.48))
 
                     // 下: フォルダ付きメモ一覧
                     TabbedMemoListView(

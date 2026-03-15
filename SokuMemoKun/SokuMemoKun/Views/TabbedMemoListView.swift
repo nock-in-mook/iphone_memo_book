@@ -549,7 +549,7 @@ struct TabbedMemoListView: View {
                 ))
 
                 // 上部ツールバー（メモ枚数・メモ追加・グリッドサイズ）
-                VStack {
+                VStack(spacing: 0) {
                     HStack(spacing: 8) {
                         Text("\(filteredMemos.count)枚のメモ")
                             .font(.system(size: 13, weight: .medium, design: .rounded))
