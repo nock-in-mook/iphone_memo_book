@@ -9,9 +9,13 @@ struct MainView: View {
     @State private var selectedTabIndex: Int = 0
     @State private var searchText = ""
     @State private var isInputExpanded = false
+    // 「ここに保存」確認ダイアログ
+    @State private var showSaveToTabAlert = false
+    @State private var pendingSaveTagID: UUID? = nil
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @AppStorage("markdownEnabled") private var markdownEnabled = false
     @Environment(\.modelContext) private var modelContext
+    @Query(sort: \Tag.name) private var tags: [Tag]
 
     var body: some View {
         NavigationStack {
@@ -23,7 +27,7 @@ struct MainView: View {
                         focusInput: $focusInput,
                         isExpanded: $isInputExpanded
                     )
-                    .frame(height: geo.size.height * (isInputExpanded ? 0.92 : 0.48))
+                    .frame(height: isInputExpanded ? geo.size.height * 0.92 : geo.size.height * 0.48 - 30)
 
                     // 下: フォルダ付きメモ一覧
                     TabbedMemoListView(
@@ -42,6 +46,12 @@ struct MainView: View {
                             if viewModel.editingMemo?.id == memo.id {
                                 viewModel.clearInput()
                             }
+                        },
+                        isCompact: isInputExpanded,
+                        onAddToCurrentTab: { tagID in
+                            // 確認ダイアログを表示
+                            pendingSaveTagID = tagID
+                            showSaveToTabAlert = true
                         }
                     )
                 }
@@ -49,14 +59,25 @@ struct MainView: View {
             .ignoresSafeArea(.keyboard)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // 左: ＋ボタン（新規メモ作成）
+                // 左: 展開時は「←」で縮小、通常時は「＋」で新規メモ
                 ToolbarItem(placement: .topBarLeading) {
-                    Button {
-                        viewModel.clearInput()
-                        focusInput = true
-                    } label: {
-                        Image(systemName: "plus.circle")
-                            .font(.system(size: 17))
+                    if isInputExpanded {
+                        Button {
+                            withAnimation(.spring(response: 0.35)) {
+                                isInputExpanded = false
+                            }
+                        } label: {
+                            Image(systemName: "chevron.left")
+                                .font(.system(size: 17))
+                        }
+                    } else {
+                        Button {
+                            viewModel.clearInput()
+                            focusInput = true
+                        } label: {
+                            Image(systemName: "plus.circle")
+                                .font(.system(size: 17))
+                        }
                     }
                 }
                 // 中央: 検索バー
@@ -153,6 +174,23 @@ struct MainView: View {
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
                 isKeyboardVisible = false
             }
+            .alert("このメモを「\(saveToTabTagName)」に保存します。よろしいですか？", isPresented: $showSaveToTabAlert) {
+                Button("保存") {
+                    let savedMemoID = viewModel.editingMemo?.id
+                    viewModel.selectedTagID = pendingSaveTagID
+                    viewModel.onTagChanged(tags: tags)
+                    try? modelContext.save()
+                    viewModel.clearInput()
+                    if let memoID = savedMemoID {
+                        NotificationCenter.default.post(
+                            name: .memoSavedFlash,
+                            object: nil,
+                            userInfo: ["memoID": memoID]
+                        )
+                    }
+                }
+                Button("キャンセル", role: .cancel) {}
+            }
             .onAppear {
                 viewModel.restoreLastMemo(context: modelContext)
                 // マスタースイッチOFFなら起動時もマークダウン解除
@@ -161,5 +199,14 @@ struct MainView: View {
                 }
             }
         }
+    }
+
+    // 「ここに保存」ダイアログ用のタグ名
+    private var saveToTabTagName: String {
+        if let tagID = pendingSaveTagID,
+           let tag = tags.first(where: { $0.id == tagID }) {
+            return tag.name
+        }
+        return "タグなし"
     }
 }

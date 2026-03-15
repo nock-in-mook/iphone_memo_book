@@ -165,11 +165,25 @@ struct TabbedMemoListView: View {
     var onAddMemo: ((UUID?) -> Void)?
     var onEditMemo: ((Memo) -> Void)?
     var onDeleteMemo: ((Memo) -> Void)?
+    // 入力欄展開時はコンパクト表示（選択削除等を非表示）
+    var isCompact = false
+    // 「記入中のメモをここに保存」コールバック
+    var onAddToCurrentTab: ((UUID?) -> Void)?
+    // フラッシュ対象のメモID（保存直後にハイライト）
+    @State private var flashMemoID: UUID?
+    // タブフラッシュ
+    @State private var flashTabIndex: Int?
 
     // 並び替えシート表示
     @State private var showReorderSheet = false
     // タグ追加シート
     @State private var showAddTagSheet = false
+    // 子タグ引き出しドロワー
+    @State private var drawerReveal: CGFloat = 0       // 引き出し量（0=閉、maxで全開）
+    @State private var drawerDragOffset: CGFloat = 0   // ドラッグ中の一時オフセット
+    @State private var selectedChildFilterID: UUID? = nil
+    @State private var showAddChildTagSheet = false
+    private let drawerHandleWidth: CGFloat = 28         // 「子タグ」タブの幅
 
     // colorIndex == -1 は「すべて」タブを示す特別な値
     private let allTabColorIndex = -1
@@ -192,6 +206,30 @@ struct TabbedMemoListView: View {
     // 「すべて」タブかどうか
     private var isAllTab: Bool {
         tabItems[selectedTabIndex].colorIndex == allTabColorIndex
+    }
+
+    // 「タグなし」タブかどうか
+    private var isNoTagTab: Bool {
+        let item = tabItems[selectedTabIndex]
+        return item.tag == nil && item.colorIndex != allTabColorIndex
+    }
+
+    // 現在の親タグ（あれば）
+    private var currentParentTag: Tag? {
+        tabItems[selectedTabIndex].tag
+    }
+
+    // 現在の親タグの子タグ一覧（sortOrder順）
+    private var childTags: [Tag] {
+        guard let parentTag = currentParentTag else { return [] }
+        return tags
+            .filter { $0.parentTagID == parentTag.id }
+            .sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    // 子タグパネルを表示すべきか（親タグタブのときのみ）
+    private var canShowChildTagPanel: Bool {
+        !isAllTab && !isNoTagTab && currentParentTag != nil
     }
 
     // 現在のタブのグリッドサイズ
@@ -228,9 +266,16 @@ struct TabbedMemoListView: View {
             return allMemos
         }
         if let tag = item.tag {
-            return allMemos.filter { memo in
+            let parentFiltered = allMemos.filter { memo in
                 memo.tags.contains { $0.id == tag.id }
             }
+            // 子タグフィルター適用
+            if let childID = selectedChildFilterID {
+                return parentFiltered.filter { memo in
+                    memo.tags.contains { $0.id == childID }
+                }
+            }
+            return parentFiltered
         } else {
             return allMemos.filter { $0.tags.isEmpty }
         }
@@ -295,9 +340,14 @@ struct TabbedMemoListView: View {
                 TabBarView(
                     tabItems: tabItems,
                     selectedTabIndex: $selectedTabIndex,
+                    flashTabIndex: flashTabIndex,
                     onSelectModeReset: {
                         isSelectMode = false
                         selectedMemoIDs.removeAll()
+                        // タブ切替時に子タグフィルターリセット
+                        selectedChildFilterID = nil
+                        drawerReveal = 0
+                        drawerDragOffset = 0
                     },
                     onShowReorderSheet: {
                         showReorderSheet = true
@@ -348,6 +398,20 @@ struct TabbedMemoListView: View {
                     }
                 }
             })
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .memoSavedFlash)) { notification in
+            guard let memoID = notification.userInfo?["memoID"] as? UUID else { return }
+            // タブフラッシュ
+            flashTabIndex = selectedTabIndex
+            // メモカードフラッシュ
+            flashMemoID = memoID
+            // フラッシュを一定時間後にリセット
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    flashTabIndex = nil
+                    flashMemoID = nil
+                }
+            }
         }
     }
 
@@ -492,53 +556,31 @@ struct TabbedMemoListView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
+                        ScrollViewReader { scrollProxy in
                         ScrollView {
-                            LazyVGrid(columns: currentColumns, spacing: 8) {
-                                ForEach(filteredMemos) { memo in
-                                    HStack(spacing: 4) {
-                                        if isSelectMode {
-                                            Image(systemName: selectedMemoIDs.contains(memo.id) ? "checkmark.circle.fill" : "circle")
-                                                .font(.system(size: 20))
-                                                .foregroundStyle(selectedMemoIDs.contains(memo.id) ? .red : .gray.opacity(0.6))
-                                        }
-                                        MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: geo.size.height)
-                                    }
-                                    .onTapGesture {
-                                        if isSelectMode {
-                                            if selectedMemoIDs.contains(memo.id) {
-                                                selectedMemoIDs.remove(memo.id)
-                                            } else {
-                                                selectedMemoIDs.insert(memo.id)
-                                            }
-                                        } else {
-                                            onEditMemo?(memo)
-                                        }
-                                    }
-                                    .draggable(memo.id.uuidString) {
-                                        MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: geo.size.height)
-                                            .frame(width: 120, height: 60)
-                                            .opacity(0.8)
-                                    }
-                                    .contextMenu {
-                                        if !isSelectMode {
-                                            Button {
-                                                UIPasteboard.general.string = memo.content
-                                            } label: {
-                                                Label("コピー", systemImage: "doc.on.doc")
-                                            }
-                                            Button(role: .destructive) {
-                                                onDeleteMemo?(memo)
-                                                modelContext.delete(memo)
-                                            } label: {
-                                                Label("削除", systemImage: "trash")
-                                            }
-                                        }
+                            VStack(spacing: 0) {
+                                // 上部スペーサー（ツールバー分、タップ不可）
+                                Color.clear
+                                    .frame(height: (drawerReveal > 0 && canShowChildTagPanel) ? 50 + drawerBandHeight : 50)
+                                    .allowsHitTesting(false)
+
+                                LazyVGrid(columns: currentColumns, spacing: 8) {
+                                    ForEach(filteredMemos) { memo in
+                                        memoGridItem(memo: memo, availableHeight: geo.size.height)
                                     }
                                 }
+                                .padding(.horizontal, 10)
+                                .padding(.bottom, 40)
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.top, 50)
-                            .padding(.bottom, 40)
+                            .id("memoGrid")
+                        }
+                        .onChange(of: flashMemoID) { _, newValue in
+                            if newValue != nil {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    scrollProxy.scrollTo("memoGrid", anchor: .top)
+                                }
+                            }
+                        }
                         }
                     }
                 }
@@ -547,23 +589,39 @@ struct TabbedMemoListView: View {
                     insertion: .move(edge: swipeDirection == .left ? .trailing : .leading),
                     removal: .move(edge: swipeDirection == .left ? .leading : .trailing)
                 ))
+                // メモグリッド部分だけフォルダ移動スワイプに反応
+                .simultaneousGesture(
+                    DragGesture(minimumDistance: 50)
+                        .onEnded { value in
+                            let horizontal = abs(value.translation.width)
+                            let vertical = abs(value.translation.height)
+                            guard horizontal > vertical * 1.5 else { return }
 
-                // 上部ツールバー（メモ枚数・メモ追加・グリッドサイズ）
-                VStack {
-                    HStack(spacing: 8) {
-                        Text("\(filteredMemos.count)枚のメモ")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(darkenedColor)
+                            let count = tabItems.count
+                            if value.translation.width < -50 {
+                                swipeDirection = .left
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    selectedTabIndex = (selectedTabIndex + 1) % count
+                                }
+                            } else if value.translation.width > 50 {
+                                swipeDirection = .right
+                                withAnimation(.easeOut(duration: 0.25)) {
+                                    selectedTabIndex = (selectedTabIndex - 1 + count) % count
+                                }
+                            }
+                        }
+                )
 
+                // 上部ツールバー
+                if isCompact {
+                    // コンパクト時（入力欄展開）: 「記入中のメモをここに保存」
+                    HStack {
                         Spacer()
-
-                        // メモ追加ボタン
                         Button {
-                            if isSelectMode { isSelectMode = false; selectedMemoIDs.removeAll() }
                             let currentTag = tabItems[selectedTabIndex].tag
-                            onAddMemo?(currentTag?.id)
+                            onAddToCurrentTab?(currentTag?.id)
                         } label: {
-                            Label("フォルダにメモ追加", systemImage: "plus")
+                            Label("記入中のメモをここに保存", systemImage: "arrow.down.doc")
                                 .font(.system(size: 13, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary)
                                 .padding(.horizontal, 8)
@@ -574,39 +632,77 @@ struct TabbedMemoListView: View {
                                 )
                         }
                         .buttonStyle(.plain)
-
-                        gridSizeButton
+                        Spacer()
                     }
                     .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        LinearGradient(
-                            colors: [currentColor, currentColor, currentColor.opacity(0.0)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .padding(.bottom, -8)
-                    )
+                    .padding(.top, 8)
+                    .padding(.bottom, 4)
+                } else {
+                ZStack(alignment: .top) {
+                    VStack(spacing: 0) {
+                        // 子タグドロワー表示スペース（＋下余白6pt）
+                        if canShowChildTagPanel && drawerReveal > 0 {
+                            Color.clear.frame(height: drawerBandHeight + 6)
+                        }
 
-                    Spacer()
+                        // メモ枚数 + 保存ボタン行（ZStackでセンタリング）
+                        ZStack {
+                            HStack {
+                                Text("\(filteredMemos.count)枚のメモ")
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(darkenedColor)
+                                Spacer()
+                            }
 
-                    // 右下: 選択削除ボタン
-                    HStack {
+                            Button {
+                                if isSelectMode { isSelectMode = false; selectedMemoIDs.removeAll() }
+                                let currentTag = tabItems[selectedTabIndex].tag
+                                onAddMemo?(currentTag?.id)
+                            } label: {
+                                Label("このタグにメモ作成", systemImage: "plus.circle")
+                                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                                    .foregroundStyle(.secondary)
+                                    .padding(.horizontal, 2)
+                                    .padding(.vertical, 0)
+                            }
+                            .buttonStyle(.plain)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 4)
+                            .background(
+                                Capsule()
+                                    .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                            )
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 6)
+                    }
+                    .background(currentColor)
+
+                    // 子タグ引き出しドロワー
+                    if !isCompact && canShowChildTagPanel {
+                        childTagDrawer
+                            .animation(.spring(response: 0.3), value: drawerReveal)
+                    }
+
+                    // 左下: ゴミ箱ボタン
+                    if !isCompact {
+                    VStack {
                         Spacer()
+                        HStack {
                         if isSelectMode {
                             Button {
                                 isSelectMode = false
                                 selectedMemoIDs.removeAll()
                             } label: {
                                 Text("取消")
-                                    .font(.system(size: 13, weight: .medium, design: .rounded))
-                                    .foregroundStyle(.secondary)
-                                    .padding(.horizontal, 10)
-                                    .padding(.vertical, 6)
+                                    .font(.system(size: 15, weight: .bold, design: .rounded))
+                                    .foregroundStyle(.white)
+                                    .padding(.horizontal, 14)
+                                    .padding(.vertical, 8)
                                     .background(
                                         Capsule()
-                                            .fill(Color(uiColor: .systemBackground).opacity(0.9))
-                                            .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                                            .fill(Color.blue.opacity(0.7))
+                                            .shadow(color: .black.opacity(0.2), radius: 3, y: 1)
                                     )
                             }
                             .buttonStyle(.plain)
@@ -619,49 +715,245 @@ struct TabbedMemoListView: View {
                                 selectedMemoIDs.removeAll()
                             }
                         } label: {
-                            Label(isSelectMode ? "削除" : "選択削除", systemImage: "trash")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                            Image(systemName: isSelectMode ? "trash.fill" : "trash")
+                                .font(.system(size: 17))
                                 .foregroundStyle(isSelectMode && !selectedMemoIDs.isEmpty ? .red : .secondary)
-                                .padding(.horizontal, 10)
-                                .padding(.vertical, 6)
+                                .padding(10)
                                 .background(
                                     Capsule()
-                                        .fill(Color(uiColor: .systemBackground).opacity(0.9))
-                                        .shadow(color: .black.opacity(0.1), radius: 2, y: 1)
+                                        .fill(Color(uiColor: .systemGray6))
+                                        .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.gray.opacity(0.4), lineWidth: 1.0)
                                 )
                         }
                         .buttonStyle(.plain)
                         .disabled(isSelectMode && selectedMemoIDs.isEmpty)
+                            Spacer()
                     }
                     .padding(.horizontal, 10)
                     .padding(.bottom, 8)
+                    }
+                    }
+
+                    // 右下: グリッドサイズボタン
+                    VStack {
+                        Spacer()
+                        HStack {
+                            Spacer()
+                            gridSizeButton
+                                .padding(.horizontal, 10)
+                                .padding(.bottom, 8)
+                        }
+                    }
+                }
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: currentGridSize)
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 50)
-                    .onEnded { value in
-                        let horizontal = abs(value.translation.width)
-                        let vertical = abs(value.translation.height)
-                        guard horizontal > vertical * 1.5 else { return }
+        }
+    }
 
-                        let count = tabItems.count
-                        if value.translation.width < -50 {
-                            // 左スワイプ → 次のタブ（末尾→先頭にループ）
-                            swipeDirection = .left
-                            withAnimation(.easeOut(duration: 0.25)) {
-                                selectedTabIndex = (selectedTabIndex + 1) % count
+    // MARK: - 子タグ引き出しドロワー
+
+    /// ドロワー全体の現在の引き出し幅（確定値 + ドラッグ中オフセット）
+    private var effectiveDrawerReveal: CGFloat {
+        max(0, drawerReveal + drawerDragOffset)
+    }
+
+    private let drawerBandHeight: CGFloat = 36  // トレーの高さ
+    private let drawerHandleHeight: CGFloat = 23  // 取っ手の高さ
+    private let drawerHandleTextWidth: CGFloat = 52  // 「◁子タグ」横書き幅
+
+    /// 子タグのコンテンツ幅を計算（+ボタン + 全チップ + パディング）
+    private var drawerContentWidth: CGFloat {
+        let children = childTags
+        let chipPadding: CGFloat = 20  // 各チップの左右padding合計
+        let chipSpacing: CGFloat = 6
+        let plusButtonWidth: CGFloat = 32  // +ボタン + 余白
+        let edgePadding: CGFloat = 20    // leading/trailing余白
+
+        if children.isEmpty {
+            // 「子タグなし」テキスト分
+            return plusButtonWidth + 120 + edgePadding
+        }
+
+        // 「すべて」チップ
+        var total: CGFloat = plusButtonWidth + edgePadding
+        let allLabel = "すべて"
+        let allWidth = CGFloat(allLabel.count) * 13 + chipPadding
+        total += allWidth + chipSpacing
+
+        // 各子タグチップ
+        for child in children {
+            let labelWidth = CGFloat(child.name.count) * 13 + chipPadding
+            total += labelWidth + chipSpacing
+        }
+
+        return total
+    }
+
+    private var childTagDrawer: some View {
+        GeometryReader { geo in
+            let screenMaxReveal = geo.size.width - 10 - 30  // 取っ手幅（30pt）を確保
+            // コンテンツ幅 or 画面幅の小さい方が最大引き出し量
+            let contentMax = min(drawerContentWidth, screenMaxReveal)
+            let reveal = min(max(0, effectiveDrawerReveal), contentMax)
+            let children = childTags
+            let parentName = currentParentTag?.name ?? ""
+            let handleWidth: CGFloat = reveal > 0 ? 30 : drawerHandleTextWidth
+            let totalWidth = handleWidth + reveal
+
+            HStack(spacing: 0) {
+                // 左端: 「◁ 子タグ」取っ手（帯と一体化）
+                Group {
+                    if reveal > 0 {
+                        Image(systemName: "arrowtriangle.right.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.white.opacity(0.8))
+                            .padding(.leading, 4)
+                    } else {
+                        HStack(spacing: 2) {
+                            Image(systemName: "arrowtriangle.left.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(.white.opacity(0.8))
+                            Text("子タグ")
+                                .font(.system(size: 12, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .lineLimit(1)
+                                .fixedSize()
+                        }
+                    }
+                }
+                .frame(width: reveal > 0 ? 30 : drawerHandleTextWidth, height: reveal > 0 ? drawerBandHeight : drawerHandleHeight)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                        if drawerReveal > 0 {
+                            drawerReveal = 0
+                        } else {
+                            drawerReveal = contentMax
+                        }
+                    }
+                }
+
+                // トレー内容（子タグチップ群）— 帯の続き
+                if reveal > 0 {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        if children.isEmpty {
+                            Text("\(parentName)の子タグなし")
+                                .font(.system(size: 12, design: .rounded))
+                                .foregroundStyle(.white.opacity(0.8))
+                                .lineLimit(1)
+                        } else {
+                            // 子タグ横並び
+                            HStack(spacing: 6) {
+                                // 「すべて」オプション
+                                childTagChip(label: "すべて", colorIndex: currentParentTag?.colorIndex ?? 0, isSelected: selectedChildFilterID == nil, id: "childTag_all")
+                                    .onTapGesture {
+                                        selectedChildFilterID = nil
+                                    }
+
+                                // 子タグ群
+                                ForEach(children, id: \.id) { child in
+                                    childTagChip(label: child.name, colorIndex: child.colorIndex, isSelected: selectedChildFilterID == child.id, id: "childTag_\(child.id)")
+                                        .onTapGesture {
+                                            selectedChildFilterID = child.id
+                                        }
+                                }
                             }
-                        } else if value.translation.width > 50 {
-                            // 右スワイプ → 前のタブ（先頭→末尾にループ）
-                            swipeDirection = .right
-                            withAnimation(.easeOut(duration: 0.25)) {
-                                selectedTabIndex = (selectedTabIndex - 1 + count) % count
+                        }
+
+                        // 追加ボタン（一番右）
+                        Button {
+                            showAddChildTagSheet = true
+                        } label: {
+                            Image(systemName: "plus")
+                                .font(.system(size: 11, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 24, height: 24)
+                                .background(
+                                    Circle()
+                                        .fill(Color.white.opacity(0.3))
+                                )
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    .padding(.leading, 4)
+                    .padding(.trailing, 8)
+                    }
+                    .frame(height: drawerBandHeight)
+                }
+            }
+            // 帯全体の背景（不透明グレー）
+            .frame(width: totalWidth, height: reveal > 0 ? drawerBandHeight : drawerHandleHeight)
+            .background(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: 8,
+                    bottomLeadingRadius: 8,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: 0
+                )
+                .fill(Color.gray)
+                .shadow(color: .black.opacity(0.2), radius: 3, x: -2, y: 2)
+            )
+            .contentShape(Rectangle())  // タップ・ドラッグ領域を帯だけに限定
+            .clipped()
+            // 右端に配置
+            .position(x: geo.size.width - totalWidth / 2, y: (reveal > 0 ? drawerBandHeight : drawerHandleHeight) / 2 + 6)
+            // ドラッグジェスチャー（帯のみ反応）
+            .gesture(
+                DragGesture()
+                    .onChanged { value in
+                        drawerDragOffset = -value.translation.width
+                    }
+                    .onEnded { value in
+                        let totalReveal = drawerReveal + drawerDragOffset
+                        let velocity = -value.predictedEndTranslation.width
+                        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+                            if velocity > 200 {
+                                drawerReveal = contentMax
+                            } else if velocity < -200 {
+                                drawerReveal = 0
+                            } else if totalReveal > contentMax * 0.3 {
+                                drawerReveal = contentMax
+                            } else {
+                                drawerReveal = 0
                             }
+                            drawerDragOffset = 0
                         }
                     }
             )
+            .sheet(isPresented: $showAddChildTagSheet) {
+                NewTagSheetView(parentTagID: currentParentTag?.id, onTagCreated: { newTagID in
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        selectedChildFilterID = newTagID
+                    }
+                })
+            }
         }
+        .frame(height: drawerBandHeight + 8)
+    }
+
+    // 子タグチップ（個別の子タグカード）
+    private func childTagChip(label: String, colorIndex: Int, isSelected: Bool, id: String) -> some View {
+        Text(label)
+            .font(.system(size: 13, weight: isSelected ? .bold : .medium, design: .rounded))
+            .foregroundStyle(tagTextColor(for: colorIndex))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 5)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(tagColor(for: colorIndex))
+                    .opacity(isSelected ? 1.0 : 0.6)
+            )
+            .overlay(
+                RoundedRectangle(cornerRadius: 8)
+                    .strokeBorder(Color.white, lineWidth: isSelected ? 2.0 : 0)
+            )
+            .id(id)
     }
 
     // グリッドサイズ切替ボタン
@@ -680,18 +972,23 @@ struct TabbedMemoListView: View {
                 }
             }
         } label: {
-            HStack(spacing: 4) {
+            HStack(spacing: 5) {
                 Image(systemName: "square.grid.2x2")
-                    .font(.system(size: 12))
+                    .font(.system(size: 15))
                 Text(currentGridSize.label)
-                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .font(.system(size: 15, weight: .medium, design: .rounded))
             }
             .foregroundStyle(.secondary)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 4)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
             .background(
                 Capsule()
-                    .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                    .fill(Color(uiColor: .systemGray6))
+                    .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+            )
+            .overlay(
+                Capsule()
+                    .stroke(Color.gray.opacity(0.4), lineWidth: 1.0)
             )
         }
     }
@@ -713,6 +1010,60 @@ struct TabbedMemoListView: View {
             tag.gridSize = option.rawValue
         } else {
             noTagGridSize = option.rawValue
+        }
+    }
+
+    // メモグリッドの1アイテム（型推論負荷軽減のため分離）
+    @ViewBuilder
+    private func memoGridItem(memo: Memo, availableHeight: CGFloat) -> some View {
+        HStack(spacing: 4) {
+            if isSelectMode {
+                Image(systemName: selectedMemoIDs.contains(memo.id) ? "checkmark.circle.fill" : "circle")
+                    .font(.system(size: 20))
+                    .foregroundStyle(selectedMemoIDs.contains(memo.id) ? .red : .gray.opacity(0.6))
+            }
+            MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight, onTap: {
+                handleMemoTap(memo)
+            })
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .stroke(Color.blue, lineWidth: flashMemoID == memo.id ? 3 : 0)
+                        .opacity(flashMemoID == memo.id ? 1 : 0)
+                        .animation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true), value: flashMemoID)
+                )
+        }
+        .draggable(memo.id.uuidString) {
+            MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight)
+                .frame(width: 120, height: 60)
+                .opacity(0.8)
+        }
+        .contextMenu {
+            if !isSelectMode {
+                Button {
+                    UIPasteboard.general.string = memo.content
+                } label: {
+                    Label("コピー", systemImage: "doc.on.doc")
+                }
+                Button(role: .destructive) {
+                    onDeleteMemo?(memo)
+                    modelContext.delete(memo)
+                } label: {
+                    Label("削除", systemImage: "trash")
+                }
+            }
+        }
+    }
+
+    // メモカードタップ処理
+    private func handleMemoTap(_ memo: Memo) {
+        if isSelectMode {
+            if selectedMemoIDs.contains(memo.id) {
+                selectedMemoIDs.remove(memo.id)
+            } else {
+                selectedMemoIDs.insert(memo.id)
+            }
+        } else {
+            onEditMemo?(memo)
         }
     }
 
@@ -839,6 +1190,8 @@ struct SearchMemoCardView: View {
 struct MemoCardView: View {
     let memo: Memo
     var gridSize: GridSizeOption = .grid3x8
+    var availableHeight: CGFloat = 0
+    var onTap: (() -> Void)? = nil
 
     // グリッドサイズに応じたスタイル
     private var titleFont: CGFloat {
@@ -881,8 +1234,7 @@ struct MemoCardView: View {
         }
     }
 
-    // GeometryReaderから渡される利用可能な高さで計算
-    var availableHeight: CGFloat = 0
+    // availableHeightはプロパティ宣言で定義済み
 
     // 全文モードでは高さ固定しない
     private var isFullMode: Bool { gridSize == .full }
@@ -943,6 +1295,8 @@ struct MemoCardView: View {
         }
         .frame(height: cardHeight)
         .background(Color(uiColor: .systemBackground))
+        .contentShape(RoundedRectangle(cornerRadius: 6))
+        .onTapGesture { onTap?() }
         .clipShape(RoundedRectangle(cornerRadius: 6))
         .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
     }
@@ -1012,6 +1366,7 @@ struct TabReorderSheet: View {
 struct TabBarView: View {
     let tabItems: [(label: String, tag: Tag?, colorIndex: Int)]
     @Binding var selectedTabIndex: Int
+    var flashTabIndex: Int?
     var onSelectModeReset: () -> Void
     var onShowReorderSheet: () -> Void
     var onAddTag: () -> Void
@@ -1113,6 +1468,11 @@ struct TabBarView: View {
                 .background(
                     TrapezoidTabShape()
                         .fill(color)
+                )
+                .overlay(
+                    TrapezoidTabShape()
+                        .fill(Color.white.opacity(flashTabIndex == index ? 0.7 : 0))
+                        .animation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true), value: flashTabIndex)
                 )
                 .offset(y: isSelected ? 2 : 0)
         }

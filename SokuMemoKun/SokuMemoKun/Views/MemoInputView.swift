@@ -3,6 +3,7 @@ import SwiftData
 
 extension Notification.Name {
     static let switchToTab = Notification.Name("switchToTab")
+    static let memoSavedFlash = Notification.Name("memoSavedFlash")
 }
 
 struct MemoInputView: View {
@@ -60,7 +61,6 @@ struct MemoInputView: View {
         for tag in tags where tag.parentTagID == nil {
             list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
         }
-        list.append(("add", "＋追加", Color.blue.opacity(0.15)))
         return list
     }
 
@@ -71,7 +71,6 @@ struct MemoInputView: View {
                 list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
             }
         }
-        list.append(("add", "＋追加", Color.blue.opacity(0.15)))
         return list
     }
 
@@ -223,8 +222,7 @@ struct MemoInputView: View {
         .onChange(of: viewModel.selectedTagID) { _, newTagID in
             if !viewModel.isLoadingMemo { viewModel.selectedChildTagID = nil }
             viewModel.onTagChanged(tags: tags)
-            let idx = tabIndex(for: newTagID)
-            NotificationCenter.default.post(name: .switchToTab, object: nil, userInfo: ["tabIndex": idx])
+            // フォルダ移動はルーレット操作時のみ（switchToTabはTagDialViewから直接発火）
         }
         .onChange(of: viewModel.selectedChildTagID) { _, _ in
             viewModel.onTagChanged(tags: tags)
@@ -281,7 +279,7 @@ struct MemoInputView: View {
         }
     }
 
-    // MARK: - フッター（左=削除 右=コピー+保存）
+    // MARK: - フッター（左=削除 右=コピー+閉じる）
 
     private var footerRow: some View {
         HStack(spacing: 8) {
@@ -303,23 +301,17 @@ struct MemoInputView: View {
             }
             .disabled(viewModel.inputText.isEmpty)
 
-            // 右: 確定（メモは自動保存済み→入力欄をクリアして次のメモへ）
-            Button {
-                viewModel.clearInput()
-                isEditing = true
-                isTextEditorFocused = false
-                UIApplication.shared.sendAction(
-                    #selector(UIResponder.resignFirstResponder),
-                    to: nil, from: nil, for: nil
-                )
-            } label: {
-                Label("確定", systemImage: "checkmark.circle.fill")
-                    .font(.system(size: 14, weight: .bold))
+            // 右: 閉じる（既存メモを開いている時のみ表示）
+            if viewModel.editingMemo != nil {
+                Button {
+                    isEditing = true
+                    isTextEditorFocused = false
+                    viewModel.clearInput()
+                } label: {
+                    Label("閉じる", systemImage: "xmark.circle").font(.system(size: 14))
+                }
             }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
-            .controlSize(.small)
-            .disabled(!viewModel.canClear)
+
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
@@ -334,6 +326,31 @@ struct MemoInputView: View {
         VStack(spacing: 0) {
             dialContent
                 .frame(height: showParentDial ? dialFixedHeight : nil)
+            // ルーレット下の追加ボタン
+            if showParentDial {
+                HStack(spacing: 6) {
+                    Button {
+                        newTagIsChild = false
+                        showNewTagSheet = true
+                    } label: {
+                        Label("親タグ追加", systemImage: "plus.circle.fill")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.blue)
+                    }
+                    if showChildDial {
+                        Button {
+                            newTagIsChild = true
+                            showNewTagSheet = true
+                        } label: {
+                            Label("子タグ追加", systemImage: "plus.circle")
+                                .font(.system(size: 11, weight: .medium))
+                                .foregroundStyle(.blue.opacity(0.7))
+                        }
+                    }
+                }
+                .padding(.vertical, 6)
+                .padding(.horizontal, 4)
+            }
             Spacer(minLength: 0)
         }
         .fixedSize(horizontal: true, vertical: false)
@@ -345,34 +362,26 @@ struct MemoInputView: View {
                 Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
 
                 TagDialView(
-                    options: parentOptions,
-                    selectedID: $viewModel.selectedTagID,
-                    width: showChildDial ? 85 : 110,
-                    onAddTap: { newTagIsChild = false; showNewTagSheet = true },
-                    externalDragY: .constant(nil)
+                    parentOptions: parentOptions,
+                    parentSelectedID: $viewModel.selectedTagID,
+                    childOptions: childOptions,
+                    childSelectedID: $viewModel.selectedChildTagID,
+                    showChild: $showChildDial,
+                    childExternalDragY: $childExternalDragY
                 )
 
+                // 子タブ開閉ボタン
                 ZStack {
                     if showChildDial {
-                        HStack(spacing: 0) {
-                            Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
-                            TagDialView(
-                                options: childOptions,
-                                selectedID: $viewModel.selectedChildTagID,
-                                width: 80,
-                                onAddTap: { newTagIsChild = true; showNewTagSheet = true },
-                                externalDragY: $childExternalDragY
-                            )
-                            Text("›")
-                                .font(.system(size: 14, weight: .bold))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 14, height: 60)
-                                .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
-                                .contentShape(Rectangle())
-                                .onTapGesture {
-                                    withAnimation(.spring(response: 0.3)) { showChildDial = false }
-                                }
-                        }
+                        Text("›")
+                            .font(.system(size: 14, weight: .bold))
+                            .foregroundStyle(.secondary)
+                            .frame(width: 14, height: 60)
+                            .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                withAnimation(.spring(response: 0.3)) { showChildDial = false }
+                            }
                     } else {
                         VStack(spacing: 2) {
                             Text("子").font(.system(size: 11, weight: .bold, design: .rounded))
@@ -400,6 +409,7 @@ struct MemoInputView: View {
                         .onEnded { _ in childExternalDragY = nil }
                 )
 
+                // 全閉じボタン
                 Text("›")
                     .font(.system(size: 12, weight: .bold))
                     .foregroundStyle(.tertiary)
@@ -426,7 +436,7 @@ struct MemoInputView: View {
                     // 上部: 横長タブ（今まで通り）
                     HStack(spacing: 2) {
                         Text("◀").font(.system(size: 12))
-                        Text("タグ").font(.system(size: 13, weight: .bold, design: .rounded))
+                        Text("タグ付").font(.system(size: 13, weight: .bold, design: .rounded))
                     }
                     .foregroundStyle(.white)
                     .frame(width: 60, height: 22, alignment: .leading)

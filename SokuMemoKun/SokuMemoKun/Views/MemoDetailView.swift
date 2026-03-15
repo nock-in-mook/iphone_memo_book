@@ -29,6 +29,8 @@ struct MemoDetailView: View {
 
     // 削除確認
     @State private var showDeleteAlert = false
+    // 「ここに保存」確認
+    @State private var showSaveToTagAlert = false
 
     // タグ情報の計算
     private var selectedTagInfo: (name: String, color: Color) {
@@ -52,7 +54,7 @@ struct MemoDetailView: View {
         for tag in allTags where tag.parentTagID == nil {
             list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
         }
-        list.append(("add", "＋追加", Color.blue.opacity(0.15)))
+
         return list
     }
 
@@ -63,7 +65,7 @@ struct MemoDetailView: View {
                 list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))
             }
         }
-        list.append(("add", "＋追加", Color.blue.opacity(0.15)))
+
         return list
     }
 
@@ -125,6 +127,14 @@ struct MemoDetailView: View {
         .alert("このメモを削除します。よろしいですか？", isPresented: $showDeleteAlert) {
             Button("削除", role: .destructive) {
                 modelContext.delete(memo)
+                dismiss()
+            }
+            Button("キャンセル", role: .cancel) {}
+        }
+        .alert("このメモを「\(saveToTagLabel)」のタグで保存します。よろしいですか？", isPresented: $showSaveToTagAlert) {
+            Button("保存") {
+                syncTagsToMemo()
+                try? modelContext.save()
                 dismiss()
             }
             Button("キャンセル", role: .cancel) {}
@@ -245,18 +255,42 @@ struct MemoDetailView: View {
         }
     }
 
-    // MARK: - フッター（日付のみ: 左下・右下）
+    // MARK: - フッター（日付 + ここに保存ボタン）
 
     private var footerRow: some View {
-        HStack {
-            Text("作成: \(memo.createdAt.formatted(date: .abbreviated, time: .shortened))")
-            Spacer()
-            Text("更新: \(memo.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+        VStack(spacing: 4) {
+            HStack {
+                Text("作成: \(memo.createdAt.formatted(date: .abbreviated, time: .shortened))")
+                Spacer()
+                Text("更新: \(memo.updatedAt.formatted(date: .abbreviated, time: .shortened))")
+            }
+            .font(.system(size: 11))
+            .foregroundStyle(.tertiary)
+            .padding(.horizontal, 12)
+
+            // 「ここに保存」ボタン（タグ変更の確定用）
+            Button {
+                if isEditing { saveEdits() }
+                showSaveToTagAlert = true
+            } label: {
+                let tagName = selectedTagInfo.name
+                let childName = selectedChildTagInfo?.name
+                let label = childName != nil ? "\(tagName) - \(childName!)" : tagName
+                Label("このメモを「\(label)」に保存", systemImage: "arrow.down.doc")
+                    .font(.system(size: 13, weight: .medium, design: .rounded))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 6)
+                    .frame(maxWidth: .infinity)
+                    .background(
+                        Capsule()
+                            .fill(Color(uiColor: .secondarySystemBackground))
+                    )
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, 12)
+            .padding(.bottom, 6)
         }
-        .font(.system(size: 11))
-        .foregroundStyle(.tertiary)
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
     }
 
     // MARK: - ルーレット（収納式、全画面用 — タブを上寄せ）
@@ -268,35 +302,26 @@ struct MemoDetailView: View {
                     Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
 
                     TagDialView(
-                        options: parentOptions,
-                        selectedID: $selectedTagID,
-                        width: showChildDial ? 80 : 100,
-                        onAddTap: { newTagIsChild = false; showNewTagSheet = true },
-                        externalDragY: .constant(nil)
+                        parentOptions: parentOptions,
+                        parentSelectedID: $selectedTagID,
+                        childOptions: childOptions,
+                        childSelectedID: $selectedChildTagID,
+                        showChild: $showChildDial,
+                        childExternalDragY: $childExternalDragY
                     )
 
-                    // 子タグエリア
+                    // 子タブ開閉ボタン
                     ZStack {
                         if showChildDial {
-                            HStack(spacing: 0) {
-                                Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
-                                TagDialView(
-                                    options: childOptions,
-                                    selectedID: $selectedChildTagID,
-                                    width: 75,
-                                    onAddTap: { newTagIsChild = true; showNewTagSheet = true },
-                                    externalDragY: $childExternalDragY
-                                )
-                                Text("›")
-                                    .font(.system(size: 14, weight: .bold))
-                                    .foregroundStyle(.secondary)
-                                    .frame(width: 14, height: 60)
-                                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
-                                    .contentShape(Rectangle())
-                                    .onTapGesture {
-                                        withAnimation(.spring(response: 0.3)) { showChildDial = false }
-                                    }
-                            }
+                            Text("›")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 14, height: 60)
+                                .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
+                                .contentShape(Rectangle())
+                                .onTapGesture {
+                                    withAnimation(.spring(response: 0.3)) { showChildDial = false }
+                                }
                         } else {
                             VStack(spacing: 2) {
                                 Text("子").font(.system(size: 11, weight: .bold, design: .rounded))
@@ -358,6 +383,15 @@ struct MemoDetailView: View {
             // ルーレットは上寄せ、残りの空間は空白
             Spacer()
         }
+    }
+
+    // ダイアログ用のタグラベル
+    private var saveToTagLabel: String {
+        let tagName = selectedTagInfo.name
+        if let childName = selectedChildTagInfo?.name {
+            return "\(tagName) - \(childName)"
+        }
+        return tagName
     }
 
     // MARK: - ヘルパー
