@@ -3,6 +3,7 @@ import SwiftData
 
 extension Notification.Name {
     static let switchToTab = Notification.Name("switchToTab")
+    static let memoSavedFlash = Notification.Name("memoSavedFlash")
 }
 
 struct MemoInputView: View {
@@ -301,23 +302,6 @@ struct MemoInputView: View {
             }
             .disabled(viewModel.inputText.isEmpty)
 
-            // 右: 確定（メモは自動保存済み→入力欄をクリアして次のメモへ）
-            Button {
-                viewModel.clearInput()
-                isEditing = true
-                isTextEditorFocused = false
-                UIApplication.shared.sendAction(
-                    #selector(UIResponder.resignFirstResponder),
-                    to: nil, from: nil, for: nil
-                )
-            } label: {
-                Label("確定", systemImage: "checkmark.circle.fill")
-                    .font(.system(size: 14, weight: .bold))
-            }
-            .buttonStyle(.borderedProminent)
-            .buttonBorderShape(.capsule)
-            .controlSize(.small)
-            .disabled(!viewModel.canClear)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 5)

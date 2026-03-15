@@ -167,8 +167,12 @@ struct TabbedMemoListView: View {
     var onDeleteMemo: ((Memo) -> Void)?
     // 入力欄展開時はコンパクト表示（選択削除等を非表示）
     var isCompact = false
-    // 「記入中のメモをここに追加」コールバック
+    // 「記入中のメモをここに保存」コールバック
     var onAddToCurrentTab: ((UUID?) -> Void)?
+    // フラッシュ対象のメモID（保存直後にハイライト）
+    @State private var flashMemoID: UUID?
+    // タブフラッシュ
+    @State private var flashTabIndex: Int?
 
     // 並び替えシート表示
     @State private var showReorderSheet = false
@@ -299,6 +303,7 @@ struct TabbedMemoListView: View {
                 TabBarView(
                     tabItems: tabItems,
                     selectedTabIndex: $selectedTabIndex,
+                    flashTabIndex: flashTabIndex,
                     onSelectModeReset: {
                         isSelectMode = false
                         selectedMemoIDs.removeAll()
@@ -352,6 +357,20 @@ struct TabbedMemoListView: View {
                     }
                 }
             })
+        }
+        .onReceive(NotificationCenter.default.publisher(for: .memoSavedFlash)) { notification in
+            guard let memoID = notification.userInfo?["memoID"] as? UUID else { return }
+            // タブフラッシュ
+            flashTabIndex = selectedTabIndex
+            // メモカードフラッシュ
+            flashMemoID = memoID
+            // フラッシュを一定時間後にリセット
+            DispatchQueue.main.asyncAfter(deadline: .now() + 1.0) {
+                withAnimation(.easeOut(duration: 0.5)) {
+                    flashTabIndex = nil
+                    flashMemoID = nil
+                }
+            }
         }
     }
 
@@ -496,6 +515,7 @@ struct TabbedMemoListView: View {
                         }
                         .frame(maxWidth: .infinity, maxHeight: .infinity)
                     } else {
+                        ScrollViewReader { scrollProxy in
                         ScrollView {
                             LazyVGrid(columns: currentColumns, spacing: 8) {
                                 ForEach(filteredMemos) { memo in
@@ -506,6 +526,12 @@ struct TabbedMemoListView: View {
                                                 .foregroundStyle(selectedMemoIDs.contains(memo.id) ? .red : .gray.opacity(0.6))
                                         }
                                         MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: geo.size.height)
+                                            .overlay(
+                                                RoundedRectangle(cornerRadius: 8)
+                                                    .stroke(Color.blue, lineWidth: flashMemoID == memo.id ? 3 : 0)
+                                                    .opacity(flashMemoID == memo.id ? 1 : 0)
+                                                    .animation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true), value: flashMemoID)
+                                            )
                                     }
                                     .onTapGesture {
                                         if isSelectMode {
@@ -543,6 +569,15 @@ struct TabbedMemoListView: View {
                             .padding(.horizontal, 10)
                             .padding(.top, 50)
                             .padding(.bottom, 40)
+                            .id("memoGrid")
+                        }
+                        .onChange(of: flashMemoID) { _, newValue in
+                            if newValue != nil {
+                                withAnimation(.easeOut(duration: 0.3)) {
+                                    scrollProxy.scrollTo("memoGrid", anchor: .top)
+                                }
+                            }
+                        }
                         }
                     }
                 }
@@ -1047,6 +1082,7 @@ struct TabReorderSheet: View {
 struct TabBarView: View {
     let tabItems: [(label: String, tag: Tag?, colorIndex: Int)]
     @Binding var selectedTabIndex: Int
+    var flashTabIndex: Int?
     var onSelectModeReset: () -> Void
     var onShowReorderSheet: () -> Void
     var onAddTag: () -> Void
@@ -1148,6 +1184,11 @@ struct TabBarView: View {
                 .background(
                     TrapezoidTabShape()
                         .fill(color)
+                )
+                .overlay(
+                    TrapezoidTabShape()
+                        .fill(Color.white.opacity(flashTabIndex == index ? 0.7 : 0))
+                        .animation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true), value: flashTabIndex)
                 )
                 .offset(y: isSelected ? 2 : 0)
         }

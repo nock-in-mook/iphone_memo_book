@@ -47,9 +47,18 @@ struct MainView: View {
                         isCompact: isInputExpanded,
                         onAddToCurrentTab: { tagID in
                             // 記入中のメモにタグを付けて確定
+                            let savedMemoID = viewModel.editingMemo?.id
                             viewModel.selectedTagID = tagID
                             viewModel.onTagChanged(tags: tags)
                             viewModel.clearInput()
+                            // フラッシュ通知
+                            if let memoID = savedMemoID {
+                                NotificationCenter.default.post(
+                                    name: .memoSavedFlash,
+                                    object: nil,
+                                    userInfo: ["memoID": memoID]
+                                )
+                            }
                         }
                     )
                 }
