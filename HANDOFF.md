@@ -2,19 +2,29 @@
 
 ## 現在の状況
 - **feature/roulette-redesign** ブランチで作業中
-- 子タグ引き出しドロワー実装済み（TabbedMemoListView.swift）
-  - 「◁子タグ」取っ手をドラッグで任意の位置まで引き出し可能
-  - 不透明グレー帯デザイン、スプリングアニメーション
-  - 子タグの数に応じた幅で停止
-  - タップで全開/全閉トグル
-- メモ閲覧時のフォルダ自動移動を廃止
-  - onChange(of: selectedTagID)からswitchToTab発火を完全削除
-  - ルーレット操作でもフォルダ移動しない
-  - 新タグ作成時のみフォルダ移動を残す
-- 「ここに保存」ボタンのタップ領域をダミー枠で見た目と一致させた
-- メモソートをcreatedAt降順に変更
-- メモカードのタップ処理をMemoCardView内部に移動
-- ツールバーエリアのスワイプでフォルダ移動しないよう修正
+- セッション018で多数のUI改善を実施
+
+### 今回の変更点
+- フッターに「閉じる」ボタン追加（既存メモ表示時のみ）
+- 「ここに保存」ボタンの誤タップ対策
+  - コンパクト時（入力欄展開）: 「記入中のメモをここに保存」＋確認ダイアログ
+  - 全画面時（入力欄非展開）: 「このタグにメモ作成」（新規作成専用）
+  - MemoDetailView: フッターに「ここに保存」＋確認ダイアログ
+- 入力欄とフォルダタブの間に30ptスペース確保（誤タップ防止＋将来のSpecialメニュー用）
+- ボタンUI改善
+  - ゴミ箱を左下、グリッドを右下に配置変更
+  - ボタン背景をsystemGray6＋枠線1.0pt
+  - 取消ボタンを青背景＋白文字で視認性向上
+- 子タグドロワーUI完成
+  - 取っ手とトレーの高さ分離（取っ手23pt、トレー36pt）
+  - 選択中の子タグに内側白枠線（strokeBorder）
+  - 横スクロール対応（子タグが多くても全部アクセス可能）
+  - 収納タップを取っ手部分のみに限定
+  - 開いてる時は右向き矢印のみ表示、取っ手幅を狭く
+  - 追加ボタンを一番右に移動
+- 子タグ連打フリーズ修正（アニメーション競合解消）
+- グラデーション背景をベタ塗りに変更
+- 仕事タグに子タグ15個のテストデータ追加（sampleDataV7）
 
 ## ブランチ構成
 - **main**: 安定版
@@ -22,12 +32,13 @@
 - **feature/roulette-redesign**: ルーレット統合Canvas・UI改善・子タグドロワー（現在作業中）
 
 ## 主要ファイル
-- MemoInputView.swift: 展開/縮小、逆さL字タグタブ（「タグ付」表記）、フッター
+- MemoInputView.swift: 展開/縮小、逆さL字タグタブ（「タグ付」表記）、フッター（閉じるボタン追加）
 - MemoInputViewModel.swift: loadMemoCounter（閲覧モード切替トリガー）
-- MainView.swift: isInputExpanded状態管理、展開時←ボタン、タグQuery追加
-- TabbedMemoListView.swift: グリッド5段階、isCompact対応、「ここに保存」ボタン、フラッシュアニメーション、**子タグ引き出しドロワー**、memoGridItem関数分離
+- MainView.swift: isInputExpanded状態管理、展開時←ボタン、30ptスペース、確認ダイアログ
+- TabbedMemoListView.swift: グリッド5段階、isCompact対応、ボタンUI改善、子タグドロワー完成、横スクロール対応
 - TagDialView.swift: 親子統合Canvas（1つのCanvasで親子描画）
-- MemoDetailView.swift: 統合TagDialView対応済み
+- MemoDetailView.swift: 統合TagDialView対応済み、フッターに「ここに保存」＋確認ダイアログ
+- SokuMemoKunApp.swift: テストデータV7（仕事に子タグ15個）
 
 ## 環境
 - Mac: MacBook Air M2, macOS
@@ -37,11 +48,11 @@
 - ビルド後は毎回「Fit Screen」でウィンドウ縮小する
 
 ## 次のアクション
-1. 「記入中のメモをここに保存」の誤タップ問題（問題3、未着手）
-2. 追加したメモが一番上に保存されない問題（createdAtソートに戻した影響）
-3. feature/roulette-redesignをfeature/input-area-expand-and-view-modeにマージ
-4. さらにmainにマージ
-5. 実機ビルド・テスト
+1. Specialメニュー実装（30ptスペースからの引き出し）
+2. feature/roulette-redesignをfeature/input-area-expand-and-view-modeにマージ
+3. さらにmainにマージ
+4. 実機ビルド・テスト
+5. テストデータ（sampleDataV7）を元に戻す or 調整
 6. FullEditorView.swift / MemoDetailView.swiftの不要コード整理
 7. 設定で「子タグルーレットを常に表示」のオンオフ切替
 8. ルーレット上のマス長押しでタグ削除メニュー
@@ -61,3 +72,4 @@
 - タグタブのoverlayは本文ZStackの.topTrailingに配置（仕切り線直下）
 - TagDialViewは親子統合Canvas: ドラッグx座標で親/子判定（borderX = cx - parentInnerR）
 - switchToTabはルーレット操作では発火しない（新タグ作成時のみ）
+- **子タグ連打フリーズ**: withAnimationの競合が原因。子タグタップのwithAnimationを除去、.animation(.spring)のスコープをドロワーのみに限定して解決
