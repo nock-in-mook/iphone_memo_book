@@ -676,18 +676,12 @@ struct TabbedMemoListView: View {
                         .padding(.horizontal, 10)
                         .padding(.vertical, 6)
                     }
-                    .background(
-                        LinearGradient(
-                            colors: [currentColor, currentColor, currentColor.opacity(0.0)],
-                            startPoint: .top,
-                            endPoint: .bottom
-                        )
-                        .padding(.bottom, -8)
-                    )
+                    .background(currentColor)
 
                     // 子タグ引き出しドロワー
                     if !isCompact && canShowChildTagPanel {
                         childTagDrawer
+                            .animation(.spring(response: 0.3), value: drawerReveal)
                     }
 
                     // 左下: グリッドサイズボタン
@@ -755,7 +749,6 @@ struct TabbedMemoListView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.2), value: currentGridSize)
-            .animation(.spring(response: 0.3), value: drawerReveal)
         }
     }
 
@@ -850,18 +843,14 @@ struct TabbedMemoListView: View {
                                 // 「すべて」オプション
                                 childTagChip(label: "すべて", colorIndex: currentParentTag?.colorIndex ?? 0, isSelected: selectedChildFilterID == nil, id: "childTag_all")
                                     .onTapGesture {
-                                        withAnimation(.easeOut(duration: 0.2)) {
-                                            selectedChildFilterID = nil
-                                        }
+                                        selectedChildFilterID = nil
                                     }
 
                                 // 子タグ群
                                 ForEach(children, id: \.id) { child in
                                     childTagChip(label: child.name, colorIndex: child.colorIndex, isSelected: selectedChildFilterID == child.id, id: "childTag_\(child.id)")
                                         .onTapGesture {
-                                            withAnimation(.easeOut(duration: 0.2)) {
-                                                selectedChildFilterID = child.id
-                                            }
+                                            selectedChildFilterID = child.id
                                         }
                                 }
                             }
