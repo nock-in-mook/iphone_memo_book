@@ -657,9 +657,9 @@ struct TabbedMemoListView: View {
                             Button {
                                 if isSelectMode { isSelectMode = false; selectedMemoIDs.removeAll() }
                                 let currentTag = tabItems[selectedTabIndex].tag
-                                onAddMemo?(currentTag?.id)
+                                onAddToCurrentTab?(currentTag?.id)
                             } label: {
-                                Label("＋このタグにメモ作成", systemImage: "plus.circle")
+                                Label("記入中のメモをここに保存", systemImage: "arrow.down.doc")
                                     .font(.system(size: 13, weight: .medium, design: .rounded))
                                     .foregroundStyle(.secondary)
                                     .padding(.horizontal, 2)

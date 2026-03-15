@@ -9,6 +9,9 @@ struct MainView: View {
     @State private var selectedTabIndex: Int = 0
     @State private var searchText = ""
     @State private var isInputExpanded = false
+    // 「ここに保存」確認ダイアログ
+    @State private var showSaveToTabAlert = false
+    @State private var pendingSaveTagID: UUID? = nil
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @AppStorage("markdownEnabled") private var markdownEnabled = false
     @Environment(\.modelContext) private var modelContext
@@ -46,20 +49,9 @@ struct MainView: View {
                         },
                         isCompact: isInputExpanded,
                         onAddToCurrentTab: { tagID in
-                            // 記入中のメモにタグを付けて確定
-                            let savedMemoID = viewModel.editingMemo?.id
-                            viewModel.selectedTagID = tagID
-                            viewModel.onTagChanged(tags: tags)
-                            try? modelContext.save()
-                            viewModel.clearInput()
-                            // フラッシュ通知
-                            if let memoID = savedMemoID {
-                                NotificationCenter.default.post(
-                                    name: .memoSavedFlash,
-                                    object: nil,
-                                    userInfo: ["memoID": memoID]
-                                )
-                            }
+                            // 確認ダイアログを表示
+                            pendingSaveTagID = tagID
+                            showSaveToTabAlert = true
                         }
                     )
                 }
@@ -182,6 +174,23 @@ struct MainView: View {
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
                 isKeyboardVisible = false
             }
+            .alert("このメモを「\(saveToTabTagName)」に保存します。よろしいですか？", isPresented: $showSaveToTabAlert) {
+                Button("保存") {
+                    let savedMemoID = viewModel.editingMemo?.id
+                    viewModel.selectedTagID = pendingSaveTagID
+                    viewModel.onTagChanged(tags: tags)
+                    try? modelContext.save()
+                    viewModel.clearInput()
+                    if let memoID = savedMemoID {
+                        NotificationCenter.default.post(
+                            name: .memoSavedFlash,
+                            object: nil,
+                            userInfo: ["memoID": memoID]
+                        )
+                    }
+                }
+                Button("キャンセル", role: .cancel) {}
+            }
             .onAppear {
                 viewModel.restoreLastMemo(context: modelContext)
                 // マスタースイッチOFFなら起動時もマークダウン解除
@@ -190,5 +199,14 @@ struct MainView: View {
                 }
             }
         }
+    }
+
+    // 「ここに保存」ダイアログ用のタグ名
+    private var saveToTabTagName: String {
+        if let tagID = pendingSaveTagID,
+           let tag = tags.first(where: { $0.id == tagID }) {
+            return tag.name
+        }
+        return "タグなし"
     }
 }
