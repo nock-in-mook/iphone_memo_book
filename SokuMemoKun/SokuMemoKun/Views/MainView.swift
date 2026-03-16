@@ -8,6 +8,8 @@ struct MainView: View {
     @State private var focusInput = false
     @State private var selectedTabIndex: Int = 0
     @State private var searchText = ""
+    @State private var isSearchFocused = false
+    @FocusState private var isSearchFieldFocused: Bool
     @State private var isInputExpanded = false
     // 「ここに保存」確認ダイアログ
     @State private var showSaveToTabAlert = false
@@ -86,26 +88,38 @@ struct MainView: View {
                         }
                     }
                 }
-                // 中央: 検索バー
+                // 中央: 検索バー（未フォーカス時は短め、フォーカスで横いっぱいに広がる）
                 ToolbarItem(placement: .principal) {
+                    let expanded = isSearchFocused || !searchText.isEmpty
                     HStack(spacing: 6) {
                         Image(systemName: "magnifyingglass")
                             .font(.system(size: 13))
                             .foregroundStyle(.secondary)
-                        TextField("メモをさがす", text: $searchText)
-                            .font(.system(size: 15, design: .rounded))
-                            .textFieldStyle(.plain)
-                            .autocorrectionDisabled()
-                        if !searchText.isEmpty {
-                            Button {
-                                searchText = ""
-                            } label: {
-                                Image(systemName: "xmark.circle.fill")
-                                    .font(.system(size: 14))
-                                    .foregroundStyle(.secondary)
-                            }
-                            .buttonStyle(.plain)
+                        ZStack {
+                            // 縮小時のラベル
+                            Text("メモを探す")
+                                .font(.system(size: 15, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .opacity(expanded ? 0 : 1)
+                            // 常に存在するTextField（縮小時は非表示・無効）
+                            TextField("", text: $searchText)
+                                .font(.system(size: 15, design: .rounded))
+                                .textFieldStyle(.plain)
+                                .autocorrectionDisabled()
+                                .focused($isSearchFieldFocused)
+                                .opacity(expanded ? 1 : 0)
+                                .disabled(!expanded)
                         }
+                        // バツ印（拡大中のみ表示）
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary)
+                            .opacity(expanded ? 1 : 0)
+                            .onTapGesture {
+                                searchText = ""
+                                isSearchFieldFocused = false
+                                isSearchFocused = false
+                            }
                     }
                     .padding(.horizontal, 10)
                     .padding(.vertical, 6)
@@ -113,6 +127,19 @@ struct MainView: View {
                         RoundedRectangle(cornerRadius: 8)
                             .fill(Color(uiColor: .secondarySystemBackground))
                     )
+                    .frame(maxWidth: expanded ? .infinity : 170)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if !isSearchFocused {
+                            withAnimation(.easeOut(duration: 0.2)) {
+                                isSearchFocused = true
+                            }
+                            // アニメーション完了後にフォーカスを当てる
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.25) {
+                                isSearchFieldFocused = true
+                            }
+                        }
+                    }
                 }
                 // 右: 設定
                 ToolbarItem(placement: .topBarTrailing) {
@@ -179,6 +206,10 @@ struct MainView: View {
             }
             .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
                 isKeyboardVisible = false
+                // 検索テキストが空ならフォーカス解除→検索バーを縮小
+                if searchText.isEmpty {
+                    isSearchFocused = false
+                }
             }
             .alert("このメモを「\(saveToTabTagName)」に保存します。よろしいですか？", isPresented: $showSaveToTabAlert) {
                 Button("保存") {

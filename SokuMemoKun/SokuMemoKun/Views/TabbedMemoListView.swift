@@ -154,6 +154,9 @@ struct TabbedMemoListView: View {
     @State private var selectedMemoIDs: Set<UUID> = []
     // 選択削除確認ダイアログ
     @State private var showDeleteConfirm = false
+    // 長押し単体削除確認ダイアログ
+    @State private var showSingleDeleteConfirm = false
+    @State private var pendingDeleteMemo: Memo? = nil
     // スワイプ方向追跡（トランジション用）
     @State private var swipeDirection: SwipeDirection = .none
     enum SwipeDirection { case none, left, right }
@@ -259,11 +262,25 @@ struct TabbedMemoListView: View {
     }
 
     // 通常タブ用フィルタ
+    // ソート: 固定メモ→通常メモ、それぞれmanualSortOrder昇順→作成日降順
+    private func sortedMemos(_ memos: [Memo]) -> [Memo] {
+        memos.sorted { a, b in
+            // 固定メモを先に
+            if a.isPinned != b.isPinned { return a.isPinned }
+            // manualSortOrderが0以外なら手動順を優先
+            if a.manualSortOrder != b.manualSortOrder {
+                return a.manualSortOrder > b.manualSortOrder
+            }
+            // 同じなら作成日降順
+            return a.createdAt > b.createdAt
+        }
+    }
+
     private var filteredMemos: [Memo] {
         let item = tabItems[selectedTabIndex]
         // 「すべて」タブ
         if item.colorIndex == allTabColorIndex {
-            return allMemos
+            return sortedMemos(Array(allMemos))
         }
         if let tag = item.tag {
             let parentFiltered = allMemos.filter { memo in
@@ -271,13 +288,13 @@ struct TabbedMemoListView: View {
             }
             // 子タグフィルター適用
             if let childID = selectedChildFilterID {
-                return parentFiltered.filter { memo in
+                return sortedMemos(parentFiltered.filter { memo in
                     memo.tags.contains { $0.id == childID }
-                }
+                })
             }
-            return parentFiltered
+            return sortedMemos(parentFiltered)
         } else {
-            return allMemos.filter { $0.tags.isEmpty }
+            return sortedMemos(allMemos.filter { $0.tags.isEmpty })
         }
     }
 
@@ -366,6 +383,18 @@ struct TabbedMemoListView: View {
                 deleteSelectedMemos()
             }
             Button("キャンセル", role: .cancel) {}
+        }
+        .alert("このメモを削除します。よろしいですか？", isPresented: $showSingleDeleteConfirm) {
+            Button("削除", role: .destructive) {
+                if let memo = pendingDeleteMemo {
+                    onDeleteMemo?(memo)
+                    modelContext.delete(memo)
+                    pendingDeleteMemo = nil
+                }
+            }
+            Button("キャンセル", role: .cancel) {
+                pendingDeleteMemo = nil
+            }
         }
         .sheet(isPresented: $showReorderSheet) {
             TabReorderSheet(
@@ -706,6 +735,26 @@ struct TabbedMemoListView: View {
                                     )
                             }
                             .buttonStyle(.plain)
+                            // トップに移動ボタン（選択モード時）
+                            Button {
+                                moveSelectedToTop()
+                            } label: {
+                                MoveToTopIcon()
+                                    .frame(width: 20, height: 20)
+                                    .foregroundStyle(selectedMemoIDs.isEmpty ? .secondary : .primary)
+                                    .padding(10)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color(uiColor: .systemGray6))
+                                            .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(Color.gray.opacity(0.4), lineWidth: 1.0)
+                                    )
+                            }
+                            .buttonStyle(.plain)
+                            .disabled(selectedMemoIDs.isEmpty)
                         }
                         Button {
                             if isSelectMode {
@@ -993,6 +1042,24 @@ struct TabbedMemoListView: View {
         }
     }
 
+    // メモをトップに移動（manualSortOrderを現在の最大+1に）
+    private func moveToTop(_ memo: Memo) {
+        let maxOrder = allMemos.map(\.manualSortOrder).max() ?? 0
+        memo.manualSortOrder = maxOrder + 1
+    }
+
+    // 選択中のメモをトップに移動
+    private func moveSelectedToTop() {
+        let maxOrder = allMemos.map(\.manualSortOrder).max() ?? 0
+        var offset = 1
+        for memo in allMemos where selectedMemoIDs.contains(memo.id) {
+            memo.manualSortOrder = maxOrder + offset
+            offset += 1
+        }
+        selectedMemoIDs.removeAll()
+        isSelectMode = false
+    }
+
     private func deleteSelectedMemos() {
         for memo in allMemos where selectedMemoIDs.contains(memo.id) {
             onDeleteMemo?(memo)
@@ -1044,13 +1111,23 @@ struct TabbedMemoListView: View {
         .contextMenu {
             if !isSelectMode {
                 Button {
+                    moveToTop(memo)
+                } label: {
+                    Label("トップに移動", systemImage: "arrow.up.to.line")
+                }
+                Button {
+                    memo.isPinned.toggle()
+                } label: {
+                    Label(memo.isPinned ? "固定を解除" : "トップに常時固定", systemImage: memo.isPinned ? "pin.slash" : "pin")
+                }
+                Button {
                     UIPasteboard.general.string = memo.content
                 } label: {
                     Label("コピー", systemImage: "doc.on.doc")
                 }
                 Button(role: .destructive) {
-                    onDeleteMemo?(memo)
-                    modelContext.delete(memo)
+                    pendingDeleteMemo = memo
+                    showSingleDeleteConfirm = true
                 } label: {
                     Label("削除", systemImage: "trash")
                 }
@@ -1175,13 +1252,20 @@ struct SearchMemoCardView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(8)
 
-            // マークダウンマーク（右上）
-            if memo.isMarkdown {
-                Text("M↓")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.gray.opacity(0.5))
-                    .padding(3)
+            // 右上マーク（ピン・マークダウン）
+            VStack(spacing: 2) {
+                if memo.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.orange.opacity(0.6))
+                }
+                if memo.isMarkdown {
+                    Text("M↓")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.gray.opacity(0.5))
+                }
             }
+            .padding(3)
         }
         .frame(height: 90)
         .background(Color(uiColor: .systemBackground))
@@ -1289,13 +1373,20 @@ struct MemoCardView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(cardPadding)
 
-            // マークダウンマーク（右上）
-            if memo.isMarkdown {
-                Text("M↓")
-                    .font(.system(size: 9, weight: .bold, design: .monospaced))
-                    .foregroundStyle(.gray.opacity(0.5))
-                    .padding(3)
+            // 右上マーク（ピン・マークダウン）
+            VStack(spacing: 2) {
+                if memo.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.orange.opacity(0.6))
+                }
+                if memo.isMarkdown {
+                    Text("M↓")
+                        .font(.system(size: 9, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.gray.opacity(0.5))
+                }
             }
+            .padding(3)
         }
         .frame(height: gridSize == .grid3x8 ? 36 : gridSize == .grid2x6 ? 48 : gridSize == .grid2x3 ? 104 : gridSize == .grid1x2 ? 160 : cardHeight)
         .background(Color(uiColor: .systemBackground))
@@ -1498,6 +1589,35 @@ struct TabBarView: View {
             } label: {
                 Label("並び替え", systemImage: "arrow.up.arrow.down")
             }
+        }
+    }
+}
+
+// 「トップに移動」オリジナルアイコン（複数メモ+上矢印）
+struct MoveToTopIcon: View {
+    var body: some View {
+        Canvas { context, size in
+            let w = size.width
+            let h = size.height
+            // メモカード2枚（奥）
+            let backCard = Path(roundedRect: CGRect(x: w * 0.18, y: h * 0.35, width: w * 0.45, height: w * 0.35), cornerRadius: 2)
+            context.fill(backCard, with: .color(.primary.opacity(0.25)))
+            // メモカード（手前）
+            let frontCard = Path(roundedRect: CGRect(x: w * 0.08, y: h * 0.45, width: w * 0.45, height: w * 0.35), cornerRadius: 2)
+            context.fill(frontCard, with: .color(.primary.opacity(0.45)))
+            // 上矢印
+            var arrow = Path()
+            let ax = w * 0.75  // 矢印の中心X
+            let ay = h * 0.15  // 矢印の先端Y
+            // 矢印の頭（三角）
+            arrow.move(to: CGPoint(x: ax, y: ay))
+            arrow.addLine(to: CGPoint(x: ax - w * 0.15, y: ay + h * 0.2))
+            arrow.addLine(to: CGPoint(x: ax + w * 0.15, y: ay + h * 0.2))
+            arrow.closeSubpath()
+            context.fill(arrow, with: .color(.primary))
+            // 矢印の軸
+            let shaft = Path(CGRect(x: ax - w * 0.05, y: ay + h * 0.18, width: w * 0.1, height: h * 0.5))
+            context.fill(shaft, with: .color(.primary))
         }
     }
 }

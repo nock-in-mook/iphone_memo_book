@@ -10,6 +10,8 @@ final class Memo {
     var isMarkdown: Bool = false
     var createdAt: Date = Date()
     var updatedAt: Date = Date()
+    var isPinned: Bool = false
+    var manualSortOrder: Int = 0
 
     init(content: String, title: String = "", tags: [Tag] = [], isMarkdown: Bool = false) {
         self.id = UUID()
@@ -19,5 +21,7 @@ final class Memo {
         self.isMarkdown = isMarkdown
         self.createdAt = Date()
         self.updatedAt = Date()
+        self.isPinned = false
+        self.manualSortOrder = 0
     }
 }
