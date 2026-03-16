@@ -1021,6 +1021,10 @@ struct TabbedMemoListView: View {
                 Image(systemName: selectedMemoIDs.contains(memo.id) ? "checkmark.circle.fill" : "circle")
                     .font(.system(size: 20))
                     .foregroundStyle(selectedMemoIDs.contains(memo.id) ? .red : .gray.opacity(0.6))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        handleMemoTap(memo)
+                    }
             }
             MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight, onTap: {
                 handleMemoTap(memo)
