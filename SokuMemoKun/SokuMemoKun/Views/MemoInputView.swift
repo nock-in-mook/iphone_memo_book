@@ -340,52 +340,73 @@ struct MemoInputView: View {
         .padding(.vertical, 5)
     }
 
-    // MARK: - ルーレット（収納式）
+    // MARK: - ルーレット（トレー方式）
 
     // ルーレットの固定高さ
     private let dialFixedHeight: CGFloat = 160
+    // トレーの設定
+    private let trayColor = Color(red: 0.76, green: 0.76, blue: 0.78)
+    private let trayCornerRadius: CGFloat = 10
+
+    // タブ寸法
+    private let tabWidth: CGFloat = 70      // タブの横幅
+    private let tabHeight: CGFloat = 22     // タブの高さ（最初のデザインと同じ細さ）
+    private let tabRadius: CGFloat = 6      // タブの左側角丸
 
     private var dialArea: some View {
-        VStack(spacing: 0) {
-            dialContent
-                .frame(height: showParentDial ? dialFixedHeight : nil)
-            // ルーレット下の追加ボタン
+        Group {
             if showParentDial {
-                HStack(spacing: 6) {
-                    Button {
-                        newTagIsChild = false
-                        showNewTagSheet = true
-                    } label: {
-                        Label("親タグ追加", systemImage: "plus.circle.fill")
-                            .font(.system(size: 11, weight: .medium))
-                            .foregroundStyle(.blue)
-                    }
-                    if showChildDial {
-                        Button {
-                            newTagIsChild = true
-                            showNewTagSheet = true
-                        } label: {
-                            Label("子タグ追加", systemImage: "plus.circle")
-                                .font(.system(size: 11, weight: .medium))
-                                .foregroundStyle(.blue.opacity(0.7))
-                        }
-                    }
-                }
-                .padding(.vertical, 6)
-                .padding(.horizontal, 4)
+                openTray
+                    .transition(.move(edge: .trailing))
+            } else {
+                closedTab
             }
-            Spacer(minLength: 0)
         }
         .fixedSize(horizontal: true, vertical: false)
     }
 
-    private var dialContent: some View {
-        HStack(spacing: 0) {
-            // ルーレット本体（展開時のみ）
-            if showParentDial {
-                Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
-                    .transition(.move(edge: .trailing))
+    // 閉じている時のタブ
+    private var closedTab: some View {
+        VStack(spacing: 0) {
+            HStack(spacing: 2) {
+                Text("◀").font(.system(size: 12))
+                Text("タグ付け").font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .frame(width: tabWidth, height: tabHeight, alignment: .leading)
+            .padding(.leading, 6)
+            .background(
+                UnevenRoundedRectangle(
+                    topLeadingRadius: tabRadius,
+                    bottomLeadingRadius: tabRadius,
+                    bottomTrailingRadius: 0,
+                    topTrailingRadius: 0
+                )
+                .fill(trayColor)
+                .shadow(color: .black.opacity(0.15), radius: 2, x: -1, y: 1)
+            )
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.spring(response: 0.3)) { showParentDial = true }
+            }
+            .simultaneousGesture(
+                DragGesture(minimumDistance: 5)
+                    .onChanged { value in
+                        if value.translation.width < -10 {
+                            withAnimation(.spring(response: 0.3)) { showParentDial = true }
+                        }
+                    }
+            )
+            Spacer(minLength: 0)
+        }
+    }
 
+    // 展開時: タブがトレーの左上から飛び出した一体型
+    private var openTray: some View {
+        // GeometryReaderでトレー本体の実サイズを取得し、
+        // その上にタブが飛び出すShapeを正確に描画する
+        VStack(spacing: 4) {
+            HStack(spacing: 0) {
                 TagDialView(
                     parentOptions: parentOptions,
                     parentSelectedID: $viewModel.selectedTagID,
@@ -394,143 +415,158 @@ struct MemoInputView: View {
                     showChild: $showChildDial,
                     childExternalDragY: $childExternalDragY
                 )
-                .transition(.move(edge: .trailing))
+                childDialToggle
+            }
+            .frame(height: dialFixedHeight)
 
-                // 子タブ開閉ボタン
-                ZStack {
-                    if showChildDial {
-                        Text("›")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 14, height: 60)
-                            .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.3)) { showChildDial = false }
-                            }
-                    } else {
-                        VStack(spacing: 2) {
-                            Text("子").font(.system(size: 11, weight: .bold, design: .rounded))
-                            Text("‹").font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundStyle(.secondary)
-                        .frame(width: 20, height: 60)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color(red: 0.90, green: 0.90, blue: 0.92))
-                        )
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.3)) { showChildDial = true }
-                        }
+            HStack(spacing: 6) {
+                Button {
+                    newTagIsChild = false
+                    showNewTagSheet = true
+                } label: {
+                    Label("親タグ追加", systemImage: "plus.circle.fill")
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                if showChildDial {
+                    Button {
+                        newTagIsChild = true
+                        showNewTagSheet = true
+                    } label: {
+                        Label("子タグ追加", systemImage: "plus.circle")
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.7))
                     }
                 }
-                .contentShape(Rectangle())
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 5)
-                        .onChanged { value in
-                            if !showChildDial { showChildDial = true }
-                            childExternalDragY = value.translation.height
-                        }
-                        .onEnded { _ in childExternalDragY = nil }
-                )
             }
-
-            // 閉じている時だけタブをHStack内に配置
-            if !showParentDial {
-                VStack(spacing: 0) {
-                    tagTab
-                    Spacer(minLength: 0)
-                }
-            }
+            .padding(.vertical, 4)
         }
-        // 展開時はタブをoverlayで右端上に固定（ルーレットに重ならない位置）
-        .overlay(alignment: .topTrailing) {
-            if showParentDial {
-                tagTab
-                    .offset(x: 70) // タブ幅分だけ右にはみ出す
+        // コンテンツをボディ領域に配置（タブの右＋下）
+        .padding(.top, tabHeight + 10)
+        .padding(.bottom, 10)
+        .padding(.leading, tabWidth + 12)
+        .padding(.trailing, 12)
+        .background(
+            TrayWithTabShape(
+                tabWidth: tabWidth,
+                tabHeight: tabHeight,
+                tabRadius: tabRadius,
+                bodyRadius: trayCornerRadius
+            )
+            .fill(trayColor)
+            .shadow(color: .black.opacity(0.2), radius: 3, x: -2, y: 2)
+        )
+        // タブテキストを左上に配置
+        .overlay(alignment: .topLeading) {
+            HStack(spacing: 2) {
+                Text("▶").font(.system(size: 12))
+                Text("しまう").font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .frame(width: tabWidth, height: tabHeight, alignment: .leading)
+            .padding(.leading, 6)
+            .contentShape(Rectangle())
+            .onTapGesture {
+                withAnimation(.spring(response: 0.3)) {
+                    showParentDial = false; showChildDial = false
+                }
             }
         }
     }
 
-    // タグ付けタブ（常に表示）
-    private var tagTab: some View {
-        VStack(alignment: .trailing, spacing: 0) {
-            // 上部: 横長タブ
-            HStack(spacing: 2) {
-                Text(showParentDial ? "▶" : "◀").font(.system(size: 12))
-                Text(showParentDial ? "しまう" : "タグ付け").font(.system(size: 13, weight: .bold, design: .rounded))
-            }
-            .foregroundStyle(.white)
-            .frame(width: 70, height: 22, alignment: .leading)
-            .padding(.leading, 6)
-            .background(
-                UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, bottomTrailingRadius: 0, topTrailingRadius: 0)
-                    .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
-            )
-
-            // 下部: 縦長グリップ（包丁の刃先カーブ）— 閉じている時のみ
-            if !showParentDial {
-                HStack(spacing: 0) {
-                    Spacer(minLength: 0)
-                    GripShape()
-                        .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
-                        .frame(width: 35, height: 70)
+    // 子ダイアル開閉ボタン（トレー内）
+    private var childDialToggle: some View {
+        ZStack {
+            if showChildDial {
+                Text("›")
+                    .font(.system(size: 14, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.7))
+                    .frame(width: 14, height: 60)
+                    .background(RoundedRectangle(cornerRadius: 4).fill(Color.white.opacity(0.15)))
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3)) { showChildDial = false }
+                    }
+            } else {
+                VStack(spacing: 2) {
+                    Text("子").font(.system(size: 11, weight: .bold, design: .rounded))
+                    Text("‹").font(.system(size: 12, weight: .bold))
                 }
-                .frame(width: 70)
+                .foregroundStyle(.white.opacity(0.8))
+                .frame(width: 20, height: 60)
+                .background(
+                    RoundedRectangle(cornerRadius: 4)
+                        .fill(Color.white.opacity(0.2))
+                )
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    withAnimation(.spring(response: 0.3)) { showChildDial = true }
+                }
             }
         }
-        .shadow(color: .black.opacity(0.15), radius: 2, x: -1, y: 1)
         .contentShape(Rectangle())
-        .onTapGesture {
-            withAnimation(.spring(response: 0.3)) {
-                if showParentDial {
-                    showParentDial = false; showChildDial = false
-                } else {
-                    showParentDial = true
-                }
-            }
-        }
         .simultaneousGesture(
             DragGesture(minimumDistance: 5)
                 .onChanged { value in
-                    if !showParentDial && value.translation.width < -10 {
-                        withAnimation(.spring(response: 0.3)) { showParentDial = true }
-                    }
+                    if !showChildDial { showChildDial = true }
+                    childExternalDragY = value.translation.height
                 }
+                .onEnded { _ in childExternalDragY = nil }
         )
     }
 }
 
-// グリップの包丁刃先シェイプ
-// 上部は幅16ptの長方形、下端が左に向かってカーブしながら広がり刃先のように消える
-struct GripShape: Shape {
+// タブ + トレー一体型シェイプ
+//
+//  ┌────────┐
+//  │  タブ   ├───────────────┐
+//  └────────┤               │
+//           │  トレー本体    │
+//           │               │
+//           └───────────────┘
+//
+struct TrayWithTabShape: Shape {
+    let tabWidth: CGFloat
+    let tabHeight: CGFloat
+    let tabRadius: CGFloat
+    let bodyRadius: CGFloat
+
     func path(in rect: CGRect) -> Path {
-        let gripWidth: CGFloat = 8
-        let left = rect.maxX - gripWidth  // グリップ左端
-        let right = rect.maxX             // グリップ右端（画面端）
+        // タブ: (0,0) → (tabWidth, tabHeight) 左上に飛び出す
+        // ボディ: (tabWidth, tabHeight) → (maxX, maxY)
+        let bodyTop = tabHeight
 
-        let filletR: CGFloat = 7  // L字内側の丸み半径
+        var p = Path()
 
-        var path = Path()
-        // 左上: フィレットの開始点（上辺から）
-        path.move(to: CGPoint(x: left - filletR, y: 0))
-        // 内側の丸みカーブ（水平→垂直へ滑らかに）
-        path.addQuadCurve(
-            to: CGPoint(x: left, y: filletR),
-            control: CGPoint(x: left, y: 0)
-        )
-        // 左辺をまっすぐ途中まで下へ
-        path.addLine(to: CGPoint(x: left, y: rect.height * 0.5))
-        // 左辺がカーブして右へ→最後は水平に右辺と合流
-        path.addCurve(
-            to: CGPoint(x: right, y: rect.height),
-            control1: CGPoint(x: left, y: rect.height * 0.85),
-            control2: CGPoint(x: right - gripWidth * 0.6, y: rect.height)
-        )
-        // 右辺をまっすぐ上へ
-        path.addLine(to: CGPoint(x: right, y: 0))
-        path.closeSubpath()
-        return path
+        // 1. タブ左上角（丸み）
+        p.move(to: CGPoint(x: 0, y: tabRadius))
+        p.addArc(center: CGPoint(x: tabRadius, y: tabRadius),
+                 radius: tabRadius, startAngle: .degrees(180), endAngle: .degrees(270), clockwise: false)
+
+        // 2. タブ上辺 → 右端まで（ボディ上辺と同じ高さ）
+        p.addLine(to: CGPoint(x: rect.maxX, y: 0))
+
+        // 3. 右辺を下へ
+        p.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+
+        // 4. ボディ下辺 → ボディ左下角（丸み）
+        p.addLine(to: CGPoint(x: tabWidth + bodyRadius, y: rect.maxY))
+        p.addArc(center: CGPoint(x: tabWidth + bodyRadius, y: rect.maxY - bodyRadius),
+                 radius: bodyRadius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
+
+        // 5. ボディ左辺を上へ → タブ下辺
+        p.addLine(to: CGPoint(x: tabWidth, y: bodyTop))
+
+        // 6. タブ下辺を左へ（左下角の丸み分手前まで）
+        p.addLine(to: CGPoint(x: tabRadius, y: bodyTop))
+
+        // 9. タブ左下角（丸み）
+        p.addArc(center: CGPoint(x: tabRadius, y: bodyTop - tabRadius),
+                 radius: tabRadius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
+
+        // 10. タブ左辺を上へ → 始点に戻る
+        p.closeSubpath()
+
+        return p
     }
 }
