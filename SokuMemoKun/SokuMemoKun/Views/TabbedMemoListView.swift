@@ -776,7 +776,7 @@ struct TabbedMemoListView: View {
                                     }
                                 } label: {
                                     HStack(spacing: 4) {
-                                        MoveToTopIcon(variant: 3)
+                                        MoveToTopIcon()
                                             .frame(width: 18, height: 18)
                                         Text("トップに移動")
                                             .font(.system(size: 13, weight: .semibold, design: .rounded))
@@ -823,7 +823,7 @@ struct TabbedMemoListView: View {
                                 selectMode = .moveToTop
                                 selectedMemoIDs.removeAll()
                             } label: {
-                                MoveToTopIcon(variant: 3)
+                                MoveToTopIcon()
                                     .frame(width: 20, height: 20)
                                     .foregroundStyle(.secondary)
                                     .padding(10)
@@ -1652,206 +1652,29 @@ struct TabBarView: View {
     }
 }
 
-// 「トップに移動」オリジナルアイコン（複数メモ+上矢印）
+// 「トップに移動」オリジナルアイコン（カード横並び＋上矢印）
 struct MoveToTopIcon: View {
-    var variant: Int = 0
     var body: some View {
         Canvas { context, size in
             let w = size.width
             let h = size.height
-            switch variant {
-            case 1: // カード3枚重ね＋大きい矢印（中央）
-                let c3 = Path(roundedRect: CGRect(x: w*0.05, y: h*0.55, width: w*0.5, height: h*0.2), cornerRadius: 2)
-                let c2 = Path(roundedRect: CGRect(x: w*0.05, y: h*0.65, width: w*0.5, height: h*0.2), cornerRadius: 2)
-                let c1 = Path(roundedRect: CGRect(x: w*0.05, y: h*0.75, width: w*0.5, height: h*0.2), cornerRadius: 2)
-                context.fill(c1, with: .color(.primary.opacity(0.15)))
-                context.fill(c2, with: .color(.primary.opacity(0.3)))
-                context.fill(c3, with: .color(.primary.opacity(0.5)))
-                var arrow = Path()
-                let ax = w*0.72; let ay = h*0.05
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.2, y: ay + h*0.25))
-                arrow.addLine(to: CGPoint(x: ax + w*0.2, y: ay + h*0.25))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-                let shaft = Path(CGRect(x: ax - w*0.06, y: ay + h*0.22, width: w*0.12, height: h*0.6))
-                context.fill(shaft, with: .color(.primary))
-            case 2: // 大きなカード2枚＋右上に矢印
-                let c1 = Path(roundedRect: CGRect(x: w*0.02, y: h*0.45, width: w*0.6, height: h*0.25), cornerRadius: 3)
-                let c2 = Path(roundedRect: CGRect(x: w*0.08, y: h*0.6, width: w*0.6, height: h*0.25), cornerRadius: 3)
-                context.fill(c2, with: .color(.primary.opacity(0.2)))
-                context.fill(c1, with: .color(.primary.opacity(0.5)))
-                var arrow = Path()
-                let ax = w*0.8; let ay = h*0.08
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.18, y: ay + h*0.22))
-                arrow.addLine(to: CGPoint(x: ax + w*0.18, y: ay + h*0.22))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-                let shaft = Path(CGRect(x: ax - w*0.05, y: ay + h*0.2, width: w*0.1, height: h*0.45))
-                context.fill(shaft, with: .color(.primary))
-            case 3: // カード横並び＋上矢印（中央上）
-                let c1 = Path(roundedRect: CGRect(x: w*0.02, y: h*0.5, width: w*0.28, height: h*0.4), cornerRadius: 2)
-                let c2 = Path(roundedRect: CGRect(x: w*0.35, y: h*0.5, width: w*0.28, height: h*0.4), cornerRadius: 2)
-                let c3 = Path(roundedRect: CGRect(x: w*0.68, y: h*0.5, width: w*0.28, height: h*0.4), cornerRadius: 2)
-                context.fill(c1, with: .color(.primary.opacity(0.35)))
-                context.fill(c2, with: .color(.primary.opacity(0.45)))
-                context.fill(c3, with: .color(.primary.opacity(0.25)))
-                var arrow = Path()
-                let ax = w*0.5; let ay = h*0.02
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.2, y: ay + h*0.25))
-                arrow.addLine(to: CGPoint(x: ax + w*0.2, y: ay + h*0.25))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary.opacity(0.45)))
-                let shaft = Path(CGRect(x: ax - w*0.06, y: ay + h*0.22, width: w*0.12, height: h*0.2))
-                context.fill(shaft, with: .color(.primary.opacity(0.45)))
-            case 4: // 大カード1枚＋矢印突き抜け
-                let card = Path(roundedRect: CGRect(x: w*0.05, y: h*0.35, width: w*0.6, height: h*0.55), cornerRadius: 3)
-                context.fill(card, with: .color(.primary.opacity(0.4)))
-                // カード内の横線（メモっぽく）
-                let line1 = Path(CGRect(x: w*0.12, y: h*0.48, width: w*0.4, height: h*0.03))
-                let line2 = Path(CGRect(x: w*0.12, y: h*0.56, width: w*0.35, height: h*0.03))
-                let line3 = Path(CGRect(x: w*0.12, y: h*0.64, width: w*0.38, height: h*0.03))
-                context.fill(line1, with: .color(.primary.opacity(0.2)))
-                context.fill(line2, with: .color(.primary.opacity(0.2)))
-                context.fill(line3, with: .color(.primary.opacity(0.2)))
-                var arrow = Path()
-                let ax = w*0.8; let ay = h*0.05
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.17, y: ay + h*0.2))
-                arrow.addLine(to: CGPoint(x: ax + w*0.17, y: ay + h*0.2))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-                let shaft = Path(CGRect(x: ax - w*0.05, y: ay + h*0.18, width: w*0.1, height: h*0.7))
-                context.fill(shaft, with: .color(.primary))
-            case 5: // カード2枚ずらし＋太い矢印
-                let c1 = Path(roundedRect: CGRect(x: w*0.0, y: h*0.4, width: w*0.55, height: h*0.28), cornerRadius: 3)
-                let c2 = Path(roundedRect: CGRect(x: w*0.1, y: h*0.58, width: w*0.55, height: h*0.28), cornerRadius: 3)
-                context.fill(c2, with: .color(.primary.opacity(0.2)))
-                context.fill(c1, with: .color(.primary.opacity(0.5)))
-                var arrow = Path()
-                let ax = w*0.75; let ay = h*0.0
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.22, y: ay + h*0.3))
-                arrow.addLine(to: CGPoint(x: ax - w*0.1, y: ay + h*0.3))
-                arrow.addLine(to: CGPoint(x: ax - w*0.1, y: ay + h*0.85))
-                arrow.addLine(to: CGPoint(x: ax + w*0.1, y: ay + h*0.85))
-                arrow.addLine(to: CGPoint(x: ax + w*0.1, y: ay + h*0.3))
-                arrow.addLine(to: CGPoint(x: ax + w*0.22, y: ay + h*0.3))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-            case 6: // ミニカード3枚積み＋矢印（左寄せ）
-                for i in 0..<3 {
-                    let y = h * (0.5 + Double(i) * 0.15)
-                    let card = Path(roundedRect: CGRect(x: w*0.0, y: y, width: w*0.55, height: h*0.15), cornerRadius: 2)
-                    context.fill(card, with: .color(.primary.opacity(0.5 - Double(i) * 0.12)))
-                }
-                var arrow = Path()
-                let ax = w*0.78; let ay = h*0.05
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.18, y: ay + h*0.22))
-                arrow.addLine(to: CGPoint(x: ax + w*0.18, y: ay + h*0.22))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-                let shaft = Path(CGRect(x: ax - w*0.055, y: ay + h*0.2, width: w*0.11, height: h*0.55))
-                context.fill(shaft, with: .color(.primary))
-            case 7: // カード2枚＋丸い矢印
-                let c1 = Path(roundedRect: CGRect(x: w*0.0, y: h*0.45, width: w*0.55, height: h*0.25), cornerRadius: 3)
-                let c2 = Path(roundedRect: CGRect(x: w*0.08, y: h*0.62, width: w*0.55, height: h*0.25), cornerRadius: 3)
-                context.fill(c2, with: .color(.primary.opacity(0.2)))
-                context.fill(c1, with: .color(.primary.opacity(0.5)))
-                let cx = w*0.75; let cy = h*0.3
-                let circle = Path(ellipseIn: CGRect(x: cx - w*0.2, y: cy - w*0.2, width: w*0.4, height: w*0.4))
-                context.fill(circle, with: .color(.primary.opacity(0.15)))
-                var arrow = Path()
-                arrow.move(to: CGPoint(x: cx, y: cy - h*0.18))
-                arrow.addLine(to: CGPoint(x: cx - w*0.12, y: cy - h*0.05))
-                arrow.addLine(to: CGPoint(x: cx + w*0.12, y: cy - h*0.05))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-            case 8: // 大カード2枚＋ストップライン付き矢印
-                let c1 = Path(roundedRect: CGRect(x: w*0.0, y: h*0.5, width: w*0.58, height: h*0.22), cornerRadius: 3)
-                let c2 = Path(roundedRect: CGRect(x: w*0.06, y: h*0.66, width: w*0.58, height: h*0.22), cornerRadius: 3)
-                context.fill(c2, with: .color(.primary.opacity(0.2)))
-                context.fill(c1, with: .color(.primary.opacity(0.5)))
-                // ストップライン（上端）
-                let line = Path(CGRect(x: w*0.6, y: h*0.05, width: w*0.32, height: h*0.04))
-                context.fill(line, with: .color(.primary))
-                var arrow = Path()
-                let ax = w*0.76; let ay = h*0.12
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.15, y: ay + h*0.2))
-                arrow.addLine(to: CGPoint(x: ax + w*0.15, y: ay + h*0.2))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-                let shaft = Path(CGRect(x: ax - w*0.05, y: ay + h*0.18, width: w*0.1, height: h*0.55))
-                context.fill(shaft, with: .color(.primary))
-            case 9: // SF Symbol風 doc.on.doc + 矢印
-                // 奥のドキュメント
-                let back = Path(roundedRect: CGRect(x: w*0.15, y: h*0.38, width: w*0.45, height: h*0.35), cornerRadius: 3)
-                context.fill(back, with: .color(.primary.opacity(0.25)))
-                context.stroke(back, with: .color(.primary.opacity(0.4)), lineWidth: 1.5)
-                // 手前のドキュメント
-                let front = Path(roundedRect: CGRect(x: w*0.02, y: h*0.5, width: w*0.45, height: h*0.35), cornerRadius: 3)
-                context.fill(front, with: .color(.primary.opacity(0.1)))
-                context.stroke(front, with: .color(.primary.opacity(0.6)), lineWidth: 1.5)
-                // 手前の中の横線
-                for i in 0..<3 {
-                    let ly = h * (0.6 + Double(i) * 0.08)
-                    let l = Path(CGRect(x: w*0.08, y: ly, width: w*0.32, height: h*0.02))
-                    context.fill(l, with: .color(.primary.opacity(0.3)))
-                }
-                var arrow = Path()
-                let ax = w*0.78; let ay = h*0.02
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.17, y: ay + h*0.2))
-                arrow.addLine(to: CGPoint(x: ax + w*0.17, y: ay + h*0.2))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-                let shaft = Path(CGRect(x: ax - w*0.05, y: ay + h*0.18, width: w*0.1, height: h*0.55))
-                context.fill(shaft, with: .color(.primary))
-            default: // 0: 現在のデザイン
-                let backCard = Path(roundedRect: CGRect(x: w*0.18, y: h*0.35, width: w*0.45, height: w*0.35), cornerRadius: 2)
-                context.fill(backCard, with: .color(.primary.opacity(0.25)))
-                let frontCard = Path(roundedRect: CGRect(x: w*0.08, y: h*0.45, width: w*0.45, height: w*0.35), cornerRadius: 2)
-                context.fill(frontCard, with: .color(.primary.opacity(0.45)))
-                var arrow = Path()
-                let ax = w*0.75; let ay = h*0.15
-                arrow.move(to: CGPoint(x: ax, y: ay))
-                arrow.addLine(to: CGPoint(x: ax - w*0.15, y: ay + h*0.2))
-                arrow.addLine(to: CGPoint(x: ax + w*0.15, y: ay + h*0.2))
-                arrow.closeSubpath()
-                context.fill(arrow, with: .color(.primary))
-                let shaft = Path(CGRect(x: ax - w*0.05, y: ay + h*0.18, width: w*0.1, height: h*0.5))
-                context.fill(shaft, with: .color(.primary))
-            }
+            // カード3枚横並び
+            let c1 = Path(roundedRect: CGRect(x: w*0.02, y: h*0.5, width: w*0.28, height: h*0.4), cornerRadius: 2)
+            let c2 = Path(roundedRect: CGRect(x: w*0.35, y: h*0.5, width: w*0.28, height: h*0.4), cornerRadius: 2)
+            let c3 = Path(roundedRect: CGRect(x: w*0.68, y: h*0.5, width: w*0.28, height: h*0.4), cornerRadius: 2)
+            context.fill(c1, with: .color(.primary.opacity(0.35)))
+            context.fill(c2, with: .color(.primary.opacity(0.45)))
+            context.fill(c3, with: .color(.primary.opacity(0.25)))
+            // 上矢印
+            var arrow = Path()
+            let ax = w*0.5; let ay = h*0.02
+            arrow.move(to: CGPoint(x: ax, y: ay))
+            arrow.addLine(to: CGPoint(x: ax - w*0.2, y: ay + h*0.25))
+            arrow.addLine(to: CGPoint(x: ax + w*0.2, y: ay + h*0.25))
+            arrow.closeSubpath()
+            context.fill(arrow, with: .color(.primary.opacity(0.45)))
+            let shaft = Path(CGRect(x: ax - w*0.06, y: ay + h*0.22, width: w*0.12, height: h*0.2))
+            context.fill(shaft, with: .color(.primary.opacity(0.45)))
         }
-    }
-}
-
-// アイコン候補一覧（テスト用）
-struct IconGalleryView: View {
-    var body: some View {
-        ScrollView {
-            LazyVGrid(columns: [GridItem(.adaptive(minimum: 80))], spacing: 20) {
-                ForEach(0..<10) { i in
-                    VStack(spacing: 6) {
-                        MoveToTopIcon(variant: i)
-                            .frame(width: 50, height: 50)
-                        Text("#\(i)")
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                    }
-                    .padding(10)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(Color(uiColor: .systemGray6))
-                    )
-                }
-            }
-            .padding()
-        }
-        .navigationTitle("アイコン候補")
     }
 }

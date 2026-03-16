@@ -62,15 +62,6 @@ struct SettingsView: View {
                     }
                 }
 
-                // アイコン候補（テスト用・後で削除）
-                Section("開発用") {
-                    NavigationLink {
-                        IconGalleryView()
-                    } label: {
-                        Label("アイコン候補一覧", systemImage: "square.grid.2x2")
-                    }
-                }
-
                 // メモ設定（将来実装）
                 Section("メモ設定") {
                     HStack {
