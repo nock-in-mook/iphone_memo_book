@@ -381,8 +381,10 @@ struct MemoInputView: View {
 
     private var dialContent: some View {
         HStack(spacing: 0) {
+            // ルーレット本体（展開時のみ）
             if showParentDial {
                 Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
+                    .transition(.move(edge: .trailing))
 
                 TagDialView(
                     parentOptions: parentOptions,
@@ -392,6 +394,7 @@ struct MemoInputView: View {
                     showChild: $showChildDial,
                     childExternalDragY: $childExternalDragY
                 )
+                .transition(.move(edge: .trailing))
 
                 // 子タブ開閉ボタン
                 ZStack {
@@ -431,65 +434,71 @@ struct MemoInputView: View {
                         }
                         .onEnded { _ in childExternalDragY = nil }
                 )
+            }
 
-                // 全閉じボタン
-                Text("›")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 12, height: 50)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        withAnimation(.spring(response: 0.3)) {
-                            showParentDial = false; showChildDial = false
-                        }
-                    }
-                    .simultaneousGesture(
-                        DragGesture(minimumDistance: 10)
-                            .onEnded { value in
-                                if value.translation.width > 20 {
-                                    withAnimation(.spring(response: 0.3)) {
-                                        showParentDial = false; showChildDial = false
-                                    }
-                                }
-                            }
-                    )
-            } else {
-                // 逆さL字タブ（上=横タブ、下=縦グリップ）
-                VStack(alignment: .trailing, spacing: 0) {
-                    // 上部: 横長タブ（今まで通り）
-                    HStack(spacing: 2) {
-                        Text("◀").font(.system(size: 12))
-                        Text("タグ付").font(.system(size: 13, weight: .bold, design: .rounded))
-                    }
-                    .foregroundStyle(.white)
-                    .frame(width: 60, height: 22, alignment: .leading)
-                    .padding(.leading, 6)
-                    .background(
-                        UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, bottomTrailingRadius: 0, topTrailingRadius: 0)
-                            .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
-                    )
-
-                    // 下部: 縦長グリップ（包丁の刃先カーブ）
-                    HStack(spacing: 0) {
-                        Spacer(minLength: 0)
-                        GripShape()
-                            .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
-                            .frame(width: 35, height: 70)
-                    }
-                    .frame(width: 60)
+            // 閉じている時だけタブをHStack内に配置
+            if !showParentDial {
+                VStack(spacing: 0) {
+                    tagTab
+                    Spacer(minLength: 0)
                 }
-                .shadow(color: .black.opacity(0.15), radius: 2, x: -1, y: 1)
-                .contentShape(Rectangle())
-                .gesture(
-                    DragGesture(minimumDistance: 5)
-                        .onChanged { _ in
-                            if !showParentDial {
-                                withAnimation(.spring(response: 0.3)) { showParentDial = true }
-                            }
-                        }
-                )
             }
         }
+        // 展開時はタブをoverlayで右端上に固定（ルーレットに重ならない位置）
+        .overlay(alignment: .topTrailing) {
+            if showParentDial {
+                tagTab
+                    .offset(x: 70) // タブ幅分だけ右にはみ出す
+            }
+        }
+    }
+
+    // タグ付けタブ（常に表示）
+    private var tagTab: some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            // 上部: 横長タブ
+            HStack(spacing: 2) {
+                Text(showParentDial ? "▶" : "◀").font(.system(size: 12))
+                Text(showParentDial ? "しまう" : "タグ付け").font(.system(size: 13, weight: .bold, design: .rounded))
+            }
+            .foregroundStyle(.white)
+            .frame(width: 70, height: 22, alignment: .leading)
+            .padding(.leading, 6)
+            .background(
+                UnevenRoundedRectangle(topLeadingRadius: 6, bottomLeadingRadius: 6, bottomTrailingRadius: 0, topTrailingRadius: 0)
+                    .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
+            )
+
+            // 下部: 縦長グリップ（包丁の刃先カーブ）— 閉じている時のみ
+            if !showParentDial {
+                HStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    GripShape()
+                        .fill(Color(red: 0.76, green: 0.76, blue: 0.78))
+                        .frame(width: 35, height: 70)
+                }
+                .frame(width: 70)
+            }
+        }
+        .shadow(color: .black.opacity(0.15), radius: 2, x: -1, y: 1)
+        .contentShape(Rectangle())
+        .onTapGesture {
+            withAnimation(.spring(response: 0.3)) {
+                if showParentDial {
+                    showParentDial = false; showChildDial = false
+                } else {
+                    showParentDial = true
+                }
+            }
+        }
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 5)
+                .onChanged { value in
+                    if !showParentDial && value.translation.width < -10 {
+                        withAnimation(.spring(response: 0.3)) { showParentDial = true }
+                    }
+                }
+        )
     }
 }
 
