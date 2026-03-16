@@ -380,19 +380,6 @@ struct TagDialView: View {
             rotCtx.translateBy(x: textX, y: textY)
             rotCtx.rotate(by: rotAngle)
 
-            // バッジ背景（「タグなし」「なし」はバッジなし）
-            if !isNoneTag {
-                let badgeW = resolved.measure(in: CGSize(width: 200, height: 50)).width + 12
-                let badgeH = resolved.measure(in: CGSize(width: 200, height: 50)).height + 6
-                let badgeRect = CGRect(
-                    x: -badgeW / 2,
-                    y: -badgeH / 2,
-                    width: badgeW,
-                    height: badgeH
-                )
-                let badgePath = Path(roundedRect: badgeRect, cornerRadius: 5)
-                rotCtx.fill(badgePath, with: .color(option.color.opacity(isSelected ? 1.0 : 0.8)))
-            }
             rotCtx.draw(resolved, at: .zero, anchor: .center)
 
             context.opacity = 1.0
