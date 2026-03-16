@@ -10,6 +10,8 @@ struct MemoInputView: View {
     @Bindable var viewModel: MemoInputViewModel
     @Binding var focusInput: Bool
     @Binding var isExpanded: Bool
+    var hasDiff: Bool = false
+    var onConfirm: (() -> Void)? = nil
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
     @FocusState private var isTextEditorFocused: Bool
@@ -301,14 +303,35 @@ struct MemoInputView: View {
             }
             .disabled(viewModel.inputText.isEmpty)
 
-            // 右: 閉じる（既存メモを開いている時のみ表示）
+            // 右: 差分あり→「確定」、差分なし→「閉じる」（既存メモを開いている時のみ表示）
             if viewModel.editingMemo != nil {
+                if hasDiff {
+                    Button {
+                        isEditing = true
+                        isTextEditorFocused = false
+                        onConfirm?()
+                    } label: {
+                        Label("確定", systemImage: "checkmark.circle").font(.system(size: 14))
+                            .foregroundStyle(.blue)
+                    }
+                } else {
+                    Button {
+                        isEditing = true
+                        isTextEditorFocused = false
+                        viewModel.clearInput()
+                    } label: {
+                        Label("閉じる", systemImage: "xmark.circle").font(.system(size: 14))
+                    }
+                }
+            } else if viewModel.canClear {
+                // 新規メモで内容がある場合も「確定」
                 Button {
                     isEditing = true
                     isTextEditorFocused = false
-                    viewModel.clearInput()
+                    onConfirm?()
                 } label: {
-                    Label("閉じる", systemImage: "xmark.circle").font(.system(size: 14))
+                    Label("確定", systemImage: "checkmark.circle").font(.system(size: 14))
+                        .foregroundStyle(.blue)
                 }
             }
 

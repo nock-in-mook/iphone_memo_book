@@ -11,6 +11,11 @@ struct MainView: View {
     @State private var isSearchFocused = false
     @FocusState private var isSearchFieldFocused: Bool
     @State private var isInputExpanded = false
+    @State private var isMemoListExpanded = false
+    @State private var enteredFromMemoList = false
+    @State private var showSavedToast = false
+    @State private var originalContent = ""
+    @State private var originalTitle = ""
     // 「ここに保存」確認ダイアログ
     @State private var showSaveToTabAlert = false
     @State private var pendingSaveTagID: UUID? = nil
@@ -23,18 +28,48 @@ struct MainView: View {
         NavigationStack {
             GeometryReader { geo in
                 VStack(spacing: 0) {
-                    // 上: 入力欄（展開時は画面いっぱいに伸びる）
-                    MemoInputView(
-                        viewModel: viewModel,
-                        focusInput: $focusInput,
-                        isExpanded: $isInputExpanded
-                    )
-                    .frame(height: isInputExpanded ? geo.size.height * 0.92 : geo.size.height * 0.48 - 30)
+                    if !isMemoListExpanded {
+                        // 上: 入力欄（展開時は画面いっぱいに伸びる）
+                        MemoInputView(
+                            viewModel: viewModel,
+                            focusInput: $focusInput,
+                            isExpanded: $isInputExpanded,
+                            hasDiff: viewModel.inputText != originalContent || viewModel.titleText != originalTitle,
+                            onConfirm: { confirmMemo() }
+                        )
+                        .frame(height: isInputExpanded ? geo.size.height * 0.92 : geo.size.height * 0.48 - 30)
 
-                    // Specialメニュー用スペース（入力欄とフォルダの間）
-                    if !isInputExpanded {
-                        Spacer()
-                            .frame(height: 30)
+                        // Specialメニュー用スペース（入力欄とフォルダの間）
+                        if !isInputExpanded {
+                            // 上向き取っ手（タップでメモ一覧最大化）
+                            Button {
+                                withAnimation(.spring(response: 0.35)) {
+                                    isMemoListExpanded = true
+                                }
+                            } label: {
+                                Image(systemName: "chevron.compact.up")
+                                    .font(.system(size: 18, weight: .semibold))
+                                    .foregroundStyle(.secondary.opacity(0.5))
+                                    .frame(maxWidth: .infinity)
+                                    .frame(height: 30)
+                            }
+                            .buttonStyle(.plain)
+                        }
+                    } else {
+                        // メモ一覧最大化時: 元に戻すボタン
+                        Button {
+                            withAnimation(.spring(response: 0.35)) {
+                                isMemoListExpanded = false
+                            }
+                        } label: {
+                            Image(systemName: "chevron.compact.down")
+                                .font(.system(size: 20, weight: .semibold))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 28)
+                                .background(Color(uiColor: .secondarySystemBackground).opacity(0.6))
+                        }
+                        .buttonStyle(.plain)
                     }
 
                     // 下: フォルダ付きメモ一覧
@@ -42,13 +77,41 @@ struct MainView: View {
                         selectedTabIndex: $selectedTabIndex,
                         searchText: $searchText,
                         onAddMemo: { tagID in
-                            viewModel.clearInput()
-                            viewModel.selectedTagID = tagID
-                            focusInput = true
+                            if isMemoListExpanded {
+                                // 最大化時: 入力欄最大化に切替（←で戻れるように）
+                                viewModel.clearInput()
+                                viewModel.selectedTagID = tagID
+                                enteredFromMemoList = true
+                                withAnimation(.spring(response: 0.35)) {
+                                    isMemoListExpanded = false
+                                    isInputExpanded = true
+                                }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) {
+                                    focusInput = true
+                                }
+                            } else {
+                                viewModel.clearInput()
+                                viewModel.selectedTagID = tagID
+                                focusInput = true
+                            }
                         },
                         onEditMemo: { memo in
-                            // 既存メモを入力欄に読み込む
-                            viewModel.loadMemo(memo)
+                            if isMemoListExpanded {
+                                // 最大化時: メモを読み込み→一覧縮小＋入力欄最大化
+                                viewModel.loadMemo(memo)
+                                originalContent = viewModel.inputText
+                                originalTitle = viewModel.titleText
+                                enteredFromMemoList = true
+                                withAnimation(.spring(response: 0.35)) {
+                                    isMemoListExpanded = false
+                                    isInputExpanded = true
+                                }
+                            } else {
+                                // 通常時: 入力欄に読み込む
+                                viewModel.loadMemo(memo)
+                                originalContent = viewModel.inputText
+                                originalTitle = viewModel.titleText
+                            }
                         },
                         onDeleteMemo: { memo in
                             if viewModel.editingMemo?.id == memo.id {
@@ -67,15 +130,33 @@ struct MainView: View {
             .ignoresSafeArea(.keyboard)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
-                // 左: 展開時は「←」で縮小、通常時は「＋」で新規メモ
+                // 左: 展開時は「←」で縮小、最大化時は「↓」で戻す、通常時は「＋」で新規メモ
                 ToolbarItem(placement: .topBarLeading) {
                     if isInputExpanded {
                         Button {
-                            withAnimation(.spring(response: 0.35)) {
-                                isInputExpanded = false
+                            if enteredFromMemoList {
+                                // メモ一覧最大化から来た場合→メモ一覧最大化に戻る
+                                enteredFromMemoList = false
+                                withAnimation(.spring(response: 0.35)) {
+                                    isInputExpanded = false
+                                    isMemoListExpanded = true
+                                }
+                            } else {
+                                withAnimation(.spring(response: 0.35)) {
+                                    isInputExpanded = false
+                                }
                             }
                         } label: {
                             Image(systemName: "chevron.left")
+                                .font(.system(size: 17))
+                        }
+                    } else if isMemoListExpanded {
+                        Button {
+                            withAnimation(.spring(response: 0.35)) {
+                                isMemoListExpanded = false
+                            }
+                        } label: {
+                            Image(systemName: "chevron.down")
                                 .font(.system(size: 17))
                         }
                     } else {
@@ -141,16 +222,47 @@ struct MainView: View {
                         }
                     }
                 }
-                // 右: 設定
+                // 右: 差分ありの入力欄最大化時は「確定」、それ以外は設定
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showSettings = true
-                    } label: {
-                        Image(systemName: "gearshape")
-                            .font(.system(size: 15))
+                    let isEditing = viewModel.editingMemo != nil
+                    let hasDiff = viewModel.inputText != originalContent || viewModel.titleText != originalTitle
+                    let hasContent = viewModel.canClear
+                    let showConfirm = isInputExpanded && hasContent && (!isEditing || hasDiff)
+                    if showConfirm {
+                        Button {
+                            confirmMemo()
+                        } label: {
+                            Text("確定")
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.blue)
+                        }
+                    } else {
+                        Button {
+                            showSettings = true
+                        } label: {
+                            Image(systemName: "gearshape")
+                                .font(.system(size: 15))
+                        }
                     }
                 }
             }
+            // 保存トースト
+            .overlay(alignment: .top) {
+                if showSavedToast {
+                    Text("保存しました")
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 20)
+                        .padding(.vertical, 10)
+                        .background(
+                            Capsule()
+                                .fill(Color.black.opacity(0.7))
+                        )
+                        .padding(.top, 60)
+                        .transition(.move(edge: .top).combined(with: .opacity))
+                }
+            }
+            .animation(.easeInOut(duration: 0.3), value: showSavedToast)
             .sheet(isPresented: $showSettings, onDismiss: {
                 // 設定画面を閉じた時にマスタースイッチの状態を反映
                 if !markdownEnabled {
@@ -235,6 +347,32 @@ struct MainView: View {
                     viewModel.isMarkdown = false
                 }
             }
+        }
+    }
+
+    // 確定処理（共通）
+    private func confirmMemo() {
+        let savedMemoID = viewModel.editingMemo?.id
+        viewModel.clearInput()
+        originalContent = ""
+        originalTitle = ""
+        showSavedToast = true
+        if let memoID = savedMemoID {
+            NotificationCenter.default.post(
+                name: .memoSavedFlash,
+                object: nil,
+                userInfo: ["memoID": memoID]
+            )
+        }
+        if enteredFromMemoList {
+            enteredFromMemoList = false
+            withAnimation(.spring(response: 0.35)) {
+                isInputExpanded = false
+                isMemoListExpanded = true
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+            withAnimation { showSavedToast = false }
         }
     }
 
