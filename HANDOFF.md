@@ -33,10 +33,10 @@
 - ROADMAP.md: タグサジェスト3層構造、学習機能、長押し編集
 
 ## 環境
-- Mac: MacBook Air M2, macOS
-- Xcode: 26.3
-- シミュレータ: iPhone 15 Pro Max (95C8A8C5-0972-4BB0-B793-5219096697DF) ← iOS 17.2
+- **Mac①（旧）**: MacBook Air M2 — Xcode旧版, シミュレータ iPhone 15 Pro Max (iOS 17.2)
+- **Mac②（新）**: MacBook Air — Xcode 26.3, シミュレータ iPhone 17 Pro Max (iOS 26.3.1)
 - 実機: 15promax (26.3.1) (00008130-0006252E2E40001C)
+- 2台体制でiOS 17 / iOS 26 両方の互換性テストが可能
 - ビルド後は毎回「Fit Screen」でウィンドウ縮小する
 
 ## 次のアクション

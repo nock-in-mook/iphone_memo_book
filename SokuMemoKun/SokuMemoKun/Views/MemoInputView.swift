@@ -405,6 +405,19 @@ struct MemoInputView: View {
                     childExternalDragY: $childExternalDragY
                 )
                 .offset(x: showParentDial ? -27 : -30, y: -10) // 開き時は右寄せ、閉じ時はチラ見せ
+                .allowsHitTesting(showParentDial) // チラ見せ時はタッチ無効
+                // 引き出し時: 右端の余白に「しまう」ボタン
+                if showParentDial {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 28, weight: .bold))
+                        .foregroundStyle(.white.opacity(0.5))
+                        .frame(maxHeight: .infinity)
+                        .frame(width: 36)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) { showParentDial = false }
+                        }
+                }
             }
             .frame(height: dialFixedHeight)
 
@@ -454,6 +467,13 @@ struct MemoInputView: View {
                 .onChange(of: geo.size.width) { _, newW in trayTotalWidth = newW }
             }
         )
+        // 余白タップでトレーを閉じる
+        .contentShape(Rectangle())
+        .onTapGesture {
+            if showParentDial {
+                withAnimation(.spring(response: 0.3)) { showParentDial = false }
+            }
+        }
         // ルーレットラベル（展開時のみ、取っ手の帯と同じ高さに表示）
         .overlay(alignment: .topTrailing) {
             if showParentDial && !trayHidden {
@@ -503,21 +523,6 @@ struct MemoInputView: View {
                     }
                 }
             }
-            .simultaneousGesture(
-                DragGesture(minimumDistance: 5)
-                    .onChanged { value in
-                        if !showParentDial && !trayHidden && value.translation.width > 10 {
-                            // チラ見せ状態で右スワイプ → 完全収納
-                            withAnimation(.spring(response: 0.3)) { trayHidden = true }
-                        } else if !showParentDial && value.translation.width < -10 {
-                            // チラ見せ or 完全収納から左スワイプ → 全開
-                            withAnimation(.spring(response: 0.3)) {
-                                trayHidden = false
-                                showParentDial = true
-                            }
-                        }
-                    }
-            )
         }
     }
 
