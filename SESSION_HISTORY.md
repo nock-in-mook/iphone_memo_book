@@ -863,3 +863,14 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - 追加ボタンZStack独立配置、フォント調整
 - タグサジェスト辞書4449語（TagSuggestDictionary.json）追加
 - ROADMAP: タグサジェスト3層構造、学習機能、長押し編集追記
+
+---
+## 即メモ_024_Mac環境構築とルーレットUI改善 (2026-03-18)
+- 新Mac環境構築（Xcode設定、xcode-select、Apple ID登録、実機ペアリング）
+- iPhone 15 Pro Max vs 17 Pro Max の解像度差異確認
+- 絶対値レイアウト調査（高6件、中6件）→ リリース前タスクとしてROADMAP追記
+- ルーレットUI改善: しまうボタン追加、チラ見せタッチ無効、余白タップ閉じ
+- タイトル欄上部拡大（トレー下端で吸収）
+- 子タグ追加時の親タグ未選択警告
+- ルーレット長押し編集/削除（暫定実装→位置判定不安定）
+- TagDialView SwiftUI化プラン策定、feature/roulette-swiftui-viewsブランチ作成
