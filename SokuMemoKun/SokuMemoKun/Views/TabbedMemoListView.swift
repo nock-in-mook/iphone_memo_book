@@ -1468,11 +1468,16 @@ struct TabReorderSheet: View {
         NavigationStack {
             VStack(spacing: 0) {
                 // ヒントテキスト
-                Text("長押しで移動できます")
-                    .font(.system(size: 13, design: .rounded))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 8)
-                    .padding(.bottom, 4)
+                VStack(spacing: 2) {
+                    Text("長押しで移動できます")
+                        .font(.system(size: 13, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    Text("（タグ付けルーレットの並び順にも反映されます）")
+                        .font(.system(size: 11, design: .rounded))
+                        .foregroundStyle(.tertiary)
+                }
+                .padding(.top, 8)
+                .padding(.bottom, 4)
 
                 List {
                     ForEach(Array(orderedItems.enumerated()), id: \.offset) { index, item in
@@ -1646,7 +1651,7 @@ struct TabBarView: View {
             Button {
                 onShowReorderSheet()
             } label: {
-                Label("並び替え", systemImage: "arrow.up.arrow.down")
+                Label("フォルダの並び替え", systemImage: "arrow.up.arrow.down")
             }
         }
     }
