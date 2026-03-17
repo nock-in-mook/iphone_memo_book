@@ -489,10 +489,16 @@ struct MemoInputView: View {
                     showChild: $showChildDial,
                     isOpen: showParentDial,
                     childExternalDragY: $childExternalDragY,
-                    onLongPress: { isChild, id in
+                    onEditTag: { id in
                         if let uuid = UUID(uuidString: id) {
                             longPressedTagID = uuid
-                            showTagActionSheet = true
+                            showTagEditSheet = true
+                        }
+                    },
+                    onDeleteTag: { id in
+                        if let uuid = UUID(uuidString: id) {
+                            longPressedTagID = uuid
+                            showTagDeleteAlert = true
                         }
                     }
                 )

@@ -42,8 +42,9 @@ struct TagDialView: View {
     // 外部ドラッグ入力（子タブからの引き出し用）
     @Binding var childExternalDragY: CGFloat?
 
-    // 長押しコールバック（isChild: 子タグか, id: タグID）
-    var onLongPress: ((_ isChild: Bool, _ id: String) -> Void)?
+    // タグ操作コールバック
+    var onEditTag: ((_ id: String) -> Void)?
+    var onDeleteTag: ((_ id: String) -> Void)?
 
     // ジオメトリ定数
     private let wheelRadius: CGFloat = 350
@@ -275,13 +276,18 @@ struct TagDialView: View {
                 .onTapGesture {
                     snapToTag(index: rawIndex, isChild: isChild)
                 }
-                // 長押しでコンテキストメニュー（新機能: タグなし以外）
+                // 長押しでコンテキストメニュー（タグなし以外）
                 .if(!isNone) { view in
                     view.contextMenu {
                         Button {
-                            onLongPress?(isChild, option.id)
+                            onEditTag?(option.id)
                         } label: {
-                            Label("編集・削除", systemImage: "pencil")
+                            Label("タグ名・色を編集", systemImage: "pencil")
+                        }
+                        Button(role: .destructive) {
+                            onDeleteTag?(option.id)
+                        } label: {
+                            Label("削除", systemImage: "trash")
                         }
                     }
                 }
@@ -519,13 +525,15 @@ struct TagDialView: View {
 
     private func snapToTag(index: Int, isChild: Bool) {
         let target = CGFloat(index) * itemAngle
+        // ルーレットが回って移動する感じのアニメーション
+        let anim = Animation.spring(response: 0.45, dampingFraction: 0.75)
         if isChild {
-            withAnimation(.spring(response: 0.3)) { childRotation = target }
+            withAnimation(anim) { childRotation = target }
             childDragStart = target
             childIsInternalChange = true
             updateChildSelection()
         } else {
-            withAnimation(.spring(response: 0.3)) { parentRotation = target }
+            withAnimation(anim) { parentRotation = target }
             parentDragStart = target
             parentIsInternalChange = true
             updateParentSelection()
