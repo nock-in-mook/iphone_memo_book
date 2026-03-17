@@ -1447,7 +1447,7 @@ struct MemoCardView: View {
             }
             .padding(3)
         }
-        .frame(height: gridSize == .grid3x8 ? 36 : gridSize == .grid2x6 ? 48 : gridSize == .grid2x3 ? 104 : gridSize == .grid1x2 ? 160 : cardHeight)
+        .frame(height: gridSize == .grid3x8 ? 36 : gridSize == .grid2x6 ? 48 : gridSize == .grid2x3 ? 104 : gridSize == .grid1x2 ? 160 : cardHeight, alignment: .topLeading)
         .background(Color(uiColor: .systemBackground))
         .contentShape(RoundedRectangle(cornerRadius: 6))
         .onTapGesture { onTap?() }
