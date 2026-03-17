@@ -1651,7 +1651,7 @@ struct TabBarView: View {
             Button {
                 onShowReorderSheet()
             } label: {
-                Label("フォルダの並び替え", systemImage: "arrow.up.arrow.down")
+                Label("フォルダの並び替え", systemImage: "arrow.left.arrow.right")
             }
         }
     }
