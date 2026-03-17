@@ -417,6 +417,7 @@ struct MemoInputView: View {
                         .font(.system(size: 11, weight: .medium))
                         .foregroundStyle(.white.opacity(0.8))
                 }
+                .offset(x: -40)
                 if showChildDial {
                     Button {
                         newTagIsChild = true
@@ -429,6 +430,7 @@ struct MemoInputView: View {
                 }
             }
             .padding(.vertical, 4)
+            .offset(y: -13)
         }
         // コンテンツをボディ領域に配置（タブの右＋下）
         .padding(.top, tabHeight + 10)
