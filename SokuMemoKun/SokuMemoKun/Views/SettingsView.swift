@@ -6,6 +6,7 @@ struct SettingsView: View {
     @AppStorage("markdownEnabled") private var markdownEnabled = false
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @AppStorage("restoreLastMemo") private var restoreLastMemo = false
+    @AppStorage("dialDefault") private var dialDefault: Int = 0
 
     var body: some View {
         NavigationStack {
@@ -24,6 +25,17 @@ struct SettingsView: View {
                         Text("前回のメモを続行").tag(true)
                     } label: {
                         Label("アプリ起動時の入力欄", systemImage: "doc.text")
+                    }
+                }
+
+                // タグトレー
+                Section("タグトレー") {
+                    Picker(selection: $dialDefault) {
+                        Text("チラ見せ").tag(0)
+                        Text("全開").tag(1)
+                        Text("隠す").tag(2)
+                    } label: {
+                        Label("起動時の状態", systemImage: "tray.and.arrow.down")
                     }
                 }
 

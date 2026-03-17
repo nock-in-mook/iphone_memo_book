@@ -52,7 +52,7 @@ struct TagDialView: View {
         let innermost = showChild ? childInnerR : parentInnerR
         // 左端に必要な幅 = cx - innermost（180°方向の最左端）
         // ただし弧は150°〜210°の範囲なので少し余裕を持たせる
-        let needed = cx - innermost * CGFloat(cos(Double.pi * 30.0 / 180.0)) + 10
+        let needed = cx - innermost * CGFloat(cos(Double.pi * 30.0 / 180.0)) + 14
         return max(needed, 100)
     }
 
@@ -117,7 +117,7 @@ struct TagDialView: View {
 
             // --- 縁取り描画 ---
             // 親の外周
-            drawEdge(context: &context, cx: cx, cy: cy, radius: parentOuterR, lineWidth: 2.5, brightness: (0.35, 0.5, 0.35))
+            drawEdge(context: &context, cx: cx, cy: cy, radius: parentOuterR, lineWidth: 3, brightness: (0.35, 0.5, 0.35))
 
             // 親の内周 / 子の外周（共有境界）
             drawEdge(context: &context, cx: cx, cy: cy, radius: parentInnerR, lineWidth: 1.5, brightness: (0.3, 0.45, 0.3))

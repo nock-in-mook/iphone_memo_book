@@ -25,6 +25,7 @@ struct MemoInputView: View {
     @State private var showDeleteAlert = false
     // ルーレット展開状態
     @State private var showParentDial = false
+    @State private var trayHidden = false // 完全収納（取っ手も隠れる）
     @State private var showChildDial = true
     @State private var childExternalDragY: CGFloat? = nil
     @AppStorage("dialDefault") private var dialDefault: Int = 0
@@ -237,7 +238,18 @@ struct MemoInputView: View {
             viewModel.onTagChanged(tags: tags)
         }
         .onAppear {
-            showParentDial = dialDefault >= 1
+            // dialDefault: 0=チラ見せ, 1=全開, 2=完全収納
+            switch dialDefault {
+            case 2:
+                trayHidden = true
+                showParentDial = false
+            case 1:
+                trayHidden = false
+                showParentDial = true
+            default:
+                trayHidden = false
+                showParentDial = false
+            }
             showChildDial = true // 子ルーレット常時表示
         }
     }
@@ -356,7 +368,7 @@ struct MemoInputView: View {
     private let trayCornerRadius: CGFloat = 10
 
     // タブ寸法
-    private let tabWidth: CGFloat = 50      // タブの横幅（短くしてチラ見せスペース確保）
+    private let tabWidth: CGFloat = 80      // タブの横幅（「◀ タグ付け」テキスト分）
     private let tabHeight: CGFloat = 22     // タブの高さ（最初のデザインと同じ細さ）
     private let tabRadius: CGFloat = 6      // タブの左側角丸
 
@@ -366,12 +378,17 @@ struct MemoInputView: View {
     // トレー全体の幅（GeometryReaderで計測）
     @State private var trayTotalWidth: CGFloat = 300
 
+    // 完全収納時に取っ手が覗く量
+    private let hiddenPeekAmount: CGFloat = 34
+
     private var dialArea: some View {
         openTray
             .fixedSize(horizontal: true, vertical: false)
-            // 閉じている時: トレー本体分だけ右にオフセット（タブだけ見える）
-            .offset(x: showParentDial ? 0 : (trayTotalWidth - tabWidth))
+            .offset(x: trayHidden
+                ? (trayTotalWidth - hiddenPeekAmount)  // 完全収納: 取っ手が少しだけ覗く
+                : (showParentDial ? 0 : (trayTotalWidth - tabWidth)))  // 通常
             .animation(.spring(response: 0.3), value: showParentDial)
+            .animation(.spring(response: 0.3), value: trayHidden)
     }
 
     // 一体型トレー（常時描画）
@@ -433,21 +450,51 @@ struct MemoInputView: View {
                 .onChange(of: geo.size.width) { _, newW in trayTotalWidth = newW }
             }
         )
+        // ルーレットラベル（展開時のみ、取っ手の帯と同じ高さに表示）
+        .overlay(alignment: .topTrailing) {
+            if showParentDial && !trayHidden {
+                ZStack(alignment: .trailing) {
+                    Text("親タグ")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .frame(height: tabHeight)
+                        .padding(.trailing, 200) // 親セクター中央
+                    if showChildDial {
+                        Text("子タグ")
+                            .font(.system(size: 10, weight: .medium, design: .rounded))
+                            .foregroundStyle(.white.opacity(0.6))
+                            .frame(height: tabHeight)
+                            .padding(.trailing, 83) // 子セクター中央
+                    }
+                }
+            }
+        }
         // タブテキストを左上に配置
         .overlay(alignment: .topLeading) {
             HStack(spacing: 2) {
-                Text(showParentDial ? "▶" : "◀").font(.system(size: 12))
-                Text(showParentDial ? "しまう" : "タグ").font(.system(size: 13, weight: .bold, design: .rounded))
+                if trayHidden {
+                    // 完全収納時: 矢印だけ
+                    Text("◀").font(.system(size: 12))
+                } else {
+                    Text(showParentDial ? "▶" : "◀").font(.system(size: 12))
+                    Text(showParentDial ? "しまう" : "タグ付け").font(.system(size: 13, weight: .bold, design: .rounded))
+                }
             }
             .foregroundStyle(.white)
-            .frame(width: tabWidth, height: tabHeight, alignment: .leading)
-            .padding(.leading, 6)
+            .frame(width: trayHidden ? hiddenPeekAmount : tabWidth, height: tabHeight, alignment: .leading)
+            .padding(.leading, trayHidden ? 4 : 6)
             .contentShape(Rectangle())
             .onTapGesture {
                 withAnimation(.spring(response: 0.3)) {
-                    if showParentDial {
+                    if trayHidden {
+                        // 完全収納 → 全開
+                        trayHidden = false
+                        showParentDial = true
+                    } else if showParentDial {
+                        // 全開 → チラ見せ
                         showParentDial = false
                     } else {
+                        // チラ見せ → 全開
                         showParentDial = true
                     }
                 }
@@ -455,8 +502,15 @@ struct MemoInputView: View {
             .simultaneousGesture(
                 DragGesture(minimumDistance: 5)
                     .onChanged { value in
-                        if !showParentDial && value.translation.width < -10 {
-                            withAnimation(.spring(response: 0.3)) { showParentDial = true }
+                        if !showParentDial && !trayHidden && value.translation.width > 10 {
+                            // チラ見せ状態で右スワイプ → 完全収納
+                            withAnimation(.spring(response: 0.3)) { trayHidden = true }
+                        } else if !showParentDial && value.translation.width < -10 {
+                            // チラ見せ or 完全収納から左スワイプ → 全開
+                            withAnimation(.spring(response: 0.3)) {
+                                trayHidden = false
+                                showParentDial = true
+                            }
                         }
                     }
             )
@@ -520,12 +574,14 @@ struct TrayWithTabShape: Shape {
     let tabRadius: CGFloat
     let bodyRadius: CGFloat
     var bodyPeek: CGFloat = 0  // ボディが取っ手エリアに侵入する幅
+    var innerRadius: CGFloat = 10  // 取っ手とボディの内側角の丸み
 
     func path(in rect: CGRect) -> Path {
         // タブ: (0,0) → (tabWidth, tabHeight) 左上に飛び出す
         // ボディ: (bodyLeftX, tabHeight) → (maxX, maxY)
         let bodyTop = tabHeight
         let bodyLeftX = tabWidth - bodyPeek  // peekぶんだけ左に伸ばす
+        let ir = min(innerRadius, bodyTop)  // 内側角の丸み（はみ出し防止）
 
         var p = Path()
 
@@ -545,8 +601,12 @@ struct TrayWithTabShape: Shape {
         p.addArc(center: CGPoint(x: bodyLeftX + bodyRadius, y: rect.maxY - bodyRadius),
                  radius: bodyRadius, startAngle: .degrees(90), endAngle: .degrees(180), clockwise: false)
 
-        // 5. ボディ左辺を上へ → タブ下辺
-        p.addLine(to: CGPoint(x: bodyLeftX, y: bodyTop))
+        // 5. ボディ左辺を上へ → 内側角の手前まで
+        p.addLine(to: CGPoint(x: bodyLeftX, y: bodyTop + ir))
+
+        // 5.5. 内側角の丸み（凹カーブ: 時計回り）
+        p.addArc(center: CGPoint(x: bodyLeftX - ir, y: bodyTop + ir),
+                 radius: ir, startAngle: .degrees(0), endAngle: .degrees(270), clockwise: true)
 
         // 6. タブ下辺を左へ（左下角の丸み分手前まで）
         p.addLine(to: CGPoint(x: tabRadius, y: bodyTop))
