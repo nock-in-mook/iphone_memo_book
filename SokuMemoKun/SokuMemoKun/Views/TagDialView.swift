@@ -1,7 +1,29 @@
 import SwiftUI
 import SwiftData
+import UIKit
 
-// 親子統合ルーレット: 1つのCanvasで親の内周=子の外周がぴったり接する
+// MARK: - 扇形シェイプ（1セクターの形状）
+
+struct SectorArc: Shape {
+    var center: CGPoint
+    var innerRadius: CGFloat
+    var outerRadius: CGFloat
+    var startAngle: Angle
+    var endAngle: Angle
+
+    func path(in rect: CGRect) -> Path {
+        var p = Path()
+        p.addArc(center: center, radius: innerRadius,
+                 startAngle: startAngle, endAngle: endAngle, clockwise: false)
+        p.addArc(center: center, radius: outerRadius,
+                 startAngle: endAngle, endAngle: startAngle, clockwise: true)
+        p.closeSubpath()
+        return p
+    }
+}
+
+// MARK: - 親子統合ルーレット（SwiftUIビューベース）
+
 struct TagDialView: View {
     // 親オプション
     var parentOptions: [(id: String, name: String, color: Color)]
@@ -17,11 +39,17 @@ struct TagDialView: View {
     // トレーが開いているか（カラー表示の切り替えに使用）
     var isOpen: Bool = false
 
-    // 円の設定
-    private let wheelRadius: CGFloat = 350      // 親の外周半径
-    private let parentThickness: CGFloat = 110  // 親セクターの厚み
-    private let childThickness: CGFloat = 110   // 子セクターの厚み（親と同じ）
-    private let itemAngle: CGFloat = 8          // 各タグ間の角度（度）
+    // 外部ドラッグ入力（子タブからの引き出し用）
+    @Binding var childExternalDragY: CGFloat?
+
+    // 長押しコールバック（isChild: 子タグか, id: タグID）
+    var onLongPress: ((_ isChild: Bool, _ id: String) -> Void)?
+
+    // ジオメトリ定数
+    private let wheelRadius: CGFloat = 350
+    private let parentThickness: CGFloat = 110
+    private let childThickness: CGFloat = 110
+    private let itemAngle: CGFloat = 8
     private let dialHeight: CGFloat = 211
 
     // 親の回転
@@ -36,32 +64,475 @@ struct TagDialView: View {
     @State private var childIsDragging = false
     @State private var childIsInternalChange = false
 
-    // 外部ドラッグ入力（子タブからの引き出し用）
-    @Binding var childExternalDragY: CGFloat?
-
-    // 長押しコールバック（isChild: 子タグか, id: タグID）
-    var onLongPress: ((_ isChild: Bool, _ id: String) -> Void)?
-
-    // 長押し検出用
-    @State private var longPressTimer: Timer?
-    @State private var longPressLocation: CGPoint?
-
     // 計算プロパティ
     private var parentOuterR: CGFloat { wheelRadius }
     private var parentInnerR: CGFloat { wheelRadius - parentThickness }
-    private var childOuterR: CGFloat { parentInnerR }  // 親の内周=子の外周
+    private var childOuterR: CGFloat { parentInnerR }
     private var childInnerR: CGFloat { parentInnerR - childThickness }
 
-    // Canvas幅（親のみ or 親子）
     private var canvasWidth: CGFloat {
-        // cx - 内側の最小半径がCanvas左端に来るように
         let cx = wheelRadius + 2
         let innermost = showChild ? childInnerR : parentInnerR
-        // 左端に必要な幅 = cx - innermost（180°方向の最左端）
-        // ただし弧は150°〜210°の範囲なので少し余裕を持たせる
         let needed = cx - innermost * CGFloat(cos(Double.pi * 30.0 / 180.0)) + 14
         return max(needed, 100)
     }
+
+    // MARK: - Body
+
+    var body: some View {
+        let cx = wheelRadius + 2
+        let cy = dialHeight / 2
+        let center = CGPoint(x: cx, y: cy)
+
+        ZStack {
+            // --- 親セクターリング ---
+            sectorRing(
+                center: center, outerR: parentOuterR, innerR: parentInnerR,
+                options: parentOptions, rotation: parentRotation,
+                maxChars: 10, isChild: false
+            )
+
+            // --- 子セクターリング ---
+            if showChild && !childOptions.isEmpty {
+                sectorRing(
+                    center: center, outerR: childOuterR, innerR: childInnerR,
+                    options: childOptions, rotation: childRotation,
+                    maxChars: 7, isChild: true
+                )
+            }
+
+            // --- 縁取り ---
+            edgeArcView(center: center, radius: parentOuterR,
+                        lineWidth: 3, brightness: (0.35, 0.5, 0.35))
+            edgeArcView(center: center, radius: parentInnerR,
+                        lineWidth: 1.5, brightness: (0.3, 0.45, 0.3))
+            if showChild {
+                edgeArcView(center: center, radius: childInnerR,
+                            lineWidth: 1.5, brightness: (0.3, 0.45, 0.3))
+            }
+
+            // --- 選択ポインター（赤い三角） ---
+            pointerView(cy: cy)
+
+            // --- インナーシャドウ ---
+            innerShadowOverlay()
+        }
+        .frame(width: canvasWidth, height: dialHeight)
+        .clipped()
+        .contentShape(Rectangle())
+        // ドラッグ: simultaneousでセクターのタップと共存
+        .simultaneousGesture(
+            DragGesture()
+                .onChanged { value in
+                    let touchCX = wheelRadius + 2
+                    let touchX = value.startLocation.x
+                    let borderX = touchCX - parentInnerR
+
+                    if showChild && touchX > borderX {
+                        // 子エリア（内周より右＝内側）
+                        childIsDragging = true
+                        let rawRot = childDragStart + value.translation.height * -0.3
+                        childRotation = clampedRotation(rawRot, count: childOptions.count)
+                    } else {
+                        // 親エリア（内周より左＝外側）
+                        parentIsDragging = true
+                        let rawRot = parentDragStart + value.translation.height * -0.3
+                        parentRotation = clampedRotation(rawRot, count: parentOptions.count)
+                    }
+                }
+                .onEnded { _ in
+                    if parentIsDragging {
+                        let snapped = clampedSnap(parentRotation, count: parentOptions.count)
+                        withAnimation(.spring(response: 0.3)) { parentRotation = snapped }
+                        parentDragStart = snapped
+                        parentIsInternalChange = true
+                        updateParentSelection()
+                        parentIsDragging = false
+                    }
+                    if childIsDragging {
+                        let snapped = clampedSnap(childRotation, count: childOptions.count)
+                        withAnimation(.spring(response: 0.3)) { childRotation = snapped }
+                        childDragStart = snapped
+                        childIsInternalChange = true
+                        updateChildSelection()
+                        childIsDragging = false
+                    }
+                }
+        )
+        // タップ消費（親ビューのトレー閉じジェスチャーに伝播させない）
+        .onTapGesture { }
+        .onAppear {
+            syncParentRotation()
+            syncChildRotation()
+        }
+        // 外部ドラッグ入力（子タブからの引き出し）
+        .onChange(of: childExternalDragY) { _, newValue in
+            if let dragY = newValue {
+                childIsDragging = true
+                let rawRot = childDragStart + dragY * -0.3
+                childRotation = clampedRotation(rawRot, count: childOptions.count)
+            } else if childIsDragging {
+                let snapped = clampedSnap(childRotation, count: childOptions.count)
+                withAnimation(.spring(response: 0.3)) { childRotation = snapped }
+                childDragStart = snapped
+                childIsInternalChange = true
+                updateChildSelection()
+                childIsDragging = false
+            }
+        }
+        .onChange(of: parentSelectedID) { _, _ in
+            if parentIsInternalChange { parentIsInternalChange = false }
+            else { syncParentRotation() }
+        }
+        .onChange(of: childSelectedID) { _, _ in
+            if childIsInternalChange { childIsInternalChange = false }
+            else { syncChildRotation() }
+        }
+    }
+
+    // MARK: - セクターリング（ForEachで個別ビュー生成）
+
+    @ViewBuilder
+    private func sectorRing(
+        center: CGPoint, outerR: CGFloat, innerR: CGFloat,
+        options: [(id: String, name: String, color: Color)],
+        rotation: CGFloat, maxChars: Int, isChild: Bool
+    ) -> some View {
+        let baseIndex = Int(floor(rotation / itemAngle + 0.5))
+
+        ForEach(-10...10, id: \.self) { offset in
+            let rawIndex = baseIndex + offset
+            let hasTag = rawIndex >= 0 && rawIndex < options.count
+            let displayAngle = CGFloat(rawIndex) * itemAngle - rotation
+            let dist = abs(displayAngle)
+            let maxDist = itemAngle * 8
+            let fade = max(0.0, 1.0 - dist / maxDist)
+
+            if fade > 0 {
+                sectorSlotView(
+                    center: center, outerR: outerR, innerR: innerR,
+                    options: options, rawIndex: rawIndex, hasTag: hasTag,
+                    displayAngle: displayAngle, fade: fade,
+                    isSelected: hasTag && dist < itemAngle / 2,
+                    maxChars: maxChars, isChild: isChild
+                )
+            }
+        }
+    }
+
+    // MARK: - 個別セクタービュー
+
+    @ViewBuilder
+    private func sectorSlotView(
+        center: CGPoint, outerR: CGFloat, innerR: CGFloat,
+        options: [(id: String, name: String, color: Color)],
+        rawIndex: Int, hasTag: Bool,
+        displayAngle: CGFloat, fade: CGFloat, isSelected: Bool,
+        maxChars: Int, isChild: Bool
+    ) -> some View {
+        let halfAngle = itemAngle / 2
+        let cgStart = Angle.degrees(180.0 - Double(displayAngle + halfAngle))
+        let cgEnd = Angle.degrees(180.0 - Double(displayAngle - halfAngle))
+
+        let arc = SectorArc(
+            center: center, innerRadius: innerR, outerRadius: outerR,
+            startAngle: cgStart, endAngle: cgEnd
+        )
+
+        if hasTag {
+            let option = options[rawIndex]
+            let isNone = option.id == "none"
+            let fillColor = sectorFillColor(option: option, isSelected: isSelected)
+
+            arc.fill(fillColor)
+                .overlay {
+                    // 選択ハイライト（閉じている時のみ）
+                    if isSelected && !isOpen {
+                        arc.fill(Color.gray.opacity(0.05))
+                    }
+
+                    // 仕切り線（上端）
+                    dividerLine(center: center, angle: cgEnd,
+                                innerR: innerR, outerR: outerR, fade: fade)
+
+                    // 最後のセクターは下端にも仕切り線
+                    if rawIndex == options.count - 1 {
+                        dividerLine(center: center, angle: cgStart,
+                                    innerR: innerR, outerR: outerR, fade: fade)
+                    }
+
+                    // テキスト
+                    sectorTextView(
+                        option: option, center: center,
+                        midR: (innerR + outerR) / 2,
+                        displayAngle: displayAngle, isSelected: isSelected,
+                        maxChars: maxChars
+                    )
+                }
+                .opacity(fade)
+                .contentShape(arc)
+                // タップでそのタグにスナップ回転（新機能）
+                .onTapGesture {
+                    snapToTag(index: rawIndex, isChild: isChild)
+                }
+                // 長押しでコンテキストメニュー（新機能: タグなし以外）
+                .if(!isNone) { view in
+                    view.contextMenu {
+                        Button {
+                            onLongPress?(isChild, option.id)
+                        } label: {
+                            Label("編集・削除", systemImage: "pencil")
+                        }
+                    }
+                }
+        } else {
+            // タグなし範囲（灰色背景のみ）
+            arc.fill(Color(white: 0.92))
+                .overlay {
+                    if !isOpen {
+                        dividerLine(center: center, angle: cgEnd,
+                                    innerR: innerR, outerR: outerR, fade: fade)
+                    }
+                }
+                .opacity(fade)
+                .allowsHitTesting(false)
+        }
+    }
+
+    // MARK: - セクター塗り色
+
+    private func sectorFillColor(
+        option: (id: String, name: String, color: Color),
+        isSelected: Bool
+    ) -> Color {
+        if isOpen {
+            if option.id == "none" {
+                return .white.opacity(isSelected ? 1.0 : 0.95)
+            }
+            return option.color.opacity(isSelected ? 1.0 : 0.85)
+        } else {
+            return .white.opacity(isSelected ? 1.0 : 0.95)
+        }
+    }
+
+    // MARK: - テキスト描画
+
+    @ViewBuilder
+    private func sectorTextView(
+        option: (id: String, name: String, color: Color),
+        center: CGPoint, midR: CGFloat,
+        displayAngle: CGFloat, isSelected: Bool,
+        maxChars: Int
+    ) -> some View {
+        let displayName = option.name.count > maxChars
+            ? String(option.name.prefix(maxChars)) + "…"
+            : option.name
+        let nameLen = displayName.count
+        let isNoneTag = option.id == "none"
+        let isParent = maxChars >= 10
+
+        // フォントサイズ: セクター幅と文字数に応じて可変
+        let baseFontSize: CGFloat = {
+            if isParent {
+                if nameLen <= 2 { return 24 }
+                if nameLen <= 3 { return 21 }
+                if nameLen <= 4 { return 18 }
+                if nameLen <= 6 { return 15 }
+                if nameLen <= 8 { return 13 }
+                return 11
+            } else {
+                if nameLen <= 2 { return 16 }
+                if nameLen <= 3 { return 14 }
+                if nameLen <= 5 { return 12 }
+                return 10
+            }
+        }()
+        let fontSize: CGFloat = isNoneTag
+            ? (isParent ? 16 : 14)
+            : (isSelected ? baseFontSize : max(baseFontSize - 2, 9))
+
+        // テキスト色
+        let textColor = textColorFor(option: option)
+
+        // テキスト位置: セクター中央（弧の中点）
+        let cgMid = (180.0 - Double(displayAngle)) * .pi / 180
+        let textX = center.x + midR * CGFloat(cos(cgMid))
+        let textY = center.y + midR * CGFloat(sin(cgMid))
+
+        Text(displayName)
+            .font(.system(
+                size: fontSize,
+                weight: isSelected ? .bold : .semibold,
+                design: .rounded
+            ))
+            .foregroundColor(textColor)
+            .rotationEffect(.degrees(-Double(displayAngle)))
+            .position(x: textX, y: textY)
+    }
+
+    // テキスト色: タグなしは薄グレー、それ以外は背景色の明度で判定
+    private func textColorFor(
+        option: (id: String, name: String, color: Color)
+    ) -> Color {
+        if option.id == "none" { return Color(white: 0.55) }
+        // 閉じている時は白背景なので黒
+        if !isOpen { return .black }
+        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
+        UIColor(option.color).getRed(&r, green: &g, blue: &b, alpha: nil)
+        let luminance = 0.299 * r + 0.587 * g + 0.114 * b
+        return luminance < 0.6 ? .white : .black
+    }
+
+    // MARK: - 仕切り線
+
+    @ViewBuilder
+    private func dividerLine(
+        center: CGPoint, angle: Angle,
+        innerR: CGFloat, outerR: CGFloat, fade: CGFloat
+    ) -> some View {
+        let rad = angle.radians
+        Path { p in
+            p.move(to: CGPoint(
+                x: center.x + innerR * cos(rad),
+                y: center.y + innerR * sin(rad)
+            ))
+            p.addLine(to: CGPoint(
+                x: center.x + outerR * cos(rad),
+                y: center.y + outerR * sin(rad)
+            ))
+        }
+        .stroke(Color(white: 0.35).opacity(Double(fade) * 0.5), lineWidth: 1.5)
+    }
+
+    // MARK: - 縁取りアーク
+
+    @ViewBuilder
+    private func edgeArcView(
+        center: CGPoint, radius: CGFloat, lineWidth: CGFloat,
+        brightness: (CGFloat, CGFloat, CGFloat)
+    ) -> some View {
+        let halfHeight = dialHeight / 2
+        let maxSinAngle = min(1.0, Double(halfHeight / radius))
+        let maxAngle = asin(maxSinAngle) * 180.0 / .pi
+        let startDeg = 180.0 - maxAngle
+        let endDeg = 180.0 + maxAngle
+
+        Path { p in
+            p.addArc(center: center, radius: radius,
+                     startAngle: .degrees(startDeg),
+                     endAngle: .degrees(endDeg),
+                     clockwise: false)
+        }
+        .stroke(
+            LinearGradient(
+                colors: [
+                    Color(white: brightness.0),
+                    Color(white: brightness.1),
+                    Color(white: brightness.2)
+                ],
+                startPoint: UnitPoint(x: 0, y: (halfHeight - 80) / dialHeight),
+                endPoint: UnitPoint(x: 0, y: (halfHeight + 80) / dialHeight)
+            ),
+            lineWidth: lineWidth
+        )
+        .allowsHitTesting(false)
+    }
+
+    // MARK: - ポインター（赤い三角）
+
+    @ViewBuilder
+    private func pointerView(cy: CGFloat) -> some View {
+        let pw: CGFloat = 10
+        let ph: CGFloat = 16
+        let pLeft: CGFloat = -2
+
+        // シャドウ
+        Path { p in
+            p.move(to: CGPoint(x: pLeft + 1, y: cy - ph / 2 + 1))
+            p.addLine(to: CGPoint(x: pLeft + pw + 1, y: cy + 1))
+            p.addLine(to: CGPoint(x: pLeft + 1, y: cy + ph / 2 + 1))
+            p.closeSubpath()
+        }
+        .fill(Color.black.opacity(0.3))
+
+        // ポインター本体
+        Path { p in
+            p.move(to: CGPoint(x: pLeft, y: cy - ph / 2))
+            p.addLine(to: CGPoint(x: pLeft + pw, y: cy))
+            p.addLine(to: CGPoint(x: pLeft, y: cy + ph / 2))
+            p.closeSubpath()
+        }
+        .fill(
+            LinearGradient(
+                colors: [
+                    Color(red: 0.9, green: 0.15, blue: 0.1),
+                    Color(red: 0.7, green: 0.1, blue: 0.08)
+                ],
+                startPoint: UnitPoint(x: 0, y: (cy - ph / 2) / dialHeight),
+                endPoint: UnitPoint(x: 0, y: (cy + ph / 2) / dialHeight)
+            )
+        )
+
+        // ハイライト線
+        Path { p in
+            p.move(to: CGPoint(x: pLeft + 1, y: cy - ph / 2 + 2))
+            p.addLine(to: CGPoint(x: pLeft + pw - 3, y: cy))
+        }
+        .stroke(Color.white.opacity(0.5), lineWidth: 1)
+    }
+
+    // MARK: - インナーシャドウ（トレーの縁の影）
+
+    @ViewBuilder
+    private func innerShadowOverlay() -> some View {
+        let shadowSize: CGFloat = 8
+        let shadowLeft: CGFloat = 20
+
+        // 上辺
+        VStack(spacing: 0) {
+            LinearGradient(colors: [.black.opacity(0.2), .clear],
+                           startPoint: .top, endPoint: .bottom)
+                .frame(height: shadowSize)
+                .padding(.leading, shadowLeft)
+            Spacer(minLength: 0)
+        }
+
+        // 下辺
+        VStack(spacing: 0) {
+            Spacer(minLength: 0)
+            LinearGradient(colors: [.black.opacity(0.2), .clear],
+                           startPoint: .bottom, endPoint: .top)
+                .frame(height: shadowSize)
+                .padding(.leading, shadowLeft)
+        }
+
+        // 右辺
+        HStack(spacing: 0) {
+            Spacer(minLength: 0)
+            LinearGradient(colors: [.black.opacity(0.2), .clear],
+                           startPoint: .trailing, endPoint: .leading)
+                .frame(width: shadowSize)
+        }
+    }
+
+    // MARK: - タップでタグにスナップ回転（新機能）
+
+    private func snapToTag(index: Int, isChild: Bool) {
+        let target = CGFloat(index) * itemAngle
+        if isChild {
+            withAnimation(.spring(response: 0.3)) { childRotation = target }
+            childDragStart = target
+            childIsInternalChange = true
+            updateChildSelection()
+        } else {
+            withAnimation(.spring(response: 0.3)) { parentRotation = target }
+            parentDragStart = target
+            parentIsInternalChange = true
+            updateParentSelection()
+        }
+    }
+
+    // MARK: - ヘルパー関数
 
     private func snappedIndex(rotation: CGFloat, count: Int) -> Int {
         guard count > 0 else { return 0 }
@@ -89,439 +560,10 @@ struct TagDialView: View {
         return max(0, min(snapped, maxRot))
     }
 
-    var body: some View {
-        let pOpts = parentOptions
-        let cOpts = childOptions
-        let pRot = parentRotation
-        let cRot = childRotation
-        let pCount = pOpts.count
-        let cCount = cOpts.count
-        let sc = showChild
-
-        Canvas { context, size in
-            let cy = size.height / 2
-            let cx = wheelRadius + 2
-
-            // --- 親セクター描画 ---
-            if pCount > 0 {
-                drawSectors(
-                    context: &context, cx: cx, cy: cy,
-                    outerR: parentOuterR, innerR: parentInnerR,
-                    options: pOpts, rotation: pRot, count: pCount,
-                    maxChars: 10
-                )
-            }
-
-            // --- 子セクター描画（showChild時のみ） ---
-            if sc && cCount > 0 {
-                drawSectors(
-                    context: &context, cx: cx, cy: cy,
-                    outerR: childOuterR, innerR: childInnerR,
-                    options: cOpts, rotation: cRot, count: cCount,
-                    maxChars: 7
-                )
-            }
-
-            // --- 縁取り描画 ---
-            // 親の外周
-            drawEdge(context: &context, cx: cx, cy: cy, radius: parentOuterR, lineWidth: 3, brightness: (0.35, 0.5, 0.35))
-
-            // 親の内周 / 子の外周（共有境界）
-            drawEdge(context: &context, cx: cx, cy: cy, radius: parentInnerR, lineWidth: 1.5, brightness: (0.3, 0.45, 0.3))
-
-            // 子の内周（showChild時のみ）
-            if sc {
-                drawEdge(context: &context, cx: cx, cy: cy, radius: childInnerR, lineWidth: 1.5, brightness: (0.3, 0.45, 0.3))
-            }
-
-            // --- 選択ポインター（赤い三角） ---
-            drawPointer(context: &context, cy: cy)
-
-            // --- インナーシャドウ（トレーの縁がルーレットに影を落とす風） ---
-            let shadowSize: CGFloat = 8
-            let shadowColor = Color.black.opacity(0.2)
-            let clear = Color.clear
-            let shadowLeft: CGFloat = 20  // トレー左端に合わせる
-            // 上辺
-            let topGrad = Gradient(colors: [shadowColor, clear])
-            context.fill(
-                Path(CGRect(x: shadowLeft, y: 0, width: size.width - shadowLeft, height: shadowSize)),
-                with: .linearGradient(topGrad, startPoint: CGPoint(x: 0, y: 0), endPoint: CGPoint(x: 0, y: shadowSize))
-            )
-            // 下辺
-            context.fill(
-                Path(CGRect(x: shadowLeft, y: size.height - shadowSize, width: size.width - shadowLeft, height: shadowSize)),
-                with: .linearGradient(topGrad, startPoint: CGPoint(x: 0, y: size.height), endPoint: CGPoint(x: 0, y: size.height - shadowSize))
-            )
-            // 右辺
-            context.fill(
-                Path(CGRect(x: size.width - shadowSize, y: 0, width: shadowSize, height: size.height)),
-                with: .linearGradient(topGrad, startPoint: CGPoint(x: size.width, y: 0), endPoint: CGPoint(x: size.width - shadowSize, y: 0))
-            )
-        }
-        .frame(width: canvasWidth, height: dialHeight)
-        .clipped()
-        .contentShape(Rectangle())
-        .gesture(
-            DragGesture()
-                .onChanged { value in
-                    // x座標で親/子を判定
-                    // Canvas上: 右寄り=外周(親)、左寄り=内周(子)
-                    let cx = wheelRadius + 2
-                    let touchX = value.startLocation.x
-                    // 親内周のCanvas上のx座標（180°方向の最左端）
-                    let borderX = cx - parentInnerR  // ≈84pt
-                    if showChild && touchX > borderX {
-                        // 子エリア（内周より右＝内側）
-                        childIsDragging = true
-                        let rawRot = childDragStart + value.translation.height * -0.3
-                        childRotation = clampedRotation(rawRot, count: cOpts.count)
-                    } else {
-                        // 親エリア（内周より左＝外側）
-                        parentIsDragging = true
-                        let rawRot = parentDragStart + value.translation.height * -0.3
-                        parentRotation = clampedRotation(rawRot, count: pOpts.count)
-                    }
-                }
-                .onEnded { value in
-                    if parentIsDragging {
-                        let snapped = clampedSnap(parentRotation, count: pOpts.count)
-                        withAnimation(.spring(response: 0.3)) { parentRotation = snapped }
-                        parentDragStart = snapped
-                        parentIsInternalChange = true
-                        updateParentSelection()
-                        parentIsDragging = false
-                    }
-                    if childIsDragging {
-                        let snapped = clampedSnap(childRotation, count: cOpts.count)
-                        withAnimation(.spring(response: 0.3)) { childRotation = snapped }
-                        childDragStart = snapped
-                        childIsInternalChange = true
-                        updateChildSelection()
-                        childIsDragging = false
-                    }
-                }
-        )
-        // タップイベントを消費（親ビューのトレー閉じジェスチャーに伝播させない）
-        .onTapGesture { }
-        // 長押し検出（位置情報付き）
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 0)
-                .onChanged { value in
-                    if longPressLocation == nil {
-                        // タッチ開始: タイマーセット
-                        longPressLocation = value.startLocation
-                        longPressTimer = Timer.scheduledTimer(withTimeInterval: 0.6, repeats: false) { _ in
-                            DispatchQueue.main.async {
-                                if let loc = longPressLocation {
-                                    handleLongPress(at: loc)
-                                }
-                                longPressLocation = nil
-                            }
-                        }
-                    }
-                    // 移動量が大きければ長押しキャンセル（ドラッグ操作）
-                    if abs(value.translation.width) > 10 || abs(value.translation.height) > 10 {
-                        longPressTimer?.invalidate()
-                        longPressTimer = nil
-                        longPressLocation = nil
-                    }
-                }
-                .onEnded { _ in
-                    longPressTimer?.invalidate()
-                    longPressTimer = nil
-                    longPressLocation = nil
-                }
-        )
-        .onAppear {
-            syncParentRotation()
-            syncChildRotation()
-        }
-        // 外部ドラッグ入力（子タブからの引き出し）
-        .onChange(of: childExternalDragY) { _, newValue in
-            if let dragY = newValue {
-                childIsDragging = true
-                let rawRot = childDragStart + dragY * -0.3
-                childRotation = clampedRotation(rawRot, count: childOptions.count)
-            } else if childIsDragging {
-                let snapped = clampedSnap(childRotation, count: childOptions.count)
-                withAnimation(.spring(response: 0.3)) { childRotation = snapped }
-                childDragStart = snapped
-                childIsInternalChange = true
-                updateChildSelection()
-                childIsDragging = false
-            }
-        }
-        .onChange(of: parentSelectedID) { _, _ in
-            if parentIsInternalChange {
-                parentIsInternalChange = false
-            } else {
-                syncParentRotation()
-            }
-        }
-        .onChange(of: childSelectedID) { _, _ in
-            if childIsInternalChange {
-                childIsInternalChange = false
-            } else {
-                syncChildRotation()
-            }
-        }
-    }
-
-    // MARK: - Canvas描画ヘルパー
-
-    private func drawSectors(
-        context: inout GraphicsContext, cx: CGFloat, cy: CGFloat,
-        outerR: CGFloat, innerR: CGFloat,
-        options: [(id: String, name: String, color: Color)],
-        rotation: CGFloat, count: Int, maxChars: Int
-    ) {
-        let midR = (innerR + outerR) / 2
-
-        for slotOffset in -10...10 {
-            let baseIndex = Int(floor(rotation / itemAngle + 0.5))
-            let rawIndex = baseIndex + slotOffset
-            let hasTag = rawIndex >= 0 && rawIndex < count
-
-            let displayAngle = CGFloat(rawIndex) * itemAngle - rotation
-            let dist = abs(displayAngle)
-            let maxDist = itemAngle * 8
-            let fade = max(0.0, 1.0 - dist / maxDist)
-            guard fade > 0 else { continue }
-
-            let halfAngle = itemAngle / 2
-            let cgStart = 180.0 - Double(displayAngle + halfAngle)
-            let cgEnd = 180.0 - Double(displayAngle - halfAngle)
-
-            // 扇形パス
-            var sector = Path()
-            sector.addArc(
-                center: CGPoint(x: cx, y: cy),
-                radius: innerR,
-                startAngle: .degrees(cgStart),
-                endAngle: .degrees(cgEnd),
-                clockwise: false
-            )
-            sector.addArc(
-                center: CGPoint(x: cx, y: cy),
-                radius: outerR,
-                startAngle: .degrees(cgEnd),
-                endAngle: .degrees(cgStart),
-                clockwise: true
-            )
-            sector.closeSubpath()
-
-            let isSelected = hasTag && dist < itemAngle / 2
-
-            // セクター塗り
-            context.opacity = fade
-            if hasTag && isOpen {
-                // 開いている時: タグカラーで塗りつぶし
-                let option = options[rawIndex]
-                let isNone = option.id == "none"
-                context.fill(
-                    sector,
-                    with: .color(isNone ? .white.opacity(isSelected ? 1.0 : 0.95) : option.color.opacity(isSelected ? 1.0 : 0.85))
-                )
-            } else {
-                // 閉じている時 or タグなし範囲: 白 or 薄いグレー
-                context.fill(
-                    sector,
-                    with: .color(hasTag ? .white.opacity(isSelected ? 1.0 : 0.95) : Color(white: 0.92))
-                )
-            }
-
-            // 仕切り線（閉じてる時は全スロット、開いてる時はタグありのみ）
-            if !isOpen || hasTag {
-                let divCG = Double(cgEnd) * .pi / 180
-                var divLine = Path()
-                divLine.move(to: CGPoint(
-                    x: cx + innerR * CGFloat(cos(divCG)),
-                    y: cy + innerR * CGFloat(sin(divCG))
-                ))
-                divLine.addLine(to: CGPoint(
-                    x: cx + outerR * CGFloat(cos(divCG)),
-                    y: cy + outerR * CGFloat(sin(divCG))
-                ))
-                context.stroke(
-                    divLine,
-                    with: .color(Color(white: 0.35).opacity(Double(fade) * 0.5)),
-                    lineWidth: 1.5
-                )
-            }
-
-            // タグがない範囲は塗り＋仕切り線のみ（バッジなし）
-            guard hasTag else { context.opacity = 1.0; continue }
-            let index = rawIndex
-            let option = options[index]
-
-            // 選択ハイライト（閉じている時のみ）
-            if isSelected && !isOpen {
-                context.fill(
-                    sector,
-                    with: .color(Color.gray.opacity(0.05))
-                )
-            }
-
-            // 最後のセクターは下端にも仕切り線
-            if index == count - 1 {
-                let divStart = Double(cgStart) * .pi / 180
-                var bottomLine = Path()
-                bottomLine.move(to: CGPoint(
-                    x: cx + innerR * CGFloat(cos(divStart)),
-                    y: cy + innerR * CGFloat(sin(divStart))
-                ))
-                bottomLine.addLine(to: CGPoint(
-                    x: cx + outerR * CGFloat(cos(divStart)),
-                    y: cy + outerR * CGFloat(sin(divStart))
-                ))
-                context.stroke(
-                    bottomLine,
-                    with: .color(Color(white: 0.35).opacity(Double(fade) * 0.5)),
-                    lineWidth: 1.5
-                )
-            }
-
-            // カラーバッジ + テキスト
-            let cgMid = (180.0 - Double(displayAngle)) * .pi / 180
-            let textX = cx + midR * CGFloat(cos(cgMid))
-            let textY = cy + midR * CGFloat(sin(cgMid))
-
-            let displayName: String = {
-                if option.name.count > maxChars {
-                    return String(option.name.prefix(maxChars)) + "…"
-                }
-                return option.name
-            }()
-            // フォントサイズ: セクター幅と文字数に応じて可変
-            let nameLen = displayName.count
-            let thickness = outerR - innerR
-            let baseFontSize: CGFloat = {
-                if maxChars >= 10 {
-                    // 親タグ
-                    if nameLen <= 2 { return 24 }
-                    if nameLen <= 3 { return 21 }
-                    if nameLen <= 4 { return 18 }
-                    if nameLen <= 6 { return 15 }
-                    if nameLen <= 8 { return 13 }
-                    return 11
-                } else {
-                    // 子タグ（少し小さめ）
-                    if nameLen <= 2 { return 16 }
-                    if nameLen <= 3 { return 14 }
-                    if nameLen <= 5 { return 12 }
-                    return 10
-                }
-            }()
-            let isNoneTag = option.id == "none"
-            let isParent = maxChars >= 10
-            let fontSize: CGFloat = isNoneTag ? (isParent ? 16 : 14) : (isSelected ? baseFontSize : max(baseFontSize - 2, 9))
-
-            // テキスト色: タグなしは薄いグレー固定、それ以外は色の明るさで判定
-            let textColor: Color = {
-                if isNoneTag { return Color(white: 0.55) }
-                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-                UIColor(option.color).getRed(&r, green: &g, blue: &b, alpha: nil)
-                let luminance = 0.299 * r + 0.587 * g + 0.114 * b
-                return luminance < 0.6 ? .white : .black
-            }()
-            let resolved = context.resolve(
-                Text(displayName)
-                    .font(.system(
-                        size: fontSize,
-                        weight: isSelected ? .bold : .semibold,
-                        design: .rounded
-                    ))
-                    .foregroundColor(textColor)
-            )
-            // バッジ+テキストをセクターの角度に合わせて回転描画
-            let rotAngle = Angle.degrees(-Double(displayAngle))
-            var rotCtx = context
-            rotCtx.translateBy(x: textX, y: textY)
-            rotCtx.rotate(by: rotAngle)
-
-            rotCtx.draw(resolved, at: .zero, anchor: .center)
-
-            context.opacity = 1.0
-        }
-    }
-
-    private func drawEdge(
-        context: inout GraphicsContext, cx: CGFloat, cy: CGFloat,
-        radius: CGFloat, lineWidth: CGFloat,
-        brightness: (CGFloat, CGFloat, CGFloat)
-    ) {
-        // Canvas高さに収まる角度範囲を計算（パネルの端まで描画）
-        let halfHeight = dialHeight / 2
-        let maxSinAngle = min(1.0, Double(halfHeight / radius))
-        let maxAngle = asin(maxSinAngle) * 180.0 / .pi
-        let startDeg = 180.0 - maxAngle
-        let endDeg = 180.0 + maxAngle
-
-        var edge = Path()
-        edge.addArc(
-            center: CGPoint(x: cx, y: cy),
-            radius: radius,
-            startAngle: .degrees(startDeg),
-            endAngle: .degrees(endDeg),
-            clockwise: false
-        )
-        context.stroke(
-            edge,
-            with: .linearGradient(
-                Gradient(colors: [
-                    Color(white: brightness.0),
-                    Color(white: brightness.1),
-                    Color(white: brightness.2)
-                ]),
-                startPoint: CGPoint(x: 0, y: cy - 80),
-                endPoint: CGPoint(x: 0, y: cy + 80)
-            ),
-            lineWidth: lineWidth
-        )
-    }
-
-    private func drawPointer(context: inout GraphicsContext, cy: CGFloat) {
-        let pw: CGFloat = 10
-        let ph: CGFloat = 16
-        let pLeft: CGFloat = -2
-
-        var shadow = Path()
-        shadow.move(to: CGPoint(x: pLeft + 1, y: cy - ph / 2 + 1))
-        shadow.addLine(to: CGPoint(x: pLeft + pw + 1, y: cy + 1))
-        shadow.addLine(to: CGPoint(x: pLeft + 1, y: cy + ph / 2 + 1))
-        shadow.closeSubpath()
-        context.fill(shadow, with: .color(.black.opacity(0.3)))
-
-        var pointer = Path()
-        pointer.move(to: CGPoint(x: pLeft, y: cy - ph / 2))
-        pointer.addLine(to: CGPoint(x: pLeft + pw, y: cy))
-        pointer.addLine(to: CGPoint(x: pLeft, y: cy + ph / 2))
-        pointer.closeSubpath()
-        context.fill(
-            pointer,
-            with: .linearGradient(
-                Gradient(colors: [
-                    Color(red: 0.9, green: 0.15, blue: 0.1),
-                    Color(red: 0.7, green: 0.1, blue: 0.08)
-                ]),
-                startPoint: CGPoint(x: 0, y: cy - ph / 2),
-                endPoint: CGPoint(x: 0, y: cy + ph / 2)
-            )
-        )
-        var hl = Path()
-        hl.move(to: CGPoint(x: pLeft + 1, y: cy - ph / 2 + 2))
-        hl.addLine(to: CGPoint(x: pLeft + pw - 3, y: cy))
-        context.stroke(hl, with: .color(.white.opacity(0.5)), lineWidth: 1)
-    }
-
     // MARK: - 同期・選択
 
     private func syncParentRotation() {
-        let targetID: String = {
-            if let id = parentSelectedID { return id.uuidString }
-            return "none"
-        }()
+        let targetID = parentSelectedID?.uuidString ?? "none"
         if let index = parentOptions.firstIndex(where: { $0.id == targetID }) {
             let target = CGFloat(index) * itemAngle
             withAnimation(.easeOut(duration: 0.2)) { parentRotation = target }
@@ -530,10 +572,7 @@ struct TagDialView: View {
     }
 
     private func syncChildRotation() {
-        let targetID: String = {
-            if let id = childSelectedID { return id.uuidString }
-            return "none"
-        }()
+        let targetID = childSelectedID?.uuidString ?? "none"
         if let index = childOptions.firstIndex(where: { $0.id == targetID }) {
             let target = CGFloat(index) * itemAngle
             withAnimation(.easeOut(duration: 0.2)) { childRotation = target }
@@ -545,8 +584,7 @@ struct TagDialView: View {
         let index = snappedIndex(rotation: parentRotation, count: parentOptions.count)
         if index < parentOptions.count {
             let option = parentOptions[index]
-            let newID = option.id == "none" ? nil : UUID(uuidString: option.id)
-            parentSelectedID = newID
+            parentSelectedID = option.id == "none" ? nil : UUID(uuidString: option.id)
         }
     }
 
@@ -557,39 +595,17 @@ struct TagDialView: View {
             childSelectedID = option.id == "none" ? nil : UUID(uuidString: option.id)
         }
     }
+}
 
-    // タッチ位置からタグを判定して長押しコールバックを呼ぶ
-    private func handleLongPress(at location: CGPoint) {
-        let cx = wheelRadius + 2
-        let cy = dialHeight / 2
-        let touchX = location.x
-        let touchY = location.y
-        let borderX = cx - parentInnerR
+// MARK: - 条件付きモディファイア
 
-        // y座標から角度オフセットを計算（中央=0、上=プラス、下=マイナス）
-        let dy = cy - touchY
-        let angleOffset = dy / (dialHeight / 2) * 3 * itemAngle // 画面半分で約3タグ分
-
-        if showChild && touchX > borderX {
-            // 子タグエリア
-            let touchRotation = childRotation + angleOffset
-            let index = snappedIndex(rotation: touchRotation, count: childOptions.count)
-            if index < childOptions.count {
-                let option = childOptions[index]
-                if option.id != "none" {
-                    onLongPress?(true, option.id)
-                }
-            }
+private extension View {
+    @ViewBuilder
+    func `if`<Content: View>(_ condition: Bool, transform: (Self) -> Content) -> some View {
+        if condition {
+            transform(self)
         } else {
-            // 親タグエリア
-            let touchRotation = parentRotation + angleOffset
-            let index = snappedIndex(rotation: touchRotation, count: parentOptions.count)
-            if index < parentOptions.count {
-                let option = parentOptions[index]
-                if option.id != "none" {
-                    onLongPress?(false, option.id)
-                }
-            }
+            self
         }
     }
 }
