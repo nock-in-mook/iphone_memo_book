@@ -184,6 +184,7 @@ struct TabbedMemoListView: View {
     @State private var showReorderSheet = false
     // タグ追加シート
     @State private var showAddTagSheet = false
+    @State private var editingTagForDetail: Tag? = nil
     // 子タグ引き出しドロワー
     @State private var drawerReveal: CGFloat = 0       // 引き出し量（0=閉、maxで全開）
     @State private var drawerDragOffset: CGFloat = 0   // ドラッグ中の一時オフセット
@@ -372,6 +373,12 @@ struct TabbedMemoListView: View {
                     },
                     onAddTag: {
                         showAddTagSheet = true
+                    },
+                    onEditTag: { tag in
+                        editingTagForDetail = tag
+                    },
+                    onDeleteTag: { tag, withMemos in
+                        deleteTag(tag, withMemos: withMemos)
                     }
                 )
 
@@ -471,6 +478,9 @@ struct TabbedMemoListView: View {
                     }
                 }
             })
+        }
+        .sheet(item: $editingTagForDetail) { tag in
+            TagDetailEditView(tag: tag)
         }
         .onReceive(NotificationCenter.default.publisher(for: .memoSavedFlash)) { notification in
             guard let memoID = notification.userInfo?["memoID"] as? UUID else { return }
@@ -1186,6 +1196,36 @@ struct TabbedMemoListView: View {
         selectMode = .none
     }
 
+    // タグ削除（メモも削除 or タグなしに移動）
+    private func deleteTag(_ tag: Tag, withMemos: Bool) {
+        // このタグに属するメモを取得
+        let taggedMemos = allMemos.filter { $0.tags.contains(where: { $0.id == tag.id }) }
+        // 子タグも取得
+        let childTags = tags.filter { $0.parentTagID == tag.id }
+
+        if withMemos {
+            // メモも一緒に削除
+            for memo in taggedMemos {
+                modelContext.delete(memo)
+            }
+        } else {
+            // メモからこのタグと子タグを全て外す（タグなしに移動）
+            for memo in taggedMemos {
+                memo.tags.removeAll { $0.id == tag.id || $0.parentTagID == tag.id }
+            }
+        }
+
+        // 子タグを先に削除
+        for child in childTags {
+            modelContext.delete(child)
+        }
+        // 親タグを削除
+        modelContext.delete(tag)
+
+        // 選択タブを「すべて」に戻す
+        selectedTabIndex = 0
+    }
+
     private func setGridSize(_ option: GridSizeOption) {
         let item = tabItems[selectedTabIndex]
         if item.colorIndex == allTabColorIndex {
@@ -1588,6 +1628,14 @@ struct TabBarView: View {
     var onSelectModeReset: () -> Void
     var onShowReorderSheet: () -> Void
     var onAddTag: () -> Void
+    var onEditTag: ((Tag) -> Void)? = nil
+    var onDeleteTag: ((Tag, Bool) -> Void)? = nil  // (tag, メモも削除するか)
+
+    // 削除ダイアログ管理
+    @State private var pendingDeleteTag: Tag? = nil
+    @State private var showDeleteChoiceAlert = false   // 1回目: メモどうする？
+    @State private var showDeleteConfirmAlert = false   // 2回目: 最終確認
+    @State private var deleteWithMemos = false           // メモも一緒に削除するか
 
     // 各タブのスクロール内での位置を記録
     @State private var tabFrames: [Int: CGRect] = [:]
@@ -1713,6 +1761,53 @@ struct TabBarView: View {
                 onShowReorderSheet()
             } label: {
                 Label("フォルダの並び替え", systemImage: "arrow.left.arrow.right")
+            }
+            if let tag = tabItems[index].tag {
+                Button {
+                    onEditTag?(tag)
+                } label: {
+                    Label("このタグを編集", systemImage: "pencil")
+                }
+                Button(role: .destructive) {
+                    pendingDeleteTag = tag
+                    showDeleteChoiceAlert = true
+                } label: {
+                    Label("このタグを削除", systemImage: "trash")
+                }
+            }
+        }
+        // 1回目: メモをどうするか選択
+        .alert("「\(pendingDeleteTag?.name ?? "")」を削除します", isPresented: $showDeleteChoiceAlert) {
+            Button("メモも一緒に削除", role: .destructive) {
+                deleteWithMemos = true
+                showDeleteConfirmAlert = true
+            }
+            Button("メモは残す（タグなしに移動）") {
+                deleteWithMemos = false
+                showDeleteConfirmAlert = true
+            }
+            Button("キャンセル", role: .cancel) {
+                pendingDeleteTag = nil
+            }
+        } message: {
+            Text("このタグに含まれるメモの扱いを選んでください")
+        }
+        // 2回目: 最終確認
+        .alert("本当に削除しますか？", isPresented: $showDeleteConfirmAlert) {
+            Button("削除する", role: .destructive) {
+                if let tag = pendingDeleteTag {
+                    onDeleteTag?(tag, deleteWithMemos)
+                }
+                pendingDeleteTag = nil
+            }
+            Button("キャンセル", role: .cancel) {
+                pendingDeleteTag = nil
+            }
+        } message: {
+            if deleteWithMemos {
+                Text("「\(pendingDeleteTag?.name ?? "")」とそのメモが全て削除されます。この操作は取り消せません。")
+            } else {
+                Text("タグ「\(pendingDeleteTag?.name ?? "")」が削除されます。メモは全て「タグなし」に移動されます。")
             }
         }
     }

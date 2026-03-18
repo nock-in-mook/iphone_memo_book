@@ -201,7 +201,7 @@ struct MainView: View {
                 ToolbarItem(placement: .topBarTrailing) {
                     let isEditing = viewModel.editingMemo != nil
                     let hasDiff = viewModel.inputText != originalContent || viewModel.titleText != originalTitle
-                    let hasContent = viewModel.canClear
+                    let hasContent = viewModel.hasText
                     let showConfirm = isInputExpanded && hasContent && (!isEditing || hasDiff)
                     if showConfirm {
                         Button {

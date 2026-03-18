@@ -18,11 +18,54 @@ class MemoInputViewModel {
     // loadMemoが呼ばれた回数（Viewが閲覧モードに切り替えるトリガー）
     var loadMemoCounter: Int = 0
 
-    // 入力欄に内容があるか（ゴミ箱・保存ボタンの有効/無効）— 本文・タイトル・タグのいずれかがあれば有効
-    var canClear: Bool {
+    // Undo/Redo
+    private var undoStack: [String] = []
+    private var redoStack: [String] = []
+    private var lastSnapshot: String = ""
+    var canUndo: Bool { !undoStack.isEmpty }
+    var canRedo: Bool { !redoStack.isEmpty }
+
+    // テキスト変更時に呼ぶ（一定間隔でスナップショットを保存）
+    func pushUndoIfNeeded() {
+        let current = inputText
+        if current != lastSnapshot {
+            undoStack.append(lastSnapshot)
+            redoStack.removeAll()
+            lastSnapshot = current
+            // スタック上限
+            if undoStack.count > 50 { undoStack.removeFirst() }
+        }
+    }
+
+    func undo() {
+        guard let previous = undoStack.popLast() else { return }
+        redoStack.append(inputText)
+        inputText = previous
+        lastSnapshot = previous
+    }
+
+    func redo() {
+        guard let next = redoStack.popLast() else { return }
+        undoStack.append(inputText)
+        inputText = next
+        lastSnapshot = next
+    }
+
+    func resetUndoStack() {
+        undoStack.removeAll()
+        redoStack.removeAll()
+        lastSnapshot = inputText
+    }
+
+    // テキストがあるか（確定ボタンの有効/無効）
+    var hasText: Bool {
         !inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        !titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ||
-        selectedTagID != nil
+        !titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
+    // 入力欄に内容があるか（ゴミ箱の有効/無効）— 本文・タイトル・タグのいずれかがあれば有効
+    var canClear: Bool {
+        hasText || selectedTagID != nil
     }
 
     // テキスト変更時の自動保存
@@ -103,6 +146,7 @@ class MemoInputViewModel {
         selectedChildTagID = nil
         isMarkdown = UserDefaults.standard.bool(forKey: "defaultMarkdown")
         UserDefaults.standard.removeObject(forKey: "lastEditingMemoID")
+        resetUndoStack()
     }
 
     // 既存メモを入力欄に読み込む
@@ -120,6 +164,7 @@ class MemoInputViewModel {
         saveLastMemoID(memo.id)
         isLoadingMemo = false
         loadMemoCounter += 1
+        resetUndoStack()
     }
 
     // アプリ起動時は常に空の入力欄で開始（書きかけメモは自動保存済みでリストにある）

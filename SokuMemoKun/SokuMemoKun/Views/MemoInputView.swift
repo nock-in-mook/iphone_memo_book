@@ -216,10 +216,14 @@ struct MemoInputView: View {
                     .padding(.bottom, 8)
                 }
             }
-            .onTapGesture {
-                // トレー外タップで収納（ルーレット表示中のみ反応）
+            .overlay {
+                // トレー外タップで収納（ルーレット表示中のみ透明オーバーレイを表示）
                 if showParentDial {
-                    withAnimation(.spring(response: 0.3)) { showParentDial = false }
+                    Color.clear
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) { showParentDial = false }
+                        }
                 }
             }
             .overlay(alignment: .topTrailing) {
@@ -321,6 +325,7 @@ struct MemoInputView: View {
             isTextEditorFocused = false
         }
         .onChange(of: viewModel.inputText) { _, _ in
+            viewModel.pushUndoIfNeeded()
             viewModel.onContentChanged(context: modelContext, tags: tags)
         }
         .onChange(of: viewModel.titleText) { _, _ in
@@ -401,18 +406,39 @@ struct MemoInputView: View {
     // MARK: - フッター（左=削除 右=コピー+閉じる）
 
     private var footerRow: some View {
-        HStack(spacing: 8) {
+        HStack(spacing: 16) {
             // 左: 削除
             Button { showDeleteAlert = true } label: {
                 Image(systemName: "trash")
-                    .font(.system(size: 15))
+                    .font(.system(size: 18))
                     .foregroundStyle(.red.opacity(0.5))
             }
             .disabled(!viewModel.canClear)
 
             Spacer()
 
-            // 右: コピー
+            // Undo/Redo（間隔広め）
+            HStack(spacing: 20) {
+                Button {
+                    viewModel.undo()
+                } label: {
+                    Image(systemName: "arrow.uturn.backward")
+                        .font(.system(size: 16))
+                }
+                .disabled(!viewModel.canUndo)
+
+                Button {
+                    viewModel.redo()
+                } label: {
+                    Image(systemName: "arrow.uturn.forward")
+                        .font(.system(size: 16))
+                }
+                .disabled(!viewModel.canRedo)
+            }
+
+            Spacer().frame(width: 12)
+
+            // コピー
             Button {
                 UIPasteboard.general.string = viewModel.inputText
             } label: {
@@ -440,8 +466,8 @@ struct MemoInputView: View {
                         Label("閉じる", systemImage: "xmark.circle").font(.system(size: 14))
                     }
                 }
-            } else if viewModel.canClear {
-                // 新規メモで内容がある場合も「確定」
+            } else if viewModel.hasText {
+                // 新規メモでテキストがある場合のみ「確定」
                 Button {
                     isEditing = true
                     isTextEditorFocused = false
@@ -583,8 +609,8 @@ struct MemoInputView: View {
                 .onChange(of: geo.size.width) { _, newW in trayTotalWidth = newW }
             }
         )
-        // 余白タップでトレーを閉じる（ルーレット上のタップはTagDialView側で消費）
-        .contentShape(Rectangle())
+        // 余白タップでトレーを閉じる（ルーレット表示中のみ）
+        .contentShape(showParentDial ? AnyShape(Rectangle()) : AnyShape(Rectangle().size(.zero)))
         .onTapGesture {
             if showParentDial {
                 withAnimation(.spring(response: 0.3)) { showParentDial = false }
