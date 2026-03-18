@@ -82,6 +82,17 @@ struct SettingsView: View {
                     }
                 }
 
+                // 影ラボ
+                Section("影ラボ") {
+                    NavigationLink { TextureLab1() } label: { Text("1: タブシェイプ影") }
+                    NavigationLink { TextureLab2() } label: { Text("2: テキスト影") }
+                    NavigationLink { TextureLab3() } label: { Text("3: カード インナーシャドウ") }
+                    NavigationLink { TextureLab4() } label: { Text("4: カード ドロップシャドウ") }
+                    NavigationLink { TextureLab5() } label: { Text("5: インナー+ドロップ併用") }
+                    NavigationLink { TextureLab6() } label: { Text("6: 全部盛り組み合わせ") }
+                    NavigationLink { TextureLab7() } label: { Text("7: 色違いで確認") }
+                }
+
                 // メモ設定（将来実装）
                 Section("メモ設定") {
                     HStack {

@@ -382,8 +382,43 @@ struct TabbedMemoListView: View {
         // ★ 全体背景（タブ行〜メモ一覧まで一体で管理）
         .background(
             ZStack {
-                currentColor
-                PaperTextureOverlay()
+                // タグ色はnormalMemoContent領域だけ（タブ行は透明）
+                VStack(spacing: 0) {
+                    Color.clear.frame(height: 36)
+                    currentColor
+                }
+                // PaperTexture（ドット2000）
+                Canvas { context, size in
+                    for _ in 0..<2000 {
+                        let x = CGFloat.random(in: 0...size.width)
+                        let y = CGFloat.random(in: 0...size.height)
+                        let op = Double.random(in: 0.02...0.08)
+                        let d = CGFloat.random(in: 0.5...1.5)
+                        context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: d, height: d)), with: .color(.black.opacity(op)))
+                    }
+                }
+                .drawingGroup()
+                .allowsHitTesting(false)
+                // ノイズ画像タイル opacity=0.4
+                Image("NoiseTexture")
+                    .resizable(resizingMode: .tile)
+                    .opacity(0.4)
+                // 凹凸ドット（間隔2 弱）
+                Canvas { context, size in
+                    for row in stride(from: 0, to: Int(size.height), by: 2) {
+                        for col in stride(from: 0, to: Int(size.width), by: 2) {
+                            let h = abs(sin(Double(col * 127 + row * 311)) * 43758.5453)
+                            let v = h - Double(Int(h))
+                            if v > 0.5 {
+                                context.fill(Path(ellipseIn: CGRect(x: CGFloat(col), y: CGFloat(row), width: 1, height: 1)), with: .color(.white.opacity(0.08)))
+                            } else {
+                                context.fill(Path(ellipseIn: CGRect(x: CGFloat(col) + 1, y: CGFloat(row) + 1, width: 1, height: 1)), with: .color(.black.opacity(0.05)))
+                            }
+                        }
+                    }
+                }
+                .drawingGroup()
+                .allowsHitTesting(false)
             }
             .ignoresSafeArea(edges: .bottom)
         )
@@ -1006,7 +1041,6 @@ struct TabbedMemoListView: View {
                     topTrailingRadius: 0
                 )
                 .fill(Color.gray)
-                .shadow(color: .black.opacity(0.2), radius: 3, x: -2, y: 2)
             )
             .contentShape(Rectangle())  // タップ・ドラッグ領域を帯だけに限定
             .clipped()
@@ -1453,6 +1487,7 @@ struct MemoCardView: View {
         .contentShape(RoundedRectangle(cornerRadius: 6))
         .onTapGesture { onTap?() }
         .clipShape(RoundedRectangle(cornerRadius: 6))
+        .shadow(color: .black.opacity(0.1), radius: 2, x: -1, y: 1)
         .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
     }
 }
@@ -1620,6 +1655,7 @@ struct TabBarView: View {
             Text(tabItems[index].label)
                 .font(.system(size: 14, weight: isSelected ? .bold : .medium, design: .rounded))
                 .foregroundStyle(isSelected ? .primary : .secondary)
+                .shadow(color: isSelected ? .black.opacity(0.35) : .clear, radius: 1.5, x: -1, y: 1)
                 .lineLimit(1)
                 .truncationMode(.tail)
                 .padding(.horizontal, 14)
@@ -1628,6 +1664,7 @@ struct TabBarView: View {
                 .background(
                     TrapezoidTabShape()
                         .fill(color)
+                        .shadow(color: isSelected ? .black.opacity(0.4) : .clear, radius: 5, x: -3, y: 3)
                 )
                 .overlay(
                     TrapezoidTabShape()
