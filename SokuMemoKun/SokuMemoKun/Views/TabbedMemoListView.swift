@@ -364,10 +364,8 @@ struct TabbedMemoListView: View {
                     onSelectModeReset: {
                         selectMode = .none
                         selectedMemoIDs.removeAll()
-                        // タブ切替時に子タグフィルターリセット
+                        // タブ切替時に子タグフィルターリセット（ドロワーは開いたまま）
                         selectedChildFilterID = nil
-                        drawerReveal = 0
-                        drawerDragOffset = 0
                     },
                     onShowReorderSheet: {
                         showReorderSheet = true
@@ -723,6 +721,7 @@ struct TabbedMemoListView: View {
                     if !isCompact && canShowChildTagPanel {
                         childTagDrawer
                             .animation(.spring(response: 0.3), value: drawerReveal)
+                            .animation(.spring(response: 0.3), value: drawerContentWidth)
                     }
 
                     // 左下: ゴミ箱ボタン
@@ -951,7 +950,7 @@ struct TabbedMemoListView: View {
                     ScrollView(.horizontal, showsIndicators: false) {
                     HStack(spacing: 6) {
                         if children.isEmpty {
-                            Text("\(parentName)の子タグなし")
+                            Text("\"\(parentName)\"の子タグなし")
                                 .font(.system(size: 12, design: .rounded))
                                 .foregroundStyle(.white.opacity(0.8))
                                 .lineLimit(1)
