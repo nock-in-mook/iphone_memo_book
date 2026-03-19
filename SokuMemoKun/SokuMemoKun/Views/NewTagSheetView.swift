@@ -125,10 +125,10 @@ struct NewTagSheetView: View {
             .toolbar {
                 ToolbarItem(placement: .principal) {
                     VStack(spacing: 2) {
-                        Text(parentTagID != nil ? "子タグの追加" : "フォルダの追加")
+                        Text(parentTagID != nil ? "子タグの追加" : "親タグの追加")
                             .font(.headline)
                         if parentTagID == nil {
-                            Text("（親タグの追加）")
+                            Text("（フォルダの追加）")
                                 .font(.system(size: 11, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
