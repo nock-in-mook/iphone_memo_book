@@ -2087,6 +2087,8 @@ struct TabBarView: View {
     @State private var wiggleTick: Int = 0
     // ドラッグ開始判定用
     @State private var dragStarted = false
+    // 最後にドラッグしたタブID（完了時のフォーカス用）
+    @State private var lastDraggedID: String? = nil
     // 各タブの中心X（並び替え用）
     @State private var reorderCenters: [String: CGFloat] = [:]
     // 自動スクロール用
@@ -2314,13 +2316,32 @@ struct TabBarView: View {
         wiggleTimer?.invalidate()
         wiggleTimer = nil
         stopAutoScroll()
-        isReorderMode = false
-        isInReorderMode = false
+
+        // 最後にドラッグしたタブのインデックスを記録
+        let lastDraggedIndex: Int? = {
+            guard let did = draggingID ?? lastDraggedID else { return nil }
+            return reorderItems.firstIndex(where: { stableID(for: $0) == did })
+        }()
+
+        // 並び替え結果を適用
+        onReorder(reorderItems)
+
+        // 最後にドラッグしたタブを選択状態にする
+        if let idx = lastDraggedIndex {
+            selectedTabIndex = idx
+        }
+
+        // アニメーション付きでモード解除
+        withAnimation(.spring(response: 0.35, dampingFraction: 0.8)) {
+            isReorderMode = false
+            isInReorderMode = false
+        }
+
         draggingID = nil
+        lastDraggedID = nil
         dragTranslation = 0
         dragFloatingX = 0
         reorderScrollOffset = 0
-        onReorder(reorderItems)
     }
 
     // MARK: - 自動スクロール（端にドラッグすると自動でスクロール）
@@ -2437,10 +2458,10 @@ struct TabBarView: View {
                     }
                     .onEnded { _ in
                         stopAutoScroll()
+                        lastDraggedID = draggingID
                         withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
                             draggingID = nil
                             dragStarted = false
-                            // 色はそのまま維持（最後に掴んだタブの色を残す）
                         }
                     }
             )
