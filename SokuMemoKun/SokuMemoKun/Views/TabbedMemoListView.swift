@@ -505,9 +505,7 @@ struct TabbedMemoListView: View {
                         // タブ切替時に子タグフィルターリセット（ドロワーは開いたまま）
                         selectedChildFilterID = nil
                     },
-                    onShowReorderSheet: {
-                        showReorderSheet = true
-                    },
+                    onShowReorderSheet: { },
                     onAddTag: {
                         showAddTagSheet = true
                     },
@@ -532,6 +530,9 @@ struct TabbedMemoListView: View {
                     onOpenColorSheet: { tabColorIndex in
                         let color = tabColorIndex == -1 ? allTabCustomColor : frequentTabCustomColor
                         specialColorSheetItem = SpecialColorSheetItem(tabColorIndex: tabColorIndex, initialColor: color)
+                    },
+                    onReorder: { newOrder in
+                        applyTabOrder(newOrder)
                     }
                 )
 
@@ -2009,9 +2010,7 @@ struct TabReorderSheet: View {
     }
 }
 
-// タブバー（長押しメニュー＋右端に＋ボタン）
-// 画面内のタブをタップしてもスクロール位置は変わらない
-// 画面外（一部だけ見えている）タブをタップした場合のみ、タブ全体が見える位置まで最小限スクロール
+// タブバー（長押しメニュー＋右端に＋ボタン＋ドラッグ並び替え）
 struct TabBarView: View {
     let tabItems: [(label: String, tag: Tag?, colorIndex: Int)]
     @Binding var selectedTabIndex: Int
@@ -2020,101 +2019,379 @@ struct TabBarView: View {
     var onShowReorderSheet: () -> Void
     var onAddTag: () -> Void
     var onEditTag: ((Tag) -> Void)? = nil
-    var onDeleteTag: ((Tag, Bool) -> Void)? = nil  // (tag, メモも削除するか)
-    // 特殊タブの色変更コールバック: (tabColorIndex, 新しいcolorIndex)
+    var onDeleteTag: ((Tag, Bool) -> Void)? = nil
     var onChangeSpecialTabColor: ((Int, Int) -> Void)? = nil
-    // 特殊タブの現在の色を取得するコールバック: (tabColorIndex) -> colorIndex
     var getSpecialTabColor: ((Int) -> Int)? = nil
-    // 特殊タブの色変更シートを開くコールバック: (tabColorIndex)
     var onOpenColorSheet: ((Int) -> Void)? = nil
+    var onReorder: ([(label: String, tag: Tag?, colorIndex: Int)]) -> Void = { _ in }
     private let allTabColorIndex = -1
     private let frequentTabColorIndex = -2
 
     // 削除ダイアログ管理
     @State private var pendingDeleteTag: Tag? = nil
-    @State private var showDeleteChoiceAlert = false   // 1回目: メモどうする？
-    @State private var showDeleteConfirmAlert = false   // 2回目: 最終確認
-    @State private var deleteWithMemos = false           // メモも一緒に削除するか
+    @State private var showDeleteChoiceAlert = false
+    @State private var showDeleteConfirmAlert = false
+    @State private var deleteWithMemos = false
 
     // 各タブのスクロール内での位置を記録
     @State private var tabFrames: [Int: CGRect] = [:]
-    // スクロールビューの可視領域
     @State private var scrollViewFrame: CGRect = .zero
-    // プログラム的なスクロールオフセット
     @State private var scrollOffset: CGFloat = 0
 
+    // 並び替えモード
+    @State private var isReorderMode = false
+    @State private var reorderItems: [(label: String, tag: Tag?, colorIndex: Int)] = []
+    // ドラッグ中のタブのID（安定したID）
+    @State private var draggingID: String? = nil
+    @State private var dragTranslation: CGFloat = 0
+    // 浮遊タブの画面上X座標
+    @State private var dragFloatingX: CGFloat = 0
+    // ぷるぷるアニメーション用タイマー
+    @State private var wiggleTimer: Timer? = nil
+    @State private var wiggleTick: Int = 0
+    // ドラッグ開始判定用
+    @State private var dragStarted = false
+    // 各タブの中心X（並び替え用）
+    @State private var reorderCenters: [String: CGFloat] = [:]
+    // 自動スクロール用
+    @State private var autoScrollTimer: Timer? = nil
+    @State private var reorderScrollOffset: CGFloat = 0
+    @State private var reorderContentWidth: CGFloat = 0
+    @State private var reorderViewWidth: CGFloat = 0
+
+    // タブの安定ID生成
+    private func stableID(for item: (label: String, tag: Tag?, colorIndex: Int)) -> String {
+        if let tag = item.tag { return tag.id.uuidString }
+        return "special_\(item.colorIndex)"
+    }
+
     var body: some View {
-        let count = tabItems.count
+        let items = isReorderMode ? reorderItems : tabItems
+        let count = items.count
         guard count > 0 else { return AnyView(EmptyView()) }
 
         return AnyView(
-            ScrollViewReader { proxy in
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: -1) {
-                        ForEach(0..<count, id: \.self) { i in
-                            tabButton(index: i)
+            VStack(spacing: 0) {
+                // タブバー本体
+                ZStack(alignment: .topLeading) {
+                    if isReorderMode {
+                        // 並び替えモード: 自前スクロール（offset方式）
+                        HStack(spacing: -1) {
+                            let indexed = reorderItems.enumerated().map { (i, item) in
+                                (index: i, item: item, sid: stableID(for: item))
+                            }
+                            ForEach(indexed, id: \.sid) { entry in
+                                reorderSlot(index: entry.index, item: entry.item)
+                            }
                         }
-                        // 右端の「＋」タブ
-                        Button {
-                            onAddTag()
-                        } label: {
-                            Image(systemName: "plus")
-                                .font(.system(size: 14, weight: .medium))
-                                .foregroundStyle(.secondary)
-                                .frame(width: 40)
-                                .padding(.vertical, 9)
-                                .background(
-                                    TrapezoidTabShape()
-                                        .fill(Color(uiColor: .secondarySystemBackground))
-                                )
+                        .padding(.horizontal, 8)
+                        .padding(.top, 4)
+                        .fixedSize(horizontal: true, vertical: false)
+                        .background(
+                            GeometryReader { contentGeo in
+                                Color.clear
+                                    .onAppear {
+                                        reorderContentWidth = contentGeo.size.width
+                                        reorderViewWidth = UIScreen.main.bounds.width
+                                    }
+                                    .onChange(of: contentGeo.size.width) { _, w in
+                                        reorderContentWidth = w
+                                    }
+                            }
+                        )
+                        .offset(x: reorderScrollOffset, y: draggingID != nil ? -10 : 0)
+                        .animation(.spring(response: 0.25, dampingFraction: 0.7), value: draggingID != nil)
+                        .frame(width: UIScreen.main.bounds.width, alignment: .leading)
+                        .clipped()
+                    } else {
+                        // 通常モード: ScrollView
+                        ScrollViewReader { proxy in
+                            ScrollView(.horizontal, showsIndicators: false) {
+                                HStack(spacing: -1) {
+                                    ForEach(0..<count, id: \.self) { i in
+                                        tabButton(index: i)
+                                    }
+                                    Button {
+                                        onAddTag()
+                                    } label: {
+                                        Image(systemName: "plus")
+                                            .font(.system(size: 14, weight: .medium))
+                                            .foregroundStyle(.secondary)
+                                            .frame(width: 40)
+                                            .padding(.vertical, 9)
+                                            .background(
+                                                TrapezoidTabShape()
+                                                    .fill(Color(uiColor: .secondarySystemBackground))
+                                            )
+                                    }
+                                    .buttonStyle(.plain)
+                                    .id("addTab")
+                                }
+                                .padding(.horizontal, 8)
+                                .padding(.top, 4)
+                            }
+                            .onChange(of: selectedTabIndex) { oldValue, newValue in
+                                onSelectModeReset()
+                                if let frame = tabFrames[newValue] {
+                                    let visibleMin = scrollViewFrame.minX
+                                    let visibleMax = scrollViewFrame.maxX
+                                    let tabMin = frame.minX
+                                    let tabMax = frame.maxX
+                                    if tabMin >= visibleMin && tabMax <= visibleMax {
+                                    } else if tabMin < visibleMin {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            proxy.scrollTo("tab_\(newValue)", anchor: .leading)
+                                        }
+                                    } else {
+                                        withAnimation(.easeInOut(duration: 0.2)) {
+                                            proxy.scrollTo("tab_\(newValue)", anchor: .trailing)
+                                        }
+                                    }
+                                }
+                            }
                         }
-                        .buttonStyle(.plain)
-                        .id("addTab")
                     }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 4)
-                }
-                .onChange(of: selectedTabIndex) { oldValue, newValue in
-                    onSelectModeReset()
-                    // 画面外のタブの場合のみ、端が見える位置までスクロール
-                    // ScrollViewReaderでは細かい制御が難しいので、
-                    // 左端寄せ/右端寄せ/スクロールなしを判定
-                    if let frame = tabFrames[newValue] {
-                        let visibleMin = scrollViewFrame.minX
-                        let visibleMax = scrollViewFrame.maxX
-                        let tabMin = frame.minX
-                        let tabMax = frame.maxX
 
-                        if tabMin >= visibleMin && tabMax <= visibleMax {
-                            // タブ全体が画面内 → スクロールしない
-                        } else if tabMin < visibleMin {
-                            // 左にはみ出し → 左端寄せ
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                proxy.scrollTo("tab_\(newValue)", anchor: .leading)
-                            }
-                        } else {
-                            // 右にはみ出し → 右端寄せ
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                proxy.scrollTo("tab_\(newValue)", anchor: .trailing)
-                            }
+                    // ドラッグ中のタブ（HStackの外に浮かせる）
+                    if let did = draggingID,
+                       let item = reorderItems.first(where: { stableID(for: $0) == did }) {
+                        let color = reorderResolvedColor(item: item)
+                        let wiggle = (wiggleTick % 2 == 0 ? 1.0 : -1.0)
+                        Text(item.label)
+                            .font(.system(size: 14, weight: .bold, design: .rounded))
+                            .foregroundStyle(.primary)
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                            .padding(.horizontal, 14)
+                            .padding(.vertical, 9)
+                            .frame(minWidth: 52, maxWidth: 150)
+                            .fixedSize()
+                            .background(
+                                TrapezoidTabShape()
+                                    .fill(color)
+                                    .shadow(color: .black.opacity(0.5), radius: 4, x: -3, y: 4)
+                            )
+                            .overlay(
+                                TrapezoidTabShape()
+                                    .stroke(Color.white.opacity(0.9), lineWidth: 2.5)
+                            )
+                            .scaleEffect(1.3)
+                            .rotationEffect(.degrees(wiggle))
+                            .opacity(0.95)
+                            .fixedSize()
+                            .position(x: dragFloatingX, y: 15)
+                            .allowsHitTesting(false)
+                    }
+                }
+                .frame(height: isReorderMode ? 50 : 36)
+                .clipped()
+                .background(
+                    GeometryReader { geo in
+                        Color.clear.onAppear {
+                            scrollViewFrame = geo.frame(in: .global)
+                        }
+                        .onChange(of: geo.frame(in: .global)) { _, newFrame in
+                            scrollViewFrame = newFrame
                         }
                     }
+                )
+
+                // 並び替えモード: タブバーの下にキャンセル・完了ボタン
+                if isReorderMode {
+                    HStack {
+                        Button {
+                            cancelReorder()
+                        } label: {
+                            Text("キャンセル")
+                                .font(.system(size: 13, weight: .medium, design: .rounded))
+                                .foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                        Text("ドラッグで並び替え")
+                            .font(.system(size: 12, design: .rounded))
+                            .foregroundStyle(.tertiary)
+                        Spacer()
+                        Button {
+                            finishReorder()
+                        } label: {
+                            Text("完了")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(.blue)
+                        }
+                    }
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 4)
                 }
             }
-            .frame(height: 36)
-            .background(
-                GeometryReader { geo in
-                    Color.clear.onAppear {
-                        scrollViewFrame = geo.frame(in: .global)
-                    }
-                    .onChange(of: geo.frame(in: .global)) { _, newFrame in
-                        scrollViewFrame = newFrame
-                    }
-                }
-            )
         )
     }
 
+    // MARK: - 並び替えモード開始/終了
+
+    private func cancelReorder() {
+        wiggleTimer?.invalidate()
+        wiggleTimer = nil
+        stopAutoScroll()
+        isReorderMode = false
+        draggingID = nil
+        dragTranslation = 0
+        dragFloatingX = 0
+        reorderScrollOffset = 0
+    }
+
+    private func startReorder() {
+        reorderItems = tabItems
+        isReorderMode = true
+        wiggleTick = 0
+        wiggleTimer = Timer.scheduledTimer(withTimeInterval: 0.15, repeats: true) { _ in
+            withAnimation(.easeInOut(duration: 0.15)) {
+                wiggleTick += 1
+            }
+        }
+    }
+
+    private func finishReorder() {
+        wiggleTimer?.invalidate()
+        wiggleTimer = nil
+        stopAutoScroll()
+        isReorderMode = false
+        draggingID = nil
+        dragTranslation = 0
+        dragFloatingX = 0
+        reorderScrollOffset = 0
+        onReorder(reorderItems)
+    }
+
+    // MARK: - 自動スクロール（端にドラッグすると自動でスクロール）
+
+    private func startAutoScroll() {
+        autoScrollTimer = Timer.scheduledTimer(withTimeInterval: 0.016, repeats: true) { _ in
+            guard draggingID != nil else { return }
+            let edgeZone: CGFloat = 50  // 画面端から50pt以内で自動スクロール
+            let scrollSpeed: CGFloat = 3  // 1フレームあたりのスクロール量
+            let maxScroll = max(0, reorderContentWidth - reorderViewWidth + 16)
+
+            if dragFloatingX < edgeZone {
+                // 左端 → 右にスクロール（offsetを正に）
+                reorderScrollOffset = min(0, reorderScrollOffset + scrollSpeed)
+            } else if dragFloatingX > reorderViewWidth - edgeZone {
+                // 右端 → 左にスクロール（offsetを負に）
+                reorderScrollOffset = max(-maxScroll, reorderScrollOffset - scrollSpeed)
+            }
+        }
+    }
+
+    private func stopAutoScroll() {
+        autoScrollTimer?.invalidate()
+        autoScrollTimer = nil
+    }
+
+    // MARK: - 並び替えモードのタブ表示
+
+    // HStack内のスロット（ドラッグ中は透明、それ以外はタブ表示）
+    private func reorderSlot(index: Int, item: (label: String, tag: Tag?, colorIndex: Int)) -> some View {
+        let myID = stableID(for: item)
+        let isDragging = draggingID == myID
+        let color = reorderResolvedColor(item: item)
+        let wiggleAngle: Double = (wiggleTick % 2 == 0 ? 2.0 : -2.0) * (index % 2 == 0 ? 1.0 : -1.0)
+
+        return Text(item.label)
+            .font(.system(size: 14, weight: .bold, design: .rounded))
+            .foregroundStyle(.primary)
+            .lineLimit(1)
+            .truncationMode(.tail)
+            .padding(.horizontal, 14)
+            .padding(.vertical, 9)
+            .frame(minWidth: 52, maxWidth: 150)
+            .background(
+                GeometryReader { geo in
+                    TrapezoidTabShape()
+                        .fill(color)
+                        .shadow(color: .black.opacity(0.2), radius: 3, x: -2, y: 3)
+                        .onAppear {
+                            reorderCenters[myID] = geo.frame(in: .global).midX
+                        }
+                        .onChange(of: geo.frame(in: .global).midX) { _, newX in
+                            if !isDragging {
+                                reorderCenters[myID] = newX
+                            }
+                        }
+                }
+            )
+            .rotationEffect(.degrees(isDragging ? 0 : wiggleAngle))
+            .opacity(isDragging ? 0 : 1.0) // ドラッグ中は非表示（浮遊タブが代わりに表示）
+            .animation(.spring(response: 0.3, dampingFraction: 0.7), value: reorderItems.map { stableID(for: $0) })
+            .gesture(
+                DragGesture(minimumDistance: 0, coordinateSpace: .global)
+                    .onChanged { value in
+                        if draggingID == nil {
+                            // タッチした瞬間にホールド＋フィードバック
+                            draggingID = myID
+                            dragStarted = false
+                            dragFloatingX = value.startLocation.x
+                            let generator = UIImpactFeedbackGenerator(style: .heavy)
+                            generator.impactOccurred()
+                            startAutoScroll()
+                        }
+                        guard draggingID == myID else { return }
+
+                        // 5pt以上動いたらドラッグ開始
+                        let dist = abs(value.translation.width)
+                        if !dragStarted && dist > 5 {
+                            dragStarted = true
+                        }
+
+                        // ドラッグ開始前でも浮遊タブは指に追従
+                        dragFloatingX = value.location.x
+
+                        guard dragStarted else { return }
+
+                        let fingerX = value.location.x
+                        guard let ci = reorderItems.firstIndex(where: { stableID(for: $0) == myID }) else { return }
+
+                        // 右隣チェック
+                        if ci < reorderItems.count - 1 {
+                            let rightID = stableID(for: reorderItems[ci + 1])
+                            if let rightCenter = reorderCenters[rightID], fingerX > rightCenter {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    reorderItems.swapAt(ci, ci + 1)
+                                }
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                            }
+                        }
+                        // 左隣チェック（swapAt後のインデックスを再取得）
+                        if let ci2 = reorderItems.firstIndex(where: { stableID(for: $0) == myID }), ci2 > 0 {
+                            let leftID = stableID(for: reorderItems[ci2 - 1])
+                            if let leftCenter = reorderCenters[leftID], fingerX < leftCenter {
+                                withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                                    reorderItems.swapAt(ci2, ci2 - 1)
+                                }
+                                let generator = UIImpactFeedbackGenerator(style: .light)
+                                generator.impactOccurred()
+                            }
+                        }
+                    }
+                    .onEnded { _ in
+                        stopAutoScroll()
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            draggingID = nil
+                            dragStarted = false
+                        }
+                    }
+            )
+    }
+
+    private func reorderResolvedColor(item: (label: String, tag: Tag?, colorIndex: Int)) -> Color {
+        let ci = item.colorIndex
+        if ci == allTabColorIndex || ci == frequentTabColorIndex,
+           let colorIdx = getSpecialTabColor?(ci), colorIdx >= 0 {
+            return tabColors[colorIdx % tabColors.count]
+        }
+        return tagColor(for: ci)
+    }
+
+    // MARK: - 通常モードのタブ
 
     private func resolvedTabColor(index: Int) -> Color {
         let ci = tabItems[index].colorIndex
@@ -2144,7 +2421,7 @@ struct TabBarView: View {
                 .background(
                     TrapezoidTabShape()
                         .fill(color)
-                        .shadow(color: isSelected ? .black.opacity(0.4) : .clear, radius: 5, x: -3, y: 3)
+                        .shadow(color: isSelected ? .black.opacity(0.35) : .clear, radius: 2, x: -2, y: 2)
                 )
                 .overlay(
                     TrapezoidTabShape()
@@ -2167,13 +2444,14 @@ struct TabBarView: View {
         )
         .contextMenu {
             let ci = tabItems[index].colorIndex
-            // フォルダの並び替え（常に最上部）
             Button {
-                onShowReorderSheet()
+                // contextMenu閉じた後に並び替えモード開始
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                    startReorder()
+                }
             } label: {
                 Label("フォルダの並び替え", systemImage: "arrow.left.arrow.right")
             }
-            // 「すべて」「よく見る」は色変更のみ
             if ci == allTabColorIndex || ci == frequentTabColorIndex {
                 Button {
                     onOpenColorSheet?(ci)
@@ -2181,7 +2459,6 @@ struct TabBarView: View {
                     Label("色の変更", systemImage: "paintpalette")
                 }
             }
-            // 通常タグ
             if let tag = tabItems[index].tag {
                 Button {
                     onEditTag?(tag)
@@ -2196,7 +2473,6 @@ struct TabBarView: View {
                 }
             }
         }
-        // 1回目: メモをどうするか選択
         .alert("「\(pendingDeleteTag?.name ?? "")」を削除します", isPresented: $showDeleteChoiceAlert) {
             Button("メモも一緒に削除", role: .destructive) {
                 deleteWithMemos = true
@@ -2212,7 +2488,6 @@ struct TabBarView: View {
         } message: {
             Text("このタグに含まれるメモの扱いを選んでください")
         }
-        // 2回目: 最終確認
         .alert("本当に削除しますか？", isPresented: $showDeleteConfirmAlert) {
             Button("削除する", role: .destructive) {
                 if let tag = pendingDeleteTag {
