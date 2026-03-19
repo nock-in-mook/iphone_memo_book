@@ -90,24 +90,6 @@ func tagColor(for index: Int) -> Color {
 }
 
 // 紙の質感を表現するオーバーレイ
-struct PaperTextureOverlay: View {
-    var body: some View {
-        Canvas { context, size in
-            for _ in 0..<800 {
-                let x = CGFloat.random(in: 0...size.width)
-                let y = CGFloat.random(in: 0...size.height)
-                let opacity = Double.random(in: 0.02...0.08)
-                let dotSize = CGFloat.random(in: 0.5...1.5)
-                context.fill(
-                    Path(ellipseIn: CGRect(x: x, y: y, width: dotSize, height: dotSize)),
-                    with: .color(.black.opacity(opacity))
-                )
-            }
-        }
-        .allowsHitTesting(false)
-    }
-}
-
 // グリッドサイズ定義（列数×行数）
 enum GridSizeOption: Int, CaseIterable {
     case grid3x8 = 0   // 3×8
@@ -179,22 +161,6 @@ struct SpecialColorEditSheet: View {
                         TrapezoidTabShape()
                             .fill(tagColor(for: selectedColor))
                             .shadow(color: .black.opacity(0.4), radius: 5, x: -3, y: 3)
-                    )
-                    .overlay(
-                        Canvas { context, size in
-                            for _ in 0..<200 {
-                                let x = CGFloat.random(in: 0...size.width)
-                                let y = CGFloat.random(in: 0...size.height)
-                                let op = Double.random(in: 0.02...0.08)
-                                context.opacity = op
-                                context.fill(
-                                    Path(ellipseIn: CGRect(x: x, y: y, width: 1.5, height: 1.5)),
-                                    with: .color(.black)
-                                )
-                            }
-                        }
-                        .clipShape(TrapezoidTabShape())
-                        .allowsHitTesting(false)
                     )
 
                 VStack(alignment: .leading, spacing: 6) {
@@ -566,44 +532,6 @@ struct TabbedMemoListView: View {
                         currentColor
                     }
                 }
-                // テクスチャ類もタブ行を避ける
-                VStack(spacing: 0) {
-                    Color.clear.frame(height: 36)
-                    ZStack {
-                        // PaperTexture（ドット2000）
-                        Canvas { context, size in
-                            for _ in 0..<2000 {
-                                let x = CGFloat.random(in: 0...size.width)
-                                let y = CGFloat.random(in: 0...size.height)
-                                let op = Double.random(in: 0.02...0.08)
-                                let d = CGFloat.random(in: 0.5...1.5)
-                                context.fill(Path(ellipseIn: CGRect(x: x, y: y, width: d, height: d)), with: .color(.black.opacity(op)))
-                            }
-                        }
-                        .drawingGroup()
-                        .allowsHitTesting(false)
-                        // ノイズ画像タイル opacity=0.4
-                        Image("NoiseTexture")
-                            .resizable(resizingMode: .tile)
-                            .opacity(0.4)
-                        // 凹凸ドット（間隔2 弱）
-                        Canvas { context, size in
-                            for row in stride(from: 0, to: Int(size.height), by: 2) {
-                                for col in stride(from: 0, to: Int(size.width), by: 2) {
-                                    let h = abs(sin(Double(col * 127 + row * 311)) * 43758.5453)
-                                    let v = h - Double(Int(h))
-                                    if v > 0.5 {
-                                        context.fill(Path(ellipseIn: CGRect(x: CGFloat(col), y: CGFloat(row), width: 1, height: 1)), with: .color(.white.opacity(0.08)))
-                                    } else {
-                                        context.fill(Path(ellipseIn: CGRect(x: CGFloat(col) + 1, y: CGFloat(row) + 1, width: 1, height: 1)), with: .color(.black.opacity(0.05)))
-                                    }
-                                }
-                            }
-                        }
-                        .drawingGroup()
-                        .allowsHitTesting(false)
-                    }
-                }
             }
             .ignoresSafeArea(edges: .bottom)
         )
@@ -754,7 +682,6 @@ struct TabbedMemoListView: View {
             ZStack {
                 // 背景
                 searchColor.ignoresSafeArea(edges: .bottom)
-                PaperTextureOverlay().ignoresSafeArea(edges: .bottom)
 
                 if resultSections.isEmpty {
                     // ヒットなし

@@ -77,23 +77,6 @@ struct NewTagSheetView: View {
                                 .fill(isEmpty ? Color.clear : tagColor(for: selectedColorIndex))
                                 .shadow(color: isEmpty ? .clear : .black.opacity(0.4), radius: 5, x: -3, y: 3)
                         )
-                        .overlay(
-                            Canvas { context, size in
-                                for _ in 0..<200 {
-                                    let x = CGFloat.random(in: 0...size.width)
-                                    let y = CGFloat.random(in: 0...size.height)
-                                    let op = Double.random(in: 0.02...0.08)
-                                    context.opacity = op
-                                    context.fill(
-                                        Path(ellipseIn: CGRect(x: x, y: y, width: 1.5, height: 1.5)),
-                                        with: .color(.black)
-                                    )
-                                }
-                            }
-                            .clipShape(TrapezoidTabShape())
-                            .allowsHitTesting(false)
-                            .opacity(isEmpty ? 0 : 1)
-                        )
                         .frame(maxWidth: .infinity, alignment: .center)
                 } else {
                     // 子タグ: シンプルなバッジ

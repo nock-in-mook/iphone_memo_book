@@ -289,40 +289,39 @@ struct TagDetailEditView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
 
-                // プレビュー（リアルなタブデザイン）
+                // プレビュー
                 let trimmedName = editName.trimmingCharacters(in: .whitespaces)
                 let isEmpty = trimmedName.isEmpty
-                Text(isEmpty ? " " : trimmedName)
-                    .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(isEmpty ? .clear : .primary)
-                    .shadow(color: isEmpty ? .clear : .black.opacity(0.35), radius: 1.5, x: -1, y: 1)
-                    .lineLimit(1)
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 9)
-                    .frame(minWidth: 52)
-                    .background(
-                        TrapezoidTabShape()
-                            .fill(isEmpty ? Color.clear : tagColor(for: editColorIndex))
-                            .shadow(color: isEmpty ? .clear : .black.opacity(0.4), radius: 5, x: -3, y: 3)
-                    )
-                    .overlay(
-                        Canvas { context, size in
-                            for _ in 0..<200 {
-                                let x = CGFloat.random(in: 0...size.width)
-                                let y = CGFloat.random(in: 0...size.height)
-                                let op = Double.random(in: 0.02...0.08)
-                                context.opacity = op
-                                context.fill(
-                                    Path(ellipseIn: CGRect(x: x, y: y, width: 1.5, height: 1.5)),
-                                    with: .color(.black)
-                                )
-                            }
-                        }
-                        .clipShape(TrapezoidTabShape())
-                        .allowsHitTesting(false)
-                        .opacity(isEmpty ? 0 : 1)
-                    )
-                    .frame(maxWidth: .infinity, alignment: .center)
+                let isChildTag = tag.parentTagID != nil
+                if isChildTag {
+                    // 子タグ: 角丸長方形バッジ
+                    Text(isEmpty ? " " : trimmedName)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(isEmpty ? .clear : .primary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(isEmpty ? Color.clear : tagColor(for: editColorIndex))
+                        )
+                        .frame(maxWidth: .infinity, alignment: .center)
+                } else {
+                    // 親タグ: タブデザイン
+                    Text(isEmpty ? " " : trimmedName)
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(isEmpty ? .clear : .primary)
+                        .shadow(color: isEmpty ? .clear : .black.opacity(0.35), radius: 1.5, x: -1, y: 1)
+                        .lineLimit(1)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 9)
+                        .frame(minWidth: 52)
+                        .background(
+                            TrapezoidTabShape()
+                                .fill(isEmpty ? Color.clear : tagColor(for: editColorIndex))
+                                .shadow(color: isEmpty ? .clear : .black.opacity(0.4), radius: 5, x: -3, y: 3)
+                        )
+                        .frame(maxWidth: .infinity, alignment: .center)
+                }
 
                 // カラー選択（コンパクト）
                 VStack(alignment: .leading, spacing: 6) {
