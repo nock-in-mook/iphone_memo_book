@@ -2049,6 +2049,12 @@ struct TabBarView: View {
         )
         .contextMenu {
             let ci = tabItems[index].colorIndex
+            // フォルダの並び替え（常に最上部）
+            Button {
+                onShowReorderSheet()
+            } label: {
+                Label("フォルダの並び替え", systemImage: "arrow.left.arrow.right")
+            }
             // 「すべて」「よく見る」は色変更のみ
             if ci == allTabColorIndex || ci == frequentTabColorIndex {
                 Button {
@@ -2057,11 +2063,7 @@ struct TabBarView: View {
                     Label("色の変更", systemImage: "paintpalette")
                 }
             }
-            Button {
-                onShowReorderSheet()
-            } label: {
-                Label("フォルダの並び替え", systemImage: "arrow.left.arrow.right")
-            }
+            // 通常タグ
             if let tag = tabItems[index].tag {
                 Button {
                     onEditTag?(tag)
