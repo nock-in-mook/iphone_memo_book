@@ -112,14 +112,10 @@ struct MainView: View {
                             if enteredFromMemoList {
                                 // メモ一覧最大化から来た場合→メモ一覧最大化に戻る
                                 enteredFromMemoList = false
-                                withAnimation(.spring(response: 0.35)) {
-                                    isInputExpanded = false
-                                    isMemoListExpanded = true
-                                }
+                                isInputExpanded = false
+                                isMemoListExpanded = true
                             } else {
-                                withAnimation(.spring(response: 0.35)) {
-                                    isInputExpanded = false
-                                }
+                                isInputExpanded = false
                             }
                         } label: {
                             Image(systemName: "chevron.left")
@@ -404,7 +400,7 @@ struct MainView: View {
                     originalContent = viewModel.inputText
                     originalTitle = viewModel.titleText
                     enteredFromMemoList = true
-                    withAnimation(.spring(response: 0.35)) {
+                    withAnimation(.spring(response: 0.2, dampingFraction: 0.9)) {
                         isMemoListExpanded = false
                         isInputExpanded = true
                     }

@@ -179,6 +179,8 @@ struct TabbedMemoListView: View {
     @State private var flashMemoID: UUID?
     // タブフラッシュ
     @State private var flashTabIndex: Int?
+    // 最後に開いたメモID（戻ってきた時のハイライト用）
+    @State private var lastOpenedMemoID: UUID?
 
     // 並び替えシート表示
     @State private var showReorderSheet = false
@@ -340,6 +342,12 @@ struct TabbedMemoListView: View {
 
     private var currentColor: Color {
         tagColor(for: tabItems[selectedTabIndex].colorIndex)
+    }
+
+    // 選択中の子タグ名（フィルター中のみ）
+    private var selectedChildTagName: String? {
+        guard let childID = selectedChildFilterID else { return nil }
+        return tags.first { $0.id == childID }?.name
     }
 
     // 背景色を暗くした色（メモ枚数表示用）
@@ -639,7 +647,7 @@ struct TabbedMemoListView: View {
                             VStack(spacing: 0) {
                                 // 上部スペーサー（メモ枚数行＋子タグドロワー分、タップ不可）
                                 Color.clear
-                                    .frame(height: (drawerReveal > 0 && canShowChildTagPanel) ? 32 + drawerBandHeight : 32)
+                                    .frame(height: (drawerReveal > 0 && canShowChildTagPanel) ? drawerBandHeight + 6 + drawerBandHeight : drawerBandHeight)
                                     .allowsHitTesting(false)
 
                                 LazyVGrid(columns: currentColumns, spacing: 8) {
@@ -735,16 +743,28 @@ struct TabbedMemoListView: View {
                                     .padding(.horizontal, 8)
                                     .padding(.vertical, 4)
                             } else {
-                                HStack {
+                                HStack(spacing: 6) {
                                     Text("\(filteredMemos.count)枚のメモ")
                                         .font(.system(size: 13, weight: .medium, design: .rounded))
                                         .foregroundStyle(darkenedColor)
+                                    // 親タグ-子タグバッジ（子タグフィルター中のみ）
+                                    if let childName = selectedChildTagName,
+                                       let parentName = tabItems[selectedTabIndex].tag?.name {
+                                        Text("\(parentName)-\(childName)")
+                                            .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                            .foregroundStyle(.white)
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 2)
+                                            .background(
+                                                Capsule().fill(darkenedColor.opacity(0.7))
+                                            )
+                                    }
                                     Spacer()
                                 }
                             }
                         }
                         .padding(.horizontal, 10)
-                        .padding(.vertical, 6)
+                        .frame(height: drawerBandHeight)
                     }
                     // スクロールしたメモが後ろに隠れるよう不透明背景（ドロワースペース含む）
                     .background(currentColor)
@@ -940,7 +960,7 @@ struct TabbedMemoListView: View {
         max(0, drawerReveal + drawerDragOffset)
     }
 
-    private let drawerBandHeight: CGFloat = 36  // トレーの高さ
+    private let drawerBandHeight: CGFloat = 37  // トレーの高さ
     private let drawerHandleHeight: CGFloat = 23  // 取っ手の高さ
     private let drawerHandleTextWidth: CGFloat = 52  // 「◁子タグ」横書き幅
 
@@ -1080,7 +1100,7 @@ struct TabbedMemoListView: View {
             .contentShape(Rectangle())  // タップ・ドラッグ領域を帯だけに限定
             .clipped()
             // 右端に配置
-            .position(x: geo.size.width - totalWidth / 2, y: (reveal > 0 ? drawerBandHeight : drawerHandleHeight) / 2 + 6)
+            .position(x: geo.size.width - totalWidth / 2, y: (reveal > 0 ? drawerBandHeight : drawerHandleHeight) / 2 + 7)
             // ドラッグジェスチャー（帯のみ反応）
             .gesture(
                 DragGesture()
@@ -1263,6 +1283,13 @@ struct TabbedMemoListView: View {
                         .opacity(flashMemoID == memo.id ? 1 : 0)
                         .animation(.easeInOut(duration: 0.3).repeatCount(3, autoreverses: true), value: flashMemoID)
                 )
+                // 最後に開いたメモのハイライト
+                .overlay(
+                    RoundedRectangle(cornerRadius: 8)
+                        .fill(Color.cyan.opacity(lastOpenedMemoID == memo.id ? 0.08 : 0))
+                        .animation(.easeOut(duration: 0.5), value: lastOpenedMemoID)
+                        .allowsHitTesting(false)
+                )
         }
         .draggable(memo.id.uuidString) {
             MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight)
@@ -1305,6 +1332,7 @@ struct TabbedMemoListView: View {
                 selectedMemoIDs.insert(memo.id)
             }
         } else {
+            lastOpenedMemoID = memo.id
             onEditMemo?(memo)
         }
     }
