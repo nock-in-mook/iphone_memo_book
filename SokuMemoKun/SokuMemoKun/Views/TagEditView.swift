@@ -294,7 +294,7 @@ struct TagDetailEditView: View {
                 let isEmpty = trimmedName.isEmpty
                 Text(isEmpty ? " " : trimmedName)
                     .font(.system(size: 14, weight: .bold, design: .rounded))
-                    .foregroundStyle(isEmpty ? .clear : tagTextColor(for: editColorIndex))
+                    .foregroundStyle(isEmpty ? .clear : .primary)
                     .shadow(color: isEmpty ? .clear : .black.opacity(0.35), radius: 1.5, x: -1, y: 1)
                     .lineLimit(1)
                     .padding(.horizontal, 14)

@@ -66,7 +66,7 @@ struct NewTagSheetView: View {
                     let isEmpty = trimmedName.isEmpty
                     Text(isEmpty ? " " : trimmedName)
                         .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(isEmpty ? .clear : tagTextColor(for: selectedColorIndex))
+                        .foregroundStyle(isEmpty ? .clear : .primary)
                         .shadow(color: isEmpty ? .clear : .black.opacity(0.35), radius: 1.5, x: -1, y: 1)
                         .lineLimit(1)
                         .padding(.horizontal, 14)
@@ -99,7 +99,7 @@ struct NewTagSheetView: View {
                     // 子タグ: シンプルなバッジ
                     Text(trimmedName.isEmpty ? " " : trimmedName)
                         .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(trimmedName.isEmpty ? .clear : tagTextColor(for: selectedColorIndex))
+                        .foregroundStyle(trimmedName.isEmpty ? .clear : .primary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 8)
                         .background(

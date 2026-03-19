@@ -403,14 +403,7 @@ struct TagDialView: View {
             }()
             let isNoneTag = option.id == "none"
             let fontSize: CGFloat = isNoneTag ? (isParent ? 16 : 14) : (isSelected ? baseFontSize : max(baseFontSize - 2, 9))
-            let textColor: Color = {
-                if isNoneTag { return Color(white: 0.55) }
-                if !isOpen { return .black }
-                var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-                UIColor(option.color).getRed(&r, green: &g, blue: &b, alpha: nil)
-                let luminance = 0.299 * r + 0.587 * g + 0.114 * b
-                return luminance < 0.6 ? .white : .black
-            }()
+            let textColor: Color = isNoneTag ? Color(white: 0.55) : .black
 
             let resolved = context.resolve(
                 Text(displayName)
@@ -647,12 +640,7 @@ struct TagDialView: View {
         option: (id: String, name: String, color: Color)
     ) -> Color {
         if option.id == "none" { return Color(white: 0.55) }
-        // 閉じている時は白背景なので黒
-        if !isOpen { return .black }
-        var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0
-        UIColor(option.color).getRed(&r, green: &g, blue: &b, alpha: nil)
-        let luminance = 0.299 * r + 0.587 * g + 0.114 * b
-        return luminance < 0.6 ? .white : .black
+        return .black
     }
 
     // MARK: - 仕切り線

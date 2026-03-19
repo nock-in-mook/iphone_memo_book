@@ -73,14 +73,6 @@ private let tabColors: [Color] = [
     Color(red: 0.78, green: 0.80, blue: 0.68),  // カーキ
     Color(red: 0.80, green: 0.68, blue: 0.68),  // ベージュピンク
     Color(red: 0.68, green: 0.75, blue: 0.82),  // ストーンブルー
-    // 50〜56: ダーク系
-    Color(red: 0.28, green: 0.45, blue: 0.60),  // ネイビー
-    Color(red: 0.55, green: 0.30, blue: 0.30),  // マルーン
-    Color(red: 0.30, green: 0.50, blue: 0.38),  // ダークフォレスト
-    Color(red: 0.45, green: 0.35, blue: 0.55),  // ダークパープル
-    Color(red: 0.55, green: 0.48, blue: 0.30),  // ダークゴールド
-    Color(red: 0.40, green: 0.45, blue: 0.50),  // チャコール
-    Color(red: 0.50, green: 0.35, blue: 0.45),  // ダークローズ
 ]
 
 // 「すべて」タブ用の色（薄い黄色）
@@ -95,17 +87,6 @@ func tagColor(for index: Int) -> Color {
         return tabColors[0]
     }
     return tabColors[index]
-}
-
-// 背景色の明るさに応じてテキスト色を白/黒に自動切替
-func tagTextColor(for colorIndex: Int) -> Color {
-    let bg = tagColor(for: colorIndex)
-    let uiColor = UIColor(bg)
-    var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
-    uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-    // 相対輝度（W3C基準）
-    let luminance = 0.299 * r + 0.587 * g + 0.114 * b
-    return luminance > 0.55 ? .primary : .white
 }
 
 // 紙の質感を表現するオーバーレイ
@@ -495,8 +476,8 @@ struct TabbedMemoListView: View {
         let uiColor = UIColor(base)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-        let left = Color(red: r * 0.92, green: g * 0.92, blue: b * 0.92).opacity(0.3)
-        let right = Color(red: r * 0.96, green: g * 0.96, blue: b * 0.96).opacity(0.15)
+        let left = Color(red: r * 0.85, green: g * 0.85, blue: b * 0.85)
+        let right = Color(red: r * 0.93, green: g * 0.93, blue: b * 0.93)
         return (left, right)
     }
 
@@ -1473,7 +1454,7 @@ struct TabbedMemoListView: View {
     private func childTagChip(label: String, colorIndex: Int, isSelected: Bool, id: String) -> some View {
         Text(label)
             .font(.system(size: 13, weight: isSelected ? .bold : .medium, design: .rounded))
-            .foregroundStyle(tagTextColor(for: colorIndex))
+            .foregroundStyle(.primary)
             .padding(.horizontal, 10)
             .padding(.vertical, 5)
             .background(

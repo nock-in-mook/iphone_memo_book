@@ -1,6 +1,6 @@
 import SwiftUI
 
-// ベース色からRGB成分を取得するヘルパー
+// ベース色からRGB/HSB成分を取得するヘルパー
 private extension Color {
     var components: (r: CGFloat, g: CGFloat, b: CGFloat) {
         let uiColor = UIColor(self)
@@ -15,6 +15,13 @@ private extension Color {
         uiColor.getHue(&h, saturation: &s, brightness: &b, alpha: &a)
         return (h, s, b)
     }
+
+    // 明度に基づいてテキスト色を決める
+    var isLight: Bool {
+        let c = components
+        let luminance = 0.299 * c.r + 0.587 * c.g + 0.114 * c.b
+        return luminance > 0.6
+    }
 }
 
 // 配色パターン定義
@@ -22,134 +29,165 @@ struct ColorPattern: Identifiable {
     let id: String
     let name: String
     let description: String
-    // ベース色 → (左列色, 右列色) を返す
     let generate: (Color) -> (left: Color, right: Color)
 }
 
-// 配色パターン一覧
+// 配色パターン一覧（全て不透明ベース）
 private let colorPatterns: [ColorPattern] = [
+    // 1. 濃淡（左を少し暗く、右はそのまま）
     ColorPattern(
-        id: "same_light",
-        name: "同色グラデ",
-        description: "同じ色の濃淡で左右を分ける",
+        id: "dark_light",
+        name: "濃淡",
+        description: "左を濃く、右はベースそのまま",
         generate: { base in
             let c = base.components
-            let left = Color(red: c.r * 0.92, green: c.g * 0.92, blue: c.b * 0.92).opacity(0.3)
-            let right = Color(red: c.r * 0.96, green: c.g * 0.96, blue: c.b * 0.96).opacity(0.15)
-            return (Color(left), Color(right))
+            let left = Color(red: c.r * 0.78, green: c.g * 0.78, blue: c.b * 0.78)
+            let right = Color(red: c.r * 0.92, green: c.g * 0.92, blue: c.b * 0.92)
+            return (left, right)
         }
     ),
+    // 2. 濃淡（逆）
     ColorPattern(
-        id: "warm_cool",
-        name: "暖色↔寒色",
-        description: "左を暖かく、右をクールに",
+        id: "light_dark",
+        name: "濃淡（逆）",
+        description: "左が明るく、右が濃い",
         generate: { base in
             let c = base.components
-            let left = Color(red: min(c.r + 0.08, 1), green: c.g * 0.95, blue: c.b * 0.85).opacity(0.2)
-            let right = Color(red: c.r * 0.85, green: c.g * 0.95, blue: min(c.b + 0.08, 1)).opacity(0.2)
-            return (Color(left), Color(right))
+            let left = Color(red: c.r * 0.92, green: c.g * 0.92, blue: c.b * 0.92)
+            let right = Color(red: c.r * 0.78, green: c.g * 0.78, blue: c.b * 0.78)
+            return (left, right)
         }
     ),
+    // 3. 彩度差（左が鮮やか、右がくすみ）
     ColorPattern(
-        id: "hue_shift_30",
-        name: "色相+30°",
-        description: "左はそのまま、右を色相30°ずらす",
+        id: "vivid_muted",
+        name: "鮮やか↔くすみ",
+        description: "左が鮮やか、右はグレー寄り",
         generate: { base in
             let hsb = base.hsb
-            let left = Color(hue: hsb.h, saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            let rightHue = (hsb.h + 0.083) // 30°/360°
-            let right = Color(hue: rightHue.truncatingRemainder(dividingBy: 1.0),
-                              saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            return (Color(left), Color(right))
+            let left = Color(hue: hsb.h, saturation: min(hsb.s * 1.3, 1), brightness: hsb.b * 0.88)
+            let right = Color(hue: hsb.h, saturation: hsb.s * 0.4, brightness: hsb.b * 0.95)
+            return (left, right)
         }
     ),
+    // 4. 白ミックス（左にベース色、右に白を混ぜる）
     ColorPattern(
-        id: "hue_shift_60",
-        name: "色相+60°",
-        description: "左はそのまま、右を色相60°ずらす",
+        id: "base_white",
+        name: "ベース＋ホワイト",
+        description: "左はベース色、右は白を混ぜて明るく",
         generate: { base in
-            let hsb = base.hsb
-            let left = Color(hue: hsb.h, saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            let rightHue = (hsb.h + 0.167) // 60°/360°
-            let right = Color(hue: rightHue.truncatingRemainder(dividingBy: 1.0),
-                              saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            return (Color(left), Color(right))
+            let c = base.components
+            let left = Color(red: c.r * 0.82, green: c.g * 0.82, blue: c.b * 0.82)
+            let right = Color(red: c.r * 0.5 + 0.5, green: c.g * 0.5 + 0.5, blue: c.b * 0.5 + 0.5)
+            return (left, right)
         }
     ),
+    // 5. 色相ずらし+15°
     ColorPattern(
-        id: "complement",
-        name: "補色",
-        description: "左はベース、右は補色（180°反転）",
+        id: "hue_15",
+        name: "色相+15°",
+        description: "左はベース、右を色相15°ずらし",
         generate: { base in
             let hsb = base.hsb
-            let left = Color(hue: hsb.h, saturation: hsb.s * 0.35, brightness: hsb.b).opacity(0.2)
-            let rightHue = (hsb.h + 0.5).truncatingRemainder(dividingBy: 1.0)
-            let right = Color(hue: rightHue, saturation: hsb.s * 0.3, brightness: hsb.b).opacity(0.15)
-            return (Color(left), Color(right))
+            let left = Color(hue: hsb.h, saturation: hsb.s * 0.8, brightness: hsb.b * 0.88)
+            let rightH = (hsb.h + 0.042).truncatingRemainder(dividingBy: 1.0)
+            let right = Color(hue: rightH, saturation: hsb.s * 0.8, brightness: hsb.b * 0.88)
+            return (left, right)
         }
     ),
+    // 6. 色相ずらし-15°
     ColorPattern(
-        id: "saturate_desat",
-        name: "鮮やか↔淡い",
-        description: "左を少し鮮やかに、右を彩度落とす",
+        id: "hue_minus15",
+        name: "色相-15°",
+        description: "左はベース、右を色相-15°ずらし",
         generate: { base in
             let hsb = base.hsb
-            let left = Color(hue: hsb.h, saturation: min(hsb.s * 0.6, 1), brightness: hsb.b).opacity(0.25)
-            let right = Color(hue: hsb.h, saturation: hsb.s * 0.15, brightness: hsb.b).opacity(0.15)
-            return (Color(left), Color(right))
+            let left = Color(hue: hsb.h, saturation: hsb.s * 0.8, brightness: hsb.b * 0.88)
+            let rightH = (hsb.h - 0.042 + 1.0).truncatingRemainder(dividingBy: 1.0)
+            let right = Color(hue: rightH, saturation: hsb.s * 0.8, brightness: hsb.b * 0.88)
+            return (left, right)
         }
     ),
+    // 7. 暖寒（不透明版）
     ColorPattern(
-        id: "triadic",
-        name: "トライアド",
-        description: "左はベース、右は120°ずらし",
+        id: "warm_cool_solid",
+        name: "暖↔寒",
+        description: "左に暖色、右に寒色を加える",
         generate: { base in
-            let hsb = base.hsb
-            let left = Color(hue: hsb.h, saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            let rightHue = (hsb.h + 0.333).truncatingRemainder(dividingBy: 1.0)
-            let right = Color(hue: rightHue, saturation: hsb.s * 0.35, brightness: hsb.b).opacity(0.18)
-            return (Color(left), Color(right))
+            let c = base.components
+            let left = Color(red: min(c.r * 0.9 + 0.1, 1), green: c.g * 0.85, blue: c.b * 0.75)
+            let right = Color(red: c.r * 0.75, green: c.g * 0.85, blue: min(c.b * 0.9 + 0.1, 1))
+            return (left, right)
         }
     ),
+    // 8. 明度段差（大きめの差）
     ColorPattern(
-        id: "split_complement",
-        name: "スプリット補色",
-        description: "左はベース、右は150°ずらし",
+        id: "brightness_step",
+        name: "明度段差",
+        description: "左を暗め、右を明るめ（大きな差）",
         generate: { base in
             let hsb = base.hsb
-            let left = Color(hue: hsb.h, saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            let rightHue = (hsb.h + 0.417).truncatingRemainder(dividingBy: 1.0)
-            let right = Color(hue: rightHue, saturation: hsb.s * 0.35, brightness: hsb.b).opacity(0.18)
-            return (Color(left), Color(right))
+            let left = Color(hue: hsb.h, saturation: hsb.s * 0.9, brightness: hsb.b * 0.72)
+            let right = Color(hue: hsb.h, saturation: hsb.s * 0.6, brightness: min(hsb.b * 1.05, 1))
+            return (left, right)
         }
     ),
+    // 9. 同色＋枠だけ差（背景は同じ、枠線色で差をつけるイメージ）
     ColorPattern(
-        id: "analogous",
-        name: "類似色",
-        description: "左を-15°、右を+15°",
+        id: "same_border",
+        name: "同色（枠で差）",
+        description: "背景は同色、境界線で左右を区別",
         generate: { base in
-            let hsb = base.hsb
-            let leftHue = (hsb.h - 0.042 + 1.0).truncatingRemainder(dividingBy: 1.0)
-            let rightHue = (hsb.h + 0.042).truncatingRemainder(dividingBy: 1.0)
-            let left = Color(hue: leftHue, saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            let right = Color(hue: rightHue, saturation: hsb.s * 0.4, brightness: hsb.b).opacity(0.2)
-            return (Color(left), Color(right))
+            let c = base.components
+            let color = Color(red: c.r * 0.88, green: c.g * 0.88, blue: c.b * 0.88)
+            return (color, color)
         }
     ),
+    // 10. テクスチャ差（彩度の微差）
     ColorPattern(
-        id: "mono_tint",
-        name: "モノトーン",
-        description: "白寄りの同色系、明度差のみ",
+        id: "subtle_sat",
+        name: "微彩度差",
+        description: "左の彩度をやや上げ、右をやや下げ",
         generate: { base in
             let hsb = base.hsb
-            let left = Color(hue: hsb.h, saturation: hsb.s * 0.2, brightness: min(hsb.b + 0.05, 1)).opacity(0.2)
-            let right = Color(hue: hsb.h, saturation: hsb.s * 0.1, brightness: min(hsb.b + 0.1, 1)).opacity(0.12)
-            return (Color(left), Color(right))
+            let left = Color(hue: hsb.h, saturation: min(hsb.s * 1.1, 1), brightness: hsb.b * 0.87)
+            let right = Color(hue: hsb.h, saturation: hsb.s * 0.7, brightness: hsb.b * 0.9)
+            return (left, right)
+        }
+    ),
+    // 11. パステル＋ダーク
+    ColorPattern(
+        id: "pastel_dark",
+        name: "パステル＋ダーク",
+        description: "左をパステル、右をダークトーンに",
+        generate: { base in
+            let hsb = base.hsb
+            let left = Color(hue: hsb.h, saturation: hsb.s * 0.5, brightness: min(hsb.b * 1.05, 1))
+            let right = Color(hue: hsb.h, saturation: hsb.s * 0.9, brightness: hsb.b * 0.7)
+            return (left, right)
+        }
+    ),
+    // 12. 補色ミックス
+    ColorPattern(
+        id: "complement_mix",
+        name: "補色ミックス",
+        description: "右に補色を少しだけ混ぜる",
+        generate: { base in
+            let c = base.components
+            let left = Color(red: c.r * 0.85, green: c.g * 0.85, blue: c.b * 0.85)
+            // 補色成分を20%だけ混ぜる
+            let compR = 1.0 - c.r, compG = 1.0 - c.g, compB = 1.0 - c.b
+            let right = Color(
+                red: (c.r * 0.8 + compR * 0.2) * 0.88,
+                green: (c.g * 0.8 + compG * 0.2) * 0.88,
+                blue: (c.b * 0.8 + compB * 0.2) * 0.88
+            )
+            return (left, right)
         }
     ),
 ]
 
-// サンプルに使うベース色（代表的なタブカラーから抜粋）
+// サンプルに使うベース色
 private let sampleBaseColors: [(name: String, color: Color)] = [
     ("水色", Color(red: 0.55, green: 0.80, blue: 0.95)),
     ("オレンジ", Color(red: 0.95, green: 0.70, blue: 0.55)),
@@ -159,6 +197,8 @@ private let sampleBaseColors: [(name: String, color: Color)] = [
     ("ティール", Color(red: 0.35, green: 0.65, blue: 0.80)),
     ("ゴールド", Color(red: 0.90, green: 0.80, blue: 0.50)),
     ("ローズ", Color(red: 0.85, green: 0.45, blue: 0.55)),
+    ("ネイビー", Color(red: 0.28, green: 0.45, blue: 0.60)),
+    ("ダークフォレスト", Color(red: 0.30, green: 0.50, blue: 0.38)),
 ]
 
 // MARK: - カラーラボ メイン画面
@@ -167,14 +207,14 @@ struct ColorLabView: View {
     var body: some View {
         ScrollView {
             VStack(spacing: 24) {
-                Text("「よく見る」タブの左右列配色パターン")
+                Text("「よく見る」タブの左右列配色パターン\n全て不透明・ベース色自動計算")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
                     .padding(.top, 8)
 
                 ForEach(colorPatterns) { pattern in
                     VStack(alignment: .leading, spacing: 8) {
-                        // パターン名
                         HStack {
                             Text(pattern.name)
                                 .font(.system(size: 16, weight: .bold, design: .rounded))
@@ -185,7 +225,6 @@ struct ColorLabView: View {
                         }
                         .padding(.horizontal, 16)
 
-                        // 各ベース色でのサンプル（横スクロール）
                         ScrollView(.horizontal, showsIndicators: false) {
                             HStack(spacing: 12) {
                                 ForEach(sampleBaseColors, id: \.name) { sample in
@@ -207,34 +246,33 @@ struct ColorLabView: View {
         .navigationBarTitleDisplayMode(.inline)
     }
 
-    // 1つのサンプルカード
     private func colorSampleCard(baseName: String, baseColor: Color, pattern: ColorPattern) -> some View {
         let colors = pattern.generate(baseColor)
         return VStack(spacing: 4) {
             // タブ（ベース色）
             Text(baseName)
-                .font(.system(size: 10, weight: .bold, design: .rounded))
-                .foregroundStyle(.primary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 4)
+                .font(.system(size: 9, weight: .bold, design: .rounded))
+                .foregroundColor(baseColor.isLight ? Color.primary : Color.white)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 3)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
+                    RoundedRectangle(cornerRadius: 5, style: .continuous)
                         .fill(baseColor)
                 )
 
-            // 左右分割プレビュー
+            // 左右分割プレビュー（背景色付き）
             HStack(spacing: 2) {
                 // 左列
                 VStack(spacing: 3) {
                     Text("よく見る")
                         .font(.system(size: 7, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(colors.left.isLight ? .secondary : Color.white.opacity(0.8))
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(uiColor: .systemBackground))
-                        .frame(height: 18)
+                        .frame(height: 16)
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(uiColor: .systemBackground))
-                        .frame(height: 18)
+                        .frame(height: 16)
                 }
                 .padding(4)
                 .background(
@@ -246,13 +284,13 @@ struct ColorLabView: View {
                 VStack(spacing: 3) {
                     Text("最近見た")
                         .font(.system(size: 7, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.secondary)
+                        .foregroundColor(colors.right.isLight ? .secondary : Color.white.opacity(0.8))
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(uiColor: .systemBackground))
-                        .frame(height: 18)
+                        .frame(height: 16)
                     RoundedRectangle(cornerRadius: 3)
                         .fill(Color(uiColor: .systemBackground))
-                        .frame(height: 18)
+                        .frame(height: 16)
                 }
                 .padding(4)
                 .background(
@@ -260,10 +298,10 @@ struct ColorLabView: View {
                         .fill(colors.right)
                 )
             }
-            .frame(width: 120, height: 70)
+            .frame(width: 110, height: 65)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(baseColor.opacity(0.15))
+                    .fill(baseColor)
             )
         }
     }
