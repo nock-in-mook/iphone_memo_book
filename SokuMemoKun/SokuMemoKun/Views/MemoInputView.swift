@@ -541,6 +541,7 @@ struct MemoInputView: View {
                         }
                     }
                 )
+                .shadow(color: .black.opacity(0.3), radius: 6, x: -3, y: 3)
                 .offset(x: showParentDial ? -27 : -50, y: -10) // 開き時は右寄せ、閉じ時はチラ見せ
                 .allowsHitTesting(showParentDial) // チラ見せ時はタッチ無効
                 // 引き出し時: 右端の余白に「しまう」ボタン
