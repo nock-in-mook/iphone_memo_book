@@ -147,6 +147,89 @@ enum GridSizeOption: Int, CaseIterable {
 private let borderColor = Color.primary.opacity(0.45)
 private let borderWidth: CGFloat = 2.0
 
+// 特殊タブ色変更シート用アイテム
+struct SpecialColorSheetItem: Identifiable {
+    let id = UUID()
+    let tabColorIndex: Int  // -1=すべて, -2=よく見る
+    let initialColor: Int   // 現在のcolorIndex
+}
+
+// 特殊タブの色変更シート（独立View）
+struct SpecialColorEditSheet: View {
+    let tabLabel: String
+    let initialColor: Int
+    let onSave: (Int) -> Void
+    let onCancel: () -> Void
+    @State private var selectedColor: Int
+
+    init(tabLabel: String, initialColor: Int, onSave: @escaping (Int) -> Void, onCancel: @escaping () -> Void) {
+        self.tabLabel = tabLabel
+        self.initialColor = initialColor
+        self.onSave = onSave
+        self.onCancel = onCancel
+        self._selectedColor = State(initialValue: initialColor)
+    }
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 16) {
+                // プレビュー（実際のタブと同じデザイン）
+                Text(tabLabel)
+                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .shadow(color: .black.opacity(0.35), radius: 1.5, x: -1, y: 1)
+                    .lineLimit(1)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 9)
+                    .frame(minWidth: 52)
+                    .background(
+                        TrapezoidTabShape()
+                            .fill(tagColor(for: selectedColor))
+                            .shadow(color: .black.opacity(0.4), radius: 5, x: -3, y: 3)
+                    )
+                    .overlay(
+                        Canvas { context, size in
+                            for _ in 0..<200 {
+                                let x = CGFloat.random(in: 0...size.width)
+                                let y = CGFloat.random(in: 0...size.height)
+                                let op = Double.random(in: 0.02...0.08)
+                                context.opacity = op
+                                context.fill(
+                                    Path(ellipseIn: CGRect(x: x, y: y, width: 1.5, height: 1.5)),
+                                    with: .color(.black)
+                                )
+                            }
+                        }
+                        .clipShape(TrapezoidTabShape())
+                        .allowsHitTesting(false)
+                    )
+                    .animation(.easeOut(duration: 0.15), value: selectedColor)
+
+                VStack(alignment: .leading, spacing: 6) {
+                    Text("カラー")
+                        .font(.system(size: 13, weight: .medium, design: .rounded))
+                        .foregroundStyle(.secondary)
+                    ColorPaletteGrid(selectedIndex: $selectedColor)
+                }
+                Spacer()
+            }
+            .padding(20)
+            .navigationTitle("色の変更")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .cancellationAction) {
+                    Button("キャンセル") { onCancel() }
+                }
+                ToolbarItem(placement: .confirmationAction) {
+                    Button("保存") { onSave(selectedColor) }
+                        .bold()
+                }
+            }
+        }
+        .presentationDetents([.medium])
+    }
+}
+
 struct TabbedMemoListView: View {
     @Query(sort: \Tag.name) private var tags: [Tag]
     @Query(sort: \Memo.createdAt, order: .reverse) private var allMemos: [Memo]
@@ -189,6 +272,9 @@ struct TabbedMemoListView: View {
     @State private var showReorderSheet = false
     // タグ追加シート
     @State private var showAddTagSheet = false
+    // 特殊タブの色変更シート
+    @State private var specialColorSheetItem: SpecialColorSheetItem? = nil
+    @State private var editingColorValue: Int = 1
     @State private var editingTagForDetail: Tag? = nil
     // 子タグ引き出しドロワー
     @State private var drawerReveal: CGFloat = 0       // 引き出し量（0=閉、maxで全開）
@@ -207,8 +293,8 @@ struct TabbedMemoListView: View {
     @AppStorage("noTagSortOrder") private var noTagSortOrder: Int = 9999
     @AppStorage("frequentTagSortOrder") private var frequentTagSortOrder: Int = -2
     // 「すべて」「よく見る」のカスタムカラーインデックス（-1=デフォルト色）
-    @AppStorage("allTabCustomColor") private var allTabCustomColor: Int = -1
-    @AppStorage("frequentTabCustomColor") private var frequentTabCustomColor: Int = -1
+    @AppStorage("allTabCustomColor") private var allTabCustomColor: Int = 5
+    @AppStorage("frequentTabCustomColor") private var frequentTabCustomColor: Int = 8
 
     private var tabItems: [(label: String, tag: Tag?, colorIndex: Int)] {
         var items: [(label: String, tag: Tag?, colorIndex: Int, order: Int)] = []
@@ -431,8 +517,15 @@ struct TabbedMemoListView: View {
                             frequentTabCustomColor = newColor
                         }
                     },
-                    allTabCustomColor: allTabCustomColor,
-                    frequentTabCustomColor: frequentTabCustomColor
+                    getSpecialTabColor: { tabColorIndex in
+                        if tabColorIndex == -1 { return allTabCustomColor }
+                        if tabColorIndex == -2 { return frequentTabCustomColor }
+                        return 1
+                    },
+                    onOpenColorSheet: { tabColorIndex in
+                        let color = tabColorIndex == -1 ? allTabCustomColor : frequentTabCustomColor
+                        specialColorSheetItem = SpecialColorSheetItem(tabColorIndex: tabColorIndex, initialColor: color)
+                    }
                 )
 
                 // ── 通常モード: メモ一覧 ──
@@ -534,6 +627,23 @@ struct TabbedMemoListView: View {
         }
         .sheet(item: $editingTagForDetail) { tag in
             TagDetailEditView(tag: tag)
+        }
+        .sheet(item: $specialColorSheetItem) { item in
+            SpecialColorEditSheet(
+                tabLabel: item.tabColorIndex == -1 ? "すべて" : "よく見る",
+                initialColor: item.initialColor,
+                onSave: { newColor in
+                    if item.tabColorIndex == -1 {
+                        allTabCustomColor = newColor
+                    } else {
+                        frequentTabCustomColor = newColor
+                    }
+                    specialColorSheetItem = nil
+                },
+                onCancel: {
+                    specialColorSheetItem = nil
+                }
+            )
         }
         .onReceive(NotificationCenter.default.publisher(for: .memoSavedFlash)) { notification in
             guard let memoID = notification.userInfo?["memoID"] as? UUID else { return }
@@ -1795,9 +1905,10 @@ struct TabBarView: View {
     var onDeleteTag: ((Tag, Bool) -> Void)? = nil  // (tag, メモも削除するか)
     // 特殊タブの色変更コールバック: (tabColorIndex, 新しいcolorIndex)
     var onChangeSpecialTabColor: ((Int, Int) -> Void)? = nil
-    // カスタムカラーインデックス（-1=デフォルト色）
-    var allTabCustomColor: Int = -1
-    var frequentTabCustomColor: Int = -1
+    // 特殊タブの現在の色を取得するコールバック: (tabColorIndex) -> colorIndex
+    var getSpecialTabColor: ((Int) -> Int)? = nil
+    // 特殊タブの色変更シートを開くコールバック: (tabColorIndex)
+    var onOpenColorSheet: ((Int) -> Void)? = nil
     private let allTabColorIndex = -1
     private let frequentTabColorIndex = -2
 
@@ -1806,10 +1917,6 @@ struct TabBarView: View {
     @State private var showDeleteChoiceAlert = false   // 1回目: メモどうする？
     @State private var showDeleteConfirmAlert = false   // 2回目: 最終確認
     @State private var deleteWithMemos = false           // メモも一緒に削除するか
-    // 特殊タブの色変更シート
-    @State private var showSpecialColorSheet = false
-    @State private var editingSpecialTabColorIndex: Int = -1  // allTabColorIndex or frequentTabColorIndex
-    @State private var editingColorValue: Int = 0
 
     // 各タブのスクロール内での位置を記録
     @State private var tabFrames: [Int: CGRect] = [:]
@@ -1890,24 +1997,12 @@ struct TabBarView: View {
         )
     }
 
-    private func tabColorFor(index: Int) -> Color {
-        let ci = tabItems[index].colorIndex
-        if ci == allTabColorIndex && allTabCustomColor >= 0 {
-            return tabColors[allTabCustomColor % tabColors.count]
-        }
-        if ci == frequentTabColorIndex && frequentTabCustomColor >= 0 {
-            return tabColors[frequentTabCustomColor % tabColors.count]
-        }
-        return tagColor(for: ci)
-    }
 
     private func resolvedTabColor(index: Int) -> Color {
         let ci = tabItems[index].colorIndex
-        if ci == allTabColorIndex && allTabCustomColor >= 0 {
-            return tabColors[allTabCustomColor % tabColors.count]
-        }
-        if ci == frequentTabColorIndex && frequentTabCustomColor >= 0 {
-            return tabColors[frequentTabCustomColor % tabColors.count]
+        if ci == allTabColorIndex || ci == frequentTabColorIndex,
+           let colorIdx = getSpecialTabColor?(ci), colorIdx >= 0 {
+            return tabColors[colorIdx % tabColors.count]
         }
         return tagColor(for: ci)
     }
@@ -1957,10 +2052,7 @@ struct TabBarView: View {
             // 「すべて」「よく見る」は色変更のみ
             if ci == allTabColorIndex || ci == frequentTabColorIndex {
                 Button {
-                    editingSpecialTabColorIndex = ci
-                    editingColorValue = ci == allTabColorIndex ? allTabCustomColor : frequentTabCustomColor
-                    if editingColorValue < 1 { editingColorValue = 1 }
-                    showSpecialColorSheet = true
+                    onOpenColorSheet?(ci)
                 } label: {
                     Label("色の変更", systemImage: "paintpalette")
                 }
@@ -2017,51 +2109,6 @@ struct TabBarView: View {
             } else {
                 Text("タグ「\(pendingDeleteTag?.name ?? "")」が削除されます。メモは全て「タグなし」に移動されます。")
             }
-        }
-        // 特殊タブの色変更シート
-        .sheet(isPresented: $showSpecialColorSheet) {
-            NavigationStack {
-                VStack(spacing: 16) {
-                    // プレビュー
-                    let label = editingSpecialTabColorIndex == allTabColorIndex ? "すべて" : "よく見る"
-                    Text(label)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(tagTextColor(for: editingColorValue))
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(
-                            RoundedRectangle(cornerRadius: 10)
-                                .fill(tagColor(for: editingColorValue))
-                        )
-                        .animation(.easeOut(duration: 0.15), value: editingColorValue)
-
-                    // カラー選択
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("カラー")
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
-                            .foregroundStyle(.secondary)
-                        ColorPaletteGrid(selectedIndex: $editingColorValue)
-                    }
-
-                    Spacer()
-                }
-                .padding(20)
-                .navigationTitle("色の変更")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button("キャンセル") { showSpecialColorSheet = false }
-                    }
-                    ToolbarItem(placement: .confirmationAction) {
-                        Button("保存") {
-                            onChangeSpecialTabColor?(editingSpecialTabColorIndex, editingColorValue)
-                            showSpecialColorSheet = false
-                        }
-                        .bold()
-                    }
-                }
-            }
-            .presentationDetents([.medium])
         }
     }
 }
