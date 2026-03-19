@@ -245,6 +245,14 @@ struct TabbedMemoListView: View {
     // 長押し単体削除確認ダイアログ
     @State private var showSingleDeleteConfirm = false
     @State private var pendingDeleteMemo: Memo? = nil
+    // ロック中メモ移動通知
+    @State private var showLockedMemoMovedAlert = false
+    @State private var lockedMemoMovedMessage = ""
+    // 汎用トースト
+    @State private var toastMessage = ""
+    @State private var toastIcon = "lock.fill"
+    @State private var showToast = false
+    @State private var pendingDeleteCompleteToast = false
     // スワイプ方向追跡（トランジション用）
     @State private var swipeDirection: SwipeDirection = .none
     enum SwipeDirection { case none, left, right }
@@ -592,6 +600,16 @@ struct TabbedMemoListView: View {
                 pendingDeleteMemo = nil
             }
         }
+        .alert(lockedMemoMovedMessage, isPresented: $showLockedMemoMovedAlert) {
+            Button("OK") {
+                if pendingDeleteCompleteToast {
+                    pendingDeleteCompleteToast = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showToastMessage("削除が完了しました", icon: "checkmark.circle")
+                    }
+                }
+            }
+        }
         .sheet(isPresented: $showReorderSheet) {
             TabReorderSheet(
                 tabItems: tabItems,
@@ -656,6 +674,25 @@ struct TabbedMemoListView: View {
                     flashTabIndex = nil
                     flashMemoID = nil
                 }
+            }
+        }
+        // 汎用トースト
+        .overlay(alignment: .center) {
+            if showToast {
+                HStack(spacing: 6) {
+                    Image(systemName: toastIcon)
+                        .font(.system(size: 14))
+                    Text(toastMessage)
+                        .font(.system(size: 14, weight: .medium, design: .rounded))
+                }
+                .foregroundStyle(.white)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 10)
+                .background(
+                    Capsule()
+                        .fill(Color.black.opacity(0.75))
+                )
+                .transition(.opacity)
             }
         }
     }
@@ -750,11 +787,23 @@ struct TabbedMemoListView: View {
                                                     } label: {
                                                         Label("コピー", systemImage: "doc.on.doc")
                                                     }
-                                                    Button(role: .destructive) {
-                                                        onDeleteMemo?(memo)
-                                                        modelContext.delete(memo)
+                                                    Button {
+                                                        memo.isLocked.toggle()
                                                     } label: {
-                                                        Label("削除", systemImage: "trash")
+                                                        Label(memo.isLocked ? "ロックを解除" : "削除防止ロック", systemImage: memo.isLocked ? "lock.open" : "lock")
+                                                    }
+                                                    if memo.isLocked {
+                                                        Button(role: .destructive) {} label: {
+                                                            Label("削除ロック中", systemImage: "lock.fill")
+                                                        }
+                                                        .disabled(true)
+                                                    } else {
+                                                        Button(role: .destructive) {
+                                                            onDeleteMemo?(memo)
+                                                            modelContext.delete(memo)
+                                                        } label: {
+                                                            Label("削除", systemImage: "trash")
+                                                        }
                                                     }
                                                 }
                                         }
@@ -1470,9 +1519,19 @@ struct TabbedMemoListView: View {
         let childTags = tags.filter { $0.parentTagID == tag.id }
 
         if withMemos {
-            // メモも一緒に削除
-            for memo in taggedMemos {
+            // ロック中メモはタグなしに移動、それ以外は削除
+            let lockedMemos = taggedMemos.filter { $0.isLocked }
+            let unlocked = taggedMemos.filter { !$0.isLocked }
+            for memo in unlocked {
                 modelContext.delete(memo)
+            }
+            // ロック中メモはタグを外す（タグなしに移動）
+            for memo in lockedMemos {
+                memo.tags.removeAll { $0.id == tag.id || $0.parentTagID == tag.id }
+            }
+            if !lockedMemos.isEmpty {
+                lockedMemoMovedMessage = "削除ロック中のメモ\(lockedMemos.count)件は「タグなし」に移動しました"
+                showLockedMemoMovedAlert = true
             }
         } else {
             // メモからこのタグと子タグを全て外す（タグなしに移動）
@@ -1490,6 +1549,13 @@ struct TabbedMemoListView: View {
 
         // 選択タブを「すべて」に戻す
         selectedTabIndex = 0
+
+        // 削除完了トースト（ロック中アラートがある場合は遅延表示）
+        if showLockedMemoMovedAlert {
+            pendingDeleteCompleteToast = true
+        } else {
+            showToastMessage("削除が完了しました", icon: "checkmark.circle")
+        }
     }
 
     private func setGridSize(_ option: GridSizeOption) {
@@ -1508,13 +1574,20 @@ struct TabbedMemoListView: View {
     private func memoGridItem(memo: Memo, availableHeight: CGFloat) -> some View {
         HStack(spacing: 4) {
             if isSelectMode {
-                Image(systemName: selectedMemoIDs.contains(memo.id) ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(selectedMemoIDs.contains(memo.id) ? .red : .gray.opacity(0.6))
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        handleMemoTap(memo)
-                    }
+                if memo.isLocked {
+                    // ロック中: 鍵マーク（選択不可）
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.gray.opacity(0.4))
+                } else {
+                    Image(systemName: selectedMemoIDs.contains(memo.id) ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20))
+                        .foregroundStyle(selectedMemoIDs.contains(memo.id) ? .red : .gray.opacity(0.6))
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            handleMemoTap(memo)
+                        }
+                }
             }
             MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight, onTap: {
                 handleMemoTap(memo)
@@ -1531,6 +1604,8 @@ struct TabbedMemoListView: View {
                         .fill(Color.cyan.opacity(lastOpenedMemoID == memo.id ? 0.08 : 0))
                         .allowsHitTesting(false)
                 )
+                // 選択モード中のロック中カードはグレーアウト
+                .opacity(isSelectMode && memo.isLocked ? 0.4 : 1.0)
         }
         .draggable(memo.id.uuidString) {
             MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight)
@@ -1554,19 +1629,52 @@ struct TabbedMemoListView: View {
                 } label: {
                     Label("コピー", systemImage: "doc.on.doc")
                 }
-                Button(role: .destructive) {
-                    pendingDeleteMemo = memo
-                    showSingleDeleteConfirm = true
+                Button {
+                    let wasLocked = memo.isLocked
+                    memo.isLocked.toggle()
+                    if !wasLocked {
+                        showToastMessage("メモをロックしました", icon: "lock.fill")
+                    } else {
+                        showToastMessage("ロックを解除しました", icon: "lock.open")
+                    }
                 } label: {
-                    Label("削除", systemImage: "trash")
+                    Label(memo.isLocked ? "ロックを解除" : "削除防止ロック", systemImage: memo.isLocked ? "lock.open" : "lock")
+                }
+                if memo.isLocked {
+                    Button(role: .destructive) {} label: {
+                        Label("削除ロック中", systemImage: "lock.fill")
+                    }
+                    .disabled(true)
+                } else {
+                    Button(role: .destructive) {
+                        pendingDeleteMemo = memo
+                        showSingleDeleteConfirm = true
+                    } label: {
+                        Label("削除", systemImage: "trash")
+                    }
                 }
             }
         }
     }
 
     // メモカードタップ処理
+    // 汎用トースト表示
+    private func showToastMessage(_ message: String, icon: String = "lock.fill", duration: TimeInterval = 1.5) {
+        toastMessage = message
+        toastIcon = icon
+        withAnimation { showToast = true }
+        DispatchQueue.main.asyncAfter(deadline: .now() + duration) {
+            withAnimation { showToast = false }
+        }
+    }
+
     private func handleMemoTap(_ memo: Memo) {
         if isSelectMode {
+            // ロック中メモは選択不可、トースト表示
+            guard !memo.isLocked else {
+                showToastMessage("このメモはロック中です")
+                return
+            }
             if selectedMemoIDs.contains(memo.id) {
                 selectedMemoIDs.remove(memo.id)
             } else {
@@ -1682,8 +1790,13 @@ struct SearchMemoCardView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(8)
 
-            // 右上マーク（ピン・マークダウン）
+            // 右上マーク（ロック・ピン・マークダウン）
             VStack(spacing: 2) {
+                if memo.isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.blue.opacity(0.6))
+                }
                 if memo.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.system(size: 8))
@@ -1803,8 +1916,13 @@ struct MemoCardView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(cardPadding)
 
-            // 右上マーク（ピン・マークダウン）
+            // 右上マーク（ロック・ピン・マークダウン）
             VStack(spacing: 2) {
+                if memo.isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.blue.opacity(0.6))
+                }
                 if memo.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.system(size: 8))

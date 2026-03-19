@@ -14,6 +14,7 @@ final class Memo {
     var manualSortOrder: Int = 0
     var viewCount: Int = 0
     var lastViewedAt: Date?
+    var isLocked: Bool = false
 
     init(content: String, title: String = "", tags: [Tag] = [], isMarkdown: Bool = false) {
         self.id = UUID()
@@ -27,5 +28,6 @@ final class Memo {
         self.manualSortOrder = 0
         self.viewCount = 0
         self.lastViewedAt = nil
+        self.isLocked = false
     }
 }
