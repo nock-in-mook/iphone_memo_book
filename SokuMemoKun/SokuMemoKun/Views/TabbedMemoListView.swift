@@ -442,8 +442,9 @@ struct TabbedMemoListView: View {
         let uiColor = UIColor(base)
         var r: CGFloat = 0, g: CGFloat = 0, b: CGFloat = 0, a: CGFloat = 0
         uiColor.getRed(&r, green: &g, blue: &b, alpha: &a)
-        let left = Color(red: r * 0.85, green: g * 0.85, blue: b * 0.85)
-        let right = Color(red: r * 0.93, green: g * 0.93, blue: b * 0.93)
+        let color = Color(red: r * 0.92, green: g * 0.92, blue: b * 0.92)
+        let left = color
+        let right = color
         return (left, right)
     }
 
@@ -1166,6 +1167,7 @@ struct TabbedMemoListView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(frequentColumnColors.left)
+                                .shadow(color: .black.opacity(0.3), radius: 0.5, x: -0.5, y: 0.5)
                         )
                         .frame(maxWidth: .infinity)
 
@@ -1185,6 +1187,7 @@ struct TabbedMemoListView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 10)
                                 .fill(frequentColumnColors.right)
+                                .shadow(color: .black.opacity(0.3), radius: 0.5, x: -0.5, y: 0.5)
                         )
                         .frame(maxWidth: .infinity)
                     }
