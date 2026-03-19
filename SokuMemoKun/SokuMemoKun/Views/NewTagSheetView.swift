@@ -129,7 +129,7 @@ struct NewTagSheetView: View {
                             .font(.headline)
                         if parentTagID == nil {
                             Text("（フォルダの追加）")
-                                .font(.system(size: 11, design: .rounded))
+                                .font(.system(size: 13, design: .rounded))
                                 .foregroundStyle(.secondary)
                         }
                     }
