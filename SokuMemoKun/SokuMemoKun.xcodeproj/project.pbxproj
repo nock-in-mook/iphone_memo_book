@@ -35,6 +35,7 @@
 		TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000005 /* TagSuggestDismissal.swift */; };
 		TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000007 /* TagSuggestEngine.swift */; };
 		TAGSUG000000000000000A /* TagSuggestDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000009 /* TagSuggestDictionary.json */; };
+		LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = LNTXT00000000000000001 /* LineNumberTextEditor.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -67,6 +68,7 @@
 		'A1000000000000000000B7' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullEditorView.swift; sourceTree = "<group>"; };
 		'A1000000000000000000B8' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownToolbar.swift; sourceTree = "<group>"; };
 		'A1000000000000000000B9' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTextEditor.swift; sourceTree = "<group>"; };
+		LNTXT00000000000000001 /* LineNumberTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineNumberTextEditor.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -135,6 +137,7 @@
 				A1000000000000000000B8,
 				A1000000000000000000B9,
 				863DCF5D059F41899ADDD158 /* MemoDetailView.swift */,
+				LNTXT00000000000000001 /* LineNumberTextEditor.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -260,6 +263,7 @@
 				TAGSUG0000000000000004 /* TagCooccurrence.swift in Sources */,
 				TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */,
 				TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */,
+				LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

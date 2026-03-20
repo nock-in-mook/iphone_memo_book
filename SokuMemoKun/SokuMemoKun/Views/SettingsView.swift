@@ -8,6 +8,8 @@ struct SettingsView: View {
     @AppStorage("restoreLastMemo") private var restoreLastMemo = false
     @AppStorage("dialDefault") private var dialDefault: Int = 0
     @AppStorage("coloredFrame") private var coloredFrame = true
+    @AppStorage("showCharCount") private var showCharCount = false
+    @AppStorage("showLineNumbers") private var showLineNumbers = false
 
     var body: some View {
         NavigationStack {
@@ -44,6 +46,12 @@ struct SettingsView: View {
                 Section("入力欄") {
                     Toggle(isOn: $coloredFrame) {
                         Label("タグ色でフレームを彩色", systemImage: "paintbrush")
+                    }
+                    Toggle(isOn: $showCharCount) {
+                        Label("文字数・行数カウンター", systemImage: "number")
+                    }
+                    Toggle(isOn: $showLineNumbers) {
+                        Label("行番号を表示", systemImage: "list.number")
                     }
                 }
 
@@ -102,14 +110,14 @@ struct SettingsView: View {
                     NavigationLink { TextureLab7() } label: { Text("7: 色違いで確認") }
                 }
 
-                // メモ設定（将来実装）
+                // メモ設定
                 Section("メモ設定") {
                     HStack {
                         Label("最大文字数", systemImage: "textformat.123")
                         Spacer()
-                        Text("準備中")
-                            .font(.system(size: 12, design: .rounded))
-                            .foregroundStyle(.tertiary)
+                        Text("\(MemoInputViewModel.maxCharacterCount.formatted())字")
+                            .font(.system(size: 14, design: .rounded))
+                            .foregroundStyle(.secondary)
                     }
                 }
             }

@@ -15,7 +15,9 @@ struct MemoInputView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
     @AppStorage("coloredFrame") private var coloredFrame = true
-    @FocusState private var isTextEditorFocused: Bool
+    @AppStorage("showCharCount") private var showCharCount = false
+    @AppStorage("showLineNumbers") private var showLineNumbers = false
+    @State private var isTextEditorFocused: Bool = false
     @FocusState private var isTitleFocused: Bool
 
     // 新規タグ作成シート
@@ -147,6 +149,13 @@ struct MemoInputView: View {
         return nil
     }
 
+    // 文字数・行数ラベル
+    private var charCountLabel: String {
+        let chars = viewModel.inputText.count
+        let lines = viewModel.inputText.components(separatedBy: "\n").count
+        return "\(chars)字 · \(lines)行"
+    }
+
     var body: some View {
         VStack(spacing: 0) {
             // ヘッダー: タイトル + タグ
@@ -157,13 +166,14 @@ struct MemoInputView: View {
                 // 本文入力（編集中はTextEditor、閲覧中はText）
                 ZStack(alignment: .topLeading) {
                     if isEditing {
-                        TextEditor(text: $viewModel.inputText)
-                            .font(.system(size: 17))
-                            .padding(.leading, 10)
-                            .padding(.trailing, 4)
-                            .padding(.top, 16)
-                            .contentMargins(.bottom, 40, for: .scrollContent)
-                            .focused($isTextEditorFocused)
+                        LineNumberTextEditor(
+                            text: $viewModel.inputText,
+                            isFocused: $isTextEditorFocused,
+                            showLineNumbers: showLineNumbers
+                        )
+                        .padding(.leading, showLineNumbers ? 0 : 10)
+                        .padding(.trailing, 4)
+                        .padding(.top, 0)
                     } else {
                         ScrollView {
                             Text(viewModel.inputText.isEmpty ? " " : viewModel.inputText)
@@ -186,9 +196,10 @@ struct MemoInputView: View {
                         Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
                             .font(.system(size: 17))
                             .foregroundStyle(.gray.opacity(0.5))
-                            .padding(.leading, 14)
+                            .padding(.leading, showLineNumbers ? 44 : 14)
                             .padding(.trailing, 8)
-                            .padding(.vertical, 24)
+                            .padding(.top, 16)
+                            .padding(.bottom, 24)
                             .allowsHitTesting(false)
                     }
                 }
@@ -220,23 +231,31 @@ struct MemoInputView: View {
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                // 本文クリアボタン（編集中かつ本文があるときだけ表示）
-                if isTextEditorFocused && !viewModel.inputText.isEmpty {
-                    Button {
-                        showClearBodyAlert = true
-                    } label: {
-                        Image(systemName: "eraser")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.white)
-                            .frame(width: 28, height: 28)
-                            .background(
-                                Circle().fill(Color.orange.opacity(0.6))
-                            )
-                            .shadow(color: .black.opacity(0.2), radius: 2, x: 1, y: 1)
+                HStack(spacing: 6) {
+                    // 本文クリアボタン（編集中かつ本文があるときだけ表示）
+                    if isTextEditorFocused && !viewModel.inputText.isEmpty {
+                        Button {
+                            showClearBodyAlert = true
+                        } label: {
+                            Image(systemName: "eraser")
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.white)
+                                .frame(width: 28, height: 28)
+                                .background(
+                                    Circle().fill(Color.orange.opacity(0.6))
+                                )
+                                .shadow(color: .black.opacity(0.2), radius: 2, x: 1, y: 1)
+                        }
                     }
-                    .padding(.leading, 8)
-                    .padding(.bottom, 8)
+                    // 文字数カウンター
+                    if showCharCount && !viewModel.inputText.isEmpty {
+                        Text(charCountLabel)
+                            .font(.system(size: 10, design: .monospaced))
+                            .foregroundStyle(.tertiary)
+                    }
                 }
+                .padding(.leading, 8)
+                .padding(.bottom, 8)
             }
             .overlay {
                 // トレー外タップで収納（ルーレット表示中のみ透明オーバーレイを表示）

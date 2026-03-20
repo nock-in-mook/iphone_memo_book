@@ -11,8 +11,10 @@ struct MemoDetailView: View {
     @State private var isEditing = false
     @State private var editText: String = ""
     @State private var editTitle: String = ""
-    @FocusState private var isBodyFocused: Bool
+    @State private var isBodyFocused: Bool = false
     @FocusState private var isTitleFocused: Bool
+    @AppStorage("showCharCount") private var showCharCount = false
+    @AppStorage("showLineNumbers") private var showLineNumbers = false
 
     // タグ選択状態
     @State private var selectedTagID: UUID? = nil
@@ -226,17 +228,33 @@ struct MemoDetailView: View {
     @ViewBuilder
     private var bodyArea: some View {
         if isEditing {
-            TextEditor(text: $editText)
-                .font(.system(size: 17))
-                .padding(.horizontal, 8)
+            ZStack(alignment: .bottomLeading) {
+                LineNumberTextEditor(
+                    text: $editText,
+                    isFocused: $isBodyFocused,
+                    showLineNumbers: showLineNumbers
+                )
+                .padding(.leading, showLineNumbers ? 0 : 8)
+                .padding(.trailing, 8)
                 .padding(.top, 4)
-                .focused($isBodyFocused)
                 .frame(maxHeight: .infinity)
                 .onChange(of: editText) { _, newValue in
                     if newValue.count > MemoInputViewModel.maxCharacterCount {
                         editText = String(newValue.prefix(MemoInputViewModel.maxCharacterCount))
                     }
                 }
+
+                // 文字数カウンター
+                if showCharCount && !editText.isEmpty {
+                    let chars = editText.count
+                    let lines = editText.components(separatedBy: "\n").count
+                    Text("\(chars)字 · \(lines)行")
+                        .font(.system(size: 10, design: .monospaced))
+                        .foregroundStyle(.tertiary)
+                        .padding(.leading, showLineNumbers ? 44 : 12)
+                        .padding(.bottom, 8)
+                }
+            }
         } else {
             // 閲覧モード — タップで即編集（textSelection なし→1タップで反応）
             ScrollView {
