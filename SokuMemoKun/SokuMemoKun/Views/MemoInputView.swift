@@ -206,9 +206,16 @@ struct MemoInputView: View {
                 .frame(maxHeight: .infinity)
 
             }
-            .padding(.trailing, showParentDial ? (showChildDial ? 185 : 135) : 0)
-            .animation(.spring(response: 0.3), value: showParentDial)
-            .animation(.spring(response: 0.3), value: showChildDial)
+            // ルーレット展開中は本文エリアの幅を変えない（長文の再レイアウト防止）
+            .overlay {
+                if showParentDial {
+                    Color(uiColor: .systemBackground).opacity(0.5)
+                        .allowsHitTesting(true)
+                        .onTapGesture {
+                            withAnimation(.spring(response: 0.3)) { showParentDial = false }
+                        }
+                }
+            }
             .overlay(alignment: .bottomTrailing) {
                 // 展開/縮小ボタン（ルーレット非表示時のみ）
                 if !showParentDial {
@@ -268,16 +275,7 @@ struct MemoInputView: View {
                 .padding(.leading, 8)
                 .padding(.bottom, 8)
             }
-            .overlay {
-                // トレー外タップで収納（ルーレット表示中のみ透明オーバーレイを表示）
-                if showParentDial {
-                    Color.clear
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.3)) { showParentDial = false }
-                        }
-                }
-            }
+            // トレー外タップは本文オーバーレイで処理済み
             .overlay(alignment: .topTrailing) {
                 // 仕切り線直下・右端からタグタブを生やす
                 dialArea
@@ -285,8 +283,10 @@ struct MemoInputView: View {
                     .offset(y: -1)
             }
             Divider()
-            // フッター: 左=削除 右=コピー+保存
+            // フッター: 左=削除 右=コピー+保存（ルーレット展開中は無効）
             footerRow
+                .disabled(showParentDial)
+                .opacity(showParentDial ? 0.4 : 1)
         }
         .background(
             ZStack {
@@ -378,6 +378,12 @@ struct MemoInputView: View {
         }
         .onChange(of: focusInput) { _, newValue in
             if newValue { isEditing = true; isTextEditorFocused = true; focusInput = false }
+        }
+        .onChange(of: showParentDial) { _, isShowing in
+            // ルーレット展開時はテキストのフォーカスを外す
+            if isShowing {
+                isTextEditorFocused = false
+            }
         }
         .onChange(of: viewModel.loadMemoCounter) { _, _ in
             // 既存メモ読み込み時は閲覧モードで開始
