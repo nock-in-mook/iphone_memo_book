@@ -358,9 +358,6 @@ struct MemoInputView: View {
 
     // MARK: - ヘッダー
 
-    // タグエリアの最大幅（親タグmax + 子タグmax + めり込み + ×ボタン）
-    private let tagAreaMaxWidth: CGFloat = 180
-
     private var headerRow: some View {
         HStack(spacing: 0) {
             // タイトルエリア（残りスペースを使い切る）
@@ -388,7 +385,7 @@ struct MemoInputView: View {
                 .frame(height: 24)
                 .padding(.horizontal, 8)
 
-            // タグエリア（固定最大幅）
+            // タグエリア（内容に応じて可変幅）
             HStack(spacing: 4) {
                 tagDisplay
                     .onTapGesture {
@@ -410,7 +407,7 @@ struct MemoInputView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .frame(maxWidth: tagAreaMaxWidth, alignment: .trailing)
+            .fixedSize(horizontal: true, vertical: false)
         }
         .padding(.horizontal, 10)
         .padding(.top, 10)
