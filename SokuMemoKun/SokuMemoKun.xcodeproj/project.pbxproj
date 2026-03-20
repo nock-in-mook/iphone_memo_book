@@ -30,6 +30,10 @@
 		'B1000000000000000000B8' = {isa = PBXBuildFile; fileRef = A1000000000000000000B8; };
 		'B1000000000000000000B9' = {isa = PBXBuildFile; fileRef = A1000000000000000000B9; };
 		E20F22AC7EBE4432A424C594 /* MemoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863DCF5D059F41899ADDD158 /* MemoDetailView.swift */; };
+		TAGSUG0000000000000002 /* TagFrequency.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000001 /* TagFrequency.swift */; };
+		TAGSUG0000000000000004 /* TagCooccurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000003 /* TagCooccurrence.swift */; };
+		TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000005 /* TagSuggestDismissal.swift */; };
+		TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000007 /* TagSuggestEngine.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -39,6 +43,10 @@
 		'A10000000000000000001A' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SokuMemoKunApp.swift; sourceTree = "<group>"; };
 		'A10000000000000000001B' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Memo.swift; sourceTree = "<group>"; };
 		'A10000000000000000001C' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
+		TAGSUG0000000000000001 /* TagFrequency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagFrequency.swift; sourceTree = "<group>"; };
+		TAGSUG0000000000000003 /* TagCooccurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagCooccurrence.swift; sourceTree = "<group>"; };
+		TAGSUG0000000000000005 /* TagSuggestDismissal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSuggestDismissal.swift; sourceTree = "<group>"; };
+		TAGSUG0000000000000007 /* TagSuggestEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TagSuggestEngine.swift; path = SokuMemoKun/Services/TagSuggestEngine.swift; sourceTree = SOURCE_ROOT; };
 		'A10000000000000000001D' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
 		'A10000000000000000001E' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoInputView.swift; sourceTree = "<group>"; };
 		'A10000000000000000001F' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoListView.swift; sourceTree = "<group>"; };
@@ -88,6 +96,7 @@
 				C1000000000000000000A3,
 				C1000000000000000000A4,
 				C1000000000000000000A5,
+				TAGSUG00000000000000G1,
 			);
 			path = SokuMemoKun;
 			sourceTree = "<group>";
@@ -97,6 +106,9 @@
 			children = (
 				A10000000000000000001B,
 				A10000000000000000001C,
+				TAGSUG0000000000000001 /* TagFrequency.swift */,
+				TAGSUG0000000000000003 /* TagCooccurrence.swift */,
+				TAGSUG0000000000000005 /* TagSuggestDismissal.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -138,6 +150,14 @@
 				A1000000000000000000AF,
 			);
 			name = Products;
+			sourceTree = "<group>";
+		};
+		TAGSUG00000000000000G1 = {
+			isa = PBXGroup;
+			children = (
+				TAGSUG0000000000000007 /* TagSuggestEngine.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -232,6 +252,10 @@
 				E20F22AC7EBE4432A424C594 /* MemoDetailView.swift in Sources */,
 				A00245AE9633A906577EE733 /* TextureLabView.swift in Sources */,
 				C0L0RLAB000000000002 /* ColorLabView.swift in Sources */,
+				TAGSUG0000000000000002 /* TagFrequency.swift in Sources */,
+				TAGSUG0000000000000004 /* TagCooccurrence.swift in Sources */,
+				TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */,
+				TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

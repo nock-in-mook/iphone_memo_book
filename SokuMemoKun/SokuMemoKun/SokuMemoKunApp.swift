@@ -6,7 +6,7 @@ struct SokuMemoKunApp: App {
     let sharedContainer: ModelContainer
 
     init() {
-        let container = try! ModelContainer(for: Memo.self, Tag.self)
+        let container = try! ModelContainer(for: Memo.self, Tag.self, TagFrequency.self, TagCooccurrence.self, TagSuggestDismissal.self)
         self.sharedContainer = container
         // データリセット＆サンプル投入（一度だけ実行）
         Self.resetAndInsertSamples(container: container)
