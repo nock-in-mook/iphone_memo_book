@@ -10,9 +10,6 @@ class TagSuggestEngine {
     private var dictionary: [String: [String]] = [:]
     // 直近使用したタグID（連続入力パターン用）
     private(set) var recentTagIDs: [UUID] = []
-    // デバッグ用
-    var lastExtractedWords: [String] = []
-    var lastDebugInfo: String = ""
     private let maxRecent = 10
 
     init() {
@@ -81,7 +78,6 @@ class TagSuggestEngine {
     ) -> [Suggestion] {
         // テキストから単語を抽出
         let words = extractWords(from: title, body: body)
-        lastExtractedWords = words
         guard !words.isEmpty || !recentTagIDs.isEmpty else { return [] }
 
         let now = Date()
@@ -97,15 +93,7 @@ class TagSuggestEngine {
             tagNames[tag.id] = tag.name
         }
 
-        // デバッグ: 全タグ名とバイト列を出力
-        let tagDebug = tags.map { t in
-            let bytes = Array(t.name.utf8)
-            return "\(t.name)[\(bytes.map { String(format: "%02x", $0) }.joined())]"
-        }
-        print("[Suggest] タグ一覧(\(tags.count)件): \(tagDebug)")
-
         // ① 事前辞書マッチ（完全一致＋部分一致）
-        var dictMatchLog: [String] = []
         var newTagCandidates: [String: Double] = [:] // 新規タグ候補（カテゴリ名→スコア）
         for word in words {
             let key = word.lowercased()
@@ -119,14 +107,12 @@ class TagSuggestEngine {
                         let catContainsName = category.contains(tag.name)
                         if nameMatch || nameContainsCat || catContainsName {
                             scores[tag.id, default: 0] += 1.0
-                            dictMatchLog.append("\(category)→\(tag.name)✓")
                             matched = true
                         }
                     }
                     if !matched {
                         // 既存タグに無いカテゴリ → 新規タグ候補に追加
                         newTagCandidates[category, default: 0] += 1.0
-                        dictMatchLog.append("\(category)→+new")
                     }
                 }
             }
@@ -189,11 +175,6 @@ class TagSuggestEngine {
             scores[tagID, default: 0] -= penalty
             historyScores[tagID, default: 0] -= penalty
         }
-
-        // デバッグ情報
-        let allScores = scores.map { "\(tagNames[$0.key] ?? "?"): \($0.value)" }
-        let newTagDebug = newTagCandidates.map { "\($0.key):\($0.value)" }
-        lastDebugInfo = "words=\(words.prefix(5)) match=\(dictMatchLog) new=\(newTagDebug) scores=\(allScores.prefix(5))"
 
         // 親タグと子タグを分類
         let parentTags = tags.filter { $0.parentTagID == nil }

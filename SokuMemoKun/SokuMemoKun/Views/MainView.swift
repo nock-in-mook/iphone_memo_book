@@ -465,11 +465,6 @@ struct MainView: View {
         && !suggestions.isEmpty
     }
 
-    // デバッグ: サジェストの状態表示（リリース前に削除）
-    private var suggestDebugText: String {
-        "cnt=\(suggestions.count) \(suggestEngine.lastDebugInfo)"
-    }
-
     // セクションごとにフィルタ
     private var dictSuggestions: [TagSuggestEngine.Suggestion] {
         suggestions.filter { $0.kind == .dictMatch }
@@ -484,15 +479,6 @@ struct MainView: View {
     // サジェストオーバーレイ
     @ViewBuilder
     private var tagSuggestOverlay: some View {
-        // デバッグ表示（リリース前に削除）
-        Text(suggestDebugText)
-            .font(.system(size: 14, weight: .bold))
-            .foregroundStyle(.red)
-            .padding(8)
-            .frame(maxWidth: .infinity)
-            .background(Color.yellow)
-            .cornerRadius(8)
-
         if shouldShowSuggestions {
             VStack(spacing: 4) {
                 // 閉じるボタン
