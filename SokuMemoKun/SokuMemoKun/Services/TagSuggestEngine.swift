@@ -10,6 +10,9 @@ class TagSuggestEngine {
     private var dictionary: [String: [String]] = [:]
     // 直近使用したタグID（連続入力パターン用）
     private(set) var recentTagIDs: [UUID] = []
+    // デバッグ用
+    var lastExtractedWords: [String] = []
+    var lastDebugInfo: String = ""
     private let maxRecent = 10
 
     init() {
@@ -55,6 +58,7 @@ class TagSuggestEngine {
     ) -> [Suggestion] {
         // テキストから単語を抽出
         let words = extractWords(from: title, body: body)
+        lastExtractedWords = words
         guard !words.isEmpty || !recentTagIDs.isEmpty else { return [] }
 
         let now = Date()
@@ -70,14 +74,35 @@ class TagSuggestEngine {
             tagNames[tag.id] = tag.name
         }
 
+        // デバッグ: 全タグ名とバイト列を出力
+        let tagDebug = tags.map { t in
+            let bytes = Array(t.name.utf8)
+            return "\(t.name)[\(bytes.map { String(format: "%02x", $0) }.joined())]"
+        }
+        print("[Suggest] タグ一覧(\(tags.count)件): \(tagDebug)")
+
         // ① 事前辞書マッチ（完全一致＋部分一致）
+        var dictMatchLog: [String] = []
         for word in words {
             let key = word.lowercased()
             // 完全一致
             if let categories = dictionary[key] {
                 for category in categories {
-                    for tag in tags where tag.name == category || tag.name.contains(category) || category.contains(tag.name) {
-                        scores[tag.id, default: 0] += 1.0
+                    var matched = false
+                    let catBytes = Array(category.utf8).map { String(format: "%02x", $0) }.joined()
+                    for tag in tags {
+                        let nameMatch = tag.name == category
+                        let nameContainsCat = tag.name.contains(category)
+                        let catContainsName = category.contains(tag.name)
+                        if nameMatch || nameContainsCat || catContainsName {
+                            scores[tag.id, default: 0] += 1.0
+                            dictMatchLog.append("\(category)→\(tag.name)✓")
+                            matched = true
+                        }
+                    }
+                    if !matched {
+                        // マッチしなかった場合、カテゴリのバイト列と最も近いタグ名を表示
+                        dictMatchLog.append("\(category)[\(catBytes)]→✗")
                     }
                 }
             }
@@ -128,6 +153,10 @@ class TagSuggestEngine {
             scores[tagID, default: 0] -= penalty
         }
 
+        // デバッグ情報
+        let allScores = scores.map { "\(tagNames[$0.key] ?? "?"): \($0.value)" }
+        lastDebugInfo = "title=[\(title)] body=[\(body.prefix(30))] words=\(words.prefix(8)) match=\(dictMatchLog) scores=\(allScores.prefix(5))"
+
         // 親タグと子タグを分類
         let parentTags = tags.filter { $0.parentTagID == nil }
         let childTags = tags.filter { $0.parentTagID != nil }
@@ -140,25 +169,23 @@ class TagSuggestEngine {
             }
             .sorted { $0.score > $1.score }
 
-        // 上位N件の親タグについて、子タグとのセットを構築
+        // 上位の親タグについて、子タグとのセットを構築
         var results: [Suggestion] = []
         for (parent, parentScore) in parentScores.prefix(limit * 2) {
-            // この親タグの子タグでスコアがあるものを探す
+            // この親タグの子タグでスコアがあるものを全て取得
             let children = childTags.filter { $0.parentTagID == parent.id }
-            let bestChild = children
+            let scoredChildren = children
                 .compactMap { child -> (tag: Tag, score: Double)? in
                     let s = scores[child.id, default: 0]
                     return s > 0 ? (child, s) : nil
                 }
                 .sorted { $0.score > $1.score }
-                .first
 
-            if let child = bestChild {
-                // 親+子セット
+            // スコアのある子タグ全てを親+子セットとして候補に入れる
+            for child in scoredChildren {
                 let combinedScore = parentScore + child.score
-                let suggestID = UUID(uuidString: "\(parent.id.uuidString.prefix(18))\(child.tag.id.uuidString.suffix(18))") ?? UUID()
                 results.append(Suggestion(
-                    id: suggestID, parentID: parent.id, parentName: parent.name,
+                    id: UUID(), parentID: parent.id, parentName: parent.name,
                     childID: child.tag.id, childName: child.tag.name, score: combinedScore
                 ))
             }
@@ -167,8 +194,6 @@ class TagSuggestEngine {
                 id: parent.id, parentID: parent.id, parentName: parent.name,
                 childID: nil, childName: nil, score: parentScore
             ))
-
-            if results.count >= limit * 2 { break }
         }
 
         // 重複排除してスコア順でソート、上位N件
