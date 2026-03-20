@@ -470,6 +470,17 @@ struct MainView: View {
         "cnt=\(suggestions.count) \(suggestEngine.lastDebugInfo)"
     }
 
+    // セクションごとにフィルタ
+    private var dictSuggestions: [TagSuggestEngine.Suggestion] {
+        suggestions.filter { $0.kind == .dictMatch }
+    }
+    private var newTagSuggestions: [TagSuggestEngine.Suggestion] {
+        suggestions.filter { $0.kind == .newTag }
+    }
+    private var historySuggestions: [TagSuggestEngine.Suggestion] {
+        suggestions.filter { $0.kind == .history }
+    }
+
     // サジェストオーバーレイ
     @ViewBuilder
     private var tagSuggestOverlay: some View {
@@ -483,12 +494,9 @@ struct MainView: View {
             .cornerRadius(8)
 
         if shouldShowSuggestions {
-            VStack(spacing: 6) {
+            VStack(spacing: 4) {
                 // 閉じるボタン
                 HStack {
-                    Text("おすすめタグ")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
                     Spacer()
                     Button {
                         suggestDismissed = true
@@ -500,14 +508,66 @@ struct MainView: View {
                     }
                 }
                 .padding(.horizontal, 12)
+                .padding(.top, 4)
 
-                // 候補リスト（縦に並べる、拡張可能）
-                ForEach(suggestions) { suggestion in
-                    Button {
-                        applySuggestion(suggestion)
-                    } label: {
-                        HStack(spacing: 6) {
-                            // 親タグ色の丸
+                // セクション1: おすすめタグ
+                if !dictSuggestions.isEmpty {
+                    suggestSection(title: "おすすめタグ", icon: "tag.fill", suggestions: dictSuggestions)
+                }
+
+                // セクション2: 新規タグ提案
+                if !newTagSuggestions.isEmpty {
+                    suggestSection(title: "新規タグ提案", icon: "plus.circle.fill", suggestions: newTagSuggestions)
+                }
+
+                // セクション3: 履歴から
+                if !historySuggestions.isEmpty {
+                    suggestSection(title: "履歴から", icon: "clock.fill", suggestions: historySuggestions)
+                }
+            }
+            .padding(.bottom, 6)
+            .background(Color(uiColor: .secondarySystemBackground).opacity(0.9))
+            .cornerRadius(12)
+            .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
+        }
+    }
+
+    // セクション共通ビュー
+    @ViewBuilder
+    private func suggestSection(title: String, icon: String, suggestions: [TagSuggestEngine.Suggestion]) -> some View {
+        VStack(spacing: 4) {
+            HStack(spacing: 4) {
+                Image(systemName: icon)
+                    .font(.system(size: 10))
+                    .foregroundStyle(.secondary)
+                Text(title)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Spacer()
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 4)
+
+            ForEach(suggestions) { suggestion in
+                Button {
+                    applySuggestion(suggestion)
+                } label: {
+                    HStack(spacing: 6) {
+                        if suggestion.kind == .newTag {
+                            // 新規タグ提案：＋アイコン + 緑色
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 14))
+                                .foregroundStyle(.green)
+                            Text(suggestion.parentName)
+                                .font(.system(size: 14, weight: .semibold))
+                                .foregroundStyle(.primary)
+                            Text("タグを作成")
+                                .font(.system(size: 11))
+                                .foregroundStyle(.green)
+                        } else {
+                            // 既存タグ：色付き丸
                             if let parentTag = tags.first(where: { $0.id == suggestion.parentID }) {
                                 Circle()
                                     .fill(tagColor(for: parentTag.colorIndex))
@@ -524,35 +584,45 @@ struct MainView: View {
                                     .font(.system(size: 13, weight: .medium))
                                     .foregroundStyle(.secondary)
                             }
-                            Spacer()
                         }
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 8)
-                        .background(Color(uiColor: .systemBackground).opacity(0.95))
-                        .cornerRadius(8)
-                        .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
+                        Spacer()
                     }
-                    .buttonStyle(.plain)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 8)
+                    .background(
+                        suggestion.kind == .newTag
+                            ? Color.green.opacity(0.08)
+                            : Color(uiColor: .systemBackground).opacity(0.95)
+                    )
+                    .cornerRadius(8)
+                    .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
                 }
+                .buttonStyle(.plain)
             }
-            .padding(.horizontal, 8)
-            .padding(.top, 6)
-            .padding(.bottom, 4)
-            .background(Color(uiColor: .secondarySystemBackground).opacity(0.9))
-            .cornerRadius(12)
-            .shadow(color: .black.opacity(0.1), radius: 4, y: 2)
-            .padding(.horizontal, 12)
-            .padding(.top, 4)
         }
+        .padding(.horizontal, 8)
     }
 
-    // サジェストをタップ → ルーレット＋タグバッジに反映
+    // サジェストをタップ → 既存タグ適用 or 新規タグ作成
     private func applySuggestion(_ suggestion: TagSuggestEngine.Suggestion) {
-        viewModel.selectedTagID = suggestion.parentID
-        if let childID = suggestion.childID {
-            viewModel.selectedChildTagID = childID
+        if suggestion.kind == .newTag {
+            // 新規タグ作成（親タグとして追加）
+            let newTag = Tag(name: suggestion.parentName, colorIndex: Int.random(in: 1...27))
+            // sortOrderは既存の最大値+1
+            let maxOrder = tags.filter { $0.parentTagID == nil }.map { $0.sortOrder }.max() ?? 0
+            newTag.sortOrder = maxOrder + 1
+            modelContext.insert(newTag)
+            try? modelContext.save()
+            // 作成したタグを選択
+            viewModel.selectedTagID = newTag.id
+            viewModel.onTagChanged(tags: tags + [newTag])
+        } else {
+            viewModel.selectedTagID = suggestion.parentID
+            if let childID = suggestion.childID {
+                viewModel.selectedChildTagID = childID
+            }
+            viewModel.onTagChanged(tags: tags)
         }
-        viewModel.onTagChanged(tags: tags)
         suggestions = []
     }
 

@@ -36,16 +36,39 @@ class TagSuggestEngine {
 
     // MARK: - サジェスト取得（メイン）
 
+    // サジェストの種類
+    enum SuggestionKind: Equatable {
+        case dictMatch    // おすすめタグ（辞書マッチ）
+        case newTag       // 新規タグ提案
+        case history      // 履歴から
+    }
+
     struct Suggestion: Identifiable, Equatable {
-        let id: UUID            // 一意識別用（parentID or 合成ID）
-        let parentID: UUID      // 親タグのID
-        let parentName: String  // 親タグ名
-        let childID: UUID?      // 子タグのID（nilなら親単体）
+        let id: UUID
+        let parentID: UUID?     // 親タグのID（新規タグ提案時はnil）
+        let parentName: String  // 親タグ名（新規タグ提案時は提案名）
+        let childID: UUID?      // 子タグのID
         let childName: String?  // 子タグ名
-        var score: Double       // スコア（高いほど優先）
+        var score: Double
+        let kind: SuggestionKind
+
+        init(id: UUID, parentID: UUID? = nil, parentName: String,
+             childID: UUID? = nil, childName: String? = nil,
+             score: Double, kind: SuggestionKind = .dictMatch) {
+            self.id = id
+            self.parentID = parentID
+            self.parentName = parentName
+            self.childID = childID
+            self.childName = childName
+            self.score = score
+            self.kind = kind
+        }
 
         static func == (lhs: Suggestion, rhs: Suggestion) -> Bool {
-            lhs.parentID == rhs.parentID && lhs.childID == rhs.childID
+            if lhs.kind == .newTag && rhs.kind == .newTag {
+                return lhs.parentName == rhs.parentName
+            }
+            return lhs.parentID == rhs.parentID && lhs.childID == rhs.childID
         }
     }
 
@@ -83,13 +106,13 @@ class TagSuggestEngine {
 
         // ① 事前辞書マッチ（完全一致＋部分一致）
         var dictMatchLog: [String] = []
+        var newTagCandidates: [String: Double] = [:] // 新規タグ候補（カテゴリ名→スコア）
         for word in words {
             let key = word.lowercased()
             // 完全一致
             if let categories = dictionary[key] {
                 for category in categories {
                     var matched = false
-                    let catBytes = Array(category.utf8).map { String(format: "%02x", $0) }.joined()
                     for tag in tags {
                         let nameMatch = tag.name == category
                         let nameContainsCat = tag.name.contains(category)
@@ -101,15 +124,21 @@ class TagSuggestEngine {
                         }
                     }
                     if !matched {
-                        // マッチしなかった場合、カテゴリのバイト列と最も近いタグ名を表示
-                        dictMatchLog.append("\(category)[\(catBytes)]→✗")
+                        // 既存タグに無いカテゴリ → 新規タグ候補に追加
+                        newTagCandidates[category, default: 0] += 1.0
+                        dictMatchLog.append("\(category)→+new")
                     }
                 }
             }
             // 部分一致: 入力単語が辞書キーを含む or 辞書キーが入力単語を含む
-            if key.count >= 2 {
+            // ノイズ防止: 両方3文字以上で、短い方が長い方の50%以上の長さの場合のみ
+            if key.count >= 3 {
                 for (dictKey, categories) in dictionary {
-                    if key != dictKey && (key.contains(dictKey) || dictKey.contains(key)) {
+                    guard key != dictKey && dictKey.count >= 3 else { continue }
+                    let shorter = min(key.count, dictKey.count)
+                    let longer = max(key.count, dictKey.count)
+                    guard shorter * 2 >= longer else { continue } // 短い方が長い方の半分以上
+                    if key.contains(dictKey) || dictKey.contains(key) {
                         for category in categories {
                             for tag in tags where tag.name == category || tag.name.contains(category) || category.contains(tag.name) {
                                 scores[tag.id, default: 0] += 0.5 // 部分一致は低めのスコア
@@ -120,24 +149,30 @@ class TagSuggestEngine {
             }
         }
 
+        // 辞書マッチのスコアを保存（履歴と分離するため）
+        let dictScores = scores
+
         // ② ユーザー学習（TagFrequency）
+        var historyScores: [UUID: Double] = [:]
         let frequencyScores = queryFrequencies(words: words, context: context)
         for (tagID, freq) in frequencyScores {
             scores[tagID, default: 0] += freq
+            historyScores[tagID, default: 0] += freq
         }
 
         // 時間帯加重
         let timeScores = queryTimeBoost(hour: currentHour, weekday: currentWeekday, context: context)
         for (tagID, boost) in timeScores {
             scores[tagID, default: 0] += boost
+            historyScores[tagID, default: 0] += boost
         }
 
         // ③ 連続入力パターン
         if !recentTagIDs.isEmpty {
-            // 直近のタグほど高スコア
             for (i, tagID) in recentTagIDs.reversed().enumerated() {
-                let boost = 2.0 / Double(i + 1) // 直近: 2.0, 2つ前: 1.0, 3つ前: 0.67...
+                let boost = 2.0 / Double(i + 1)
                 scores[tagID, default: 0] += boost
+                historyScores[tagID, default: 0] += boost
             }
         }
 
@@ -145,64 +180,103 @@ class TagSuggestEngine {
         let coocScores = queryCooccurrence(currentTags: Array(scores.keys), context: context)
         for (tagID, boost) in coocScores {
             scores[tagID, default: 0] += boost
+            historyScores[tagID, default: 0] += boost
         }
 
         // 否定学習（スコア減算）
         let dismissals = queryDismissals(words: words, context: context)
         for (tagID, penalty) in dismissals {
             scores[tagID, default: 0] -= penalty
+            historyScores[tagID, default: 0] -= penalty
         }
 
         // デバッグ情報
         let allScores = scores.map { "\(tagNames[$0.key] ?? "?"): \($0.value)" }
-        lastDebugInfo = "title=[\(title)] body=[\(body.prefix(30))] words=\(words.prefix(8)) match=\(dictMatchLog) scores=\(allScores.prefix(5))"
+        let newTagDebug = newTagCandidates.map { "\($0.key):\($0.value)" }
+        lastDebugInfo = "words=\(words.prefix(5)) match=\(dictMatchLog) new=\(newTagDebug) scores=\(allScores.prefix(5))"
 
         // 親タグと子タグを分類
         let parentTags = tags.filter { $0.parentTagID == nil }
         let childTags = tags.filter { $0.parentTagID != nil }
 
-        // 親タグのスコアでソート
-        var parentScores: [(tag: Tag, score: Double)] = parentTags
+        // === セクション1: おすすめタグ（辞書マッチあり） ===
+        var dictResults: [Suggestion] = []
+        let dictParentScores: [(tag: Tag, score: Double)] = parentTags
             .compactMap { tag in
-                let s = scores[tag.id, default: 0]
+                let s = dictScores[tag.id, default: 0]
                 return s > 0 ? (tag, s) : nil
             }
             .sorted { $0.score > $1.score }
 
-        // 上位の親タグについて、子タグとのセットを構築
-        var results: [Suggestion] = []
-        for (parent, parentScore) in parentScores.prefix(limit * 2) {
-            // この親タグの子タグでスコアがあるものを全て取得
+        for (parent, parentScore) in dictParentScores.prefix(limit) {
             let children = childTags.filter { $0.parentTagID == parent.id }
             let scoredChildren = children
                 .compactMap { child -> (tag: Tag, score: Double)? in
-                    let s = scores[child.id, default: 0]
+                    let s = dictScores[child.id, default: 0]
                     return s > 0 ? (child, s) : nil
                 }
                 .sorted { $0.score > $1.score }
 
-            // スコアのある子タグ全てを親+子セットとして候補に入れる
             for child in scoredChildren {
-                let combinedScore = parentScore + child.score
-                results.append(Suggestion(
+                dictResults.append(Suggestion(
                     id: UUID(), parentID: parent.id, parentName: parent.name,
-                    childID: child.tag.id, childName: child.tag.name, score: combinedScore
+                    childID: child.tag.id, childName: child.tag.name,
+                    score: parentScore + child.score, kind: .dictMatch
                 ))
             }
-            // 親単体も候補に入れる
-            results.append(Suggestion(
-                id: parent.id, parentID: parent.id, parentName: parent.name,
-                childID: nil, childName: nil, score: parentScore
+            dictResults.append(Suggestion(
+                id: UUID(), parentID: parent.id, parentName: parent.name,
+                score: parentScore, kind: .dictMatch
             ))
         }
 
-        // 重複排除してスコア順でソート、上位N件
-        var seen: Set<UUID> = []
-        return results
+        // === セクション2: 新規タグ提案 ===
+        var newTagResults: [Suggestion] = []
+        for (name, score) in newTagCandidates.sorted(by: { $0.value > $1.value }).prefix(limit) {
+            newTagResults.append(Suggestion(
+                id: UUID(), parentName: name, score: score, kind: .newTag
+            ))
+        }
+
+        // === セクション3: 履歴から（辞書マッチが無いがスコアがあるタグ） ===
+        var histResults: [Suggestion] = []
+        let histParentScores: [(tag: Tag, score: Double)] = parentTags
+            .compactMap { tag in
+                let s = historyScores[tag.id, default: 0]
+                // 辞書マッチ済みのものは除外
+                return s > 0 && dictScores[tag.id, default: 0] <= 0 ? (tag, s) : nil
+            }
             .sorted { $0.score > $1.score }
-            .filter { seen.insert($0.id).inserted }
-            .prefix(limit)
-            .map { $0 }
+
+        for (parent, parentScore) in histParentScores.prefix(limit) {
+            let children = childTags.filter { $0.parentTagID == parent.id }
+            let bestChild = children
+                .compactMap { child -> (tag: Tag, score: Double)? in
+                    let s = historyScores[child.id, default: 0]
+                    return s > 0 ? (child, s) : nil
+                }
+                .sorted { $0.score > $1.score }
+                .first
+
+            if let child = bestChild {
+                histResults.append(Suggestion(
+                    id: UUID(), parentID: parent.id, parentName: parent.name,
+                    childID: child.tag.id, childName: child.tag.name,
+                    score: parentScore + child.score, kind: .history
+                ))
+            }
+            histResults.append(Suggestion(
+                id: UUID(), parentID: parent.id, parentName: parent.name,
+                score: parentScore, kind: .history
+            ))
+        }
+
+        // 3セクションを結合して返す（各セクションlimit件まで）
+        var results: [Suggestion] = []
+        results.append(contentsOf: dictResults.prefix(limit))
+        results.append(contentsOf: newTagResults.prefix(limit))
+        results.append(contentsOf: histResults.prefix(limit))
+        return results
     }
 
     // MARK: - 単語抽出
@@ -240,12 +314,6 @@ class TagSuggestEngine {
             }
             tokenType = CFStringTokenizerAdvanceToNextToken(tokenizer)
         }
-
-        // 原文からスペース区切りの塊も追加（英語フレーズ等）
-        let spaceSplit = trimmed.components(separatedBy: .whitespacesAndNewlines)
-            .filter { $0.count >= 2 }
-            .map { $0.lowercased() }
-        words.append(contentsOf: spaceSplit)
 
         return Array(Set(words)) // 重複排除
     }
