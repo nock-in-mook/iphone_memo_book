@@ -2085,29 +2085,27 @@ struct MemoCardView: View {
     var body: some View {
         if isTitleOnly {
             // タイトルのみモード
-            HStack(spacing: 4) {
+            HStack(spacing: 2) {
                 Text(memo.title.isEmpty ? "無題" : memo.title)
                     .font(.system(size: titleFont, weight: memo.title.isEmpty ? .regular : .semibold, design: .rounded))
                     .foregroundStyle(memo.title.isEmpty ? .gray.opacity(0.5) : .primary)
                     .lineLimit(1)
                     .truncationMode(.tail)
-                Spacer()
-                // 右端マーク
-                HStack(spacing: 2) {
-                    if memo.isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.blue.opacity(0.6))
-                    }
-                    if memo.isPinned {
-                        Image(systemName: "pin.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.orange.opacity(0.6))
-                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                // 右端マーク（アイコンがある時だけスペースを使う）
+                if memo.isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 7))
+                        .foregroundStyle(.blue.opacity(0.6))
+                }
+                if memo.isPinned {
+                    Image(systemName: "pin.fill")
+                        .font(.system(size: 7))
+                        .foregroundStyle(.orange.opacity(0.6))
                 }
             }
-            .padding(.horizontal, 8)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 6)
+            .padding(.vertical, 5)
             .background(Color(uiColor: .systemBackground))
             .contentShape(RoundedRectangle(cornerRadius: 4))
             .onTapGesture { onTap?() }
