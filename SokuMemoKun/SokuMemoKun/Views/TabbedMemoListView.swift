@@ -437,10 +437,26 @@ struct TabbedMemoListView: View {
         items.append(("よく見る", nil, frequentTabColorIndex, frequentTagSortOrder))
         items.append(("タグなし", nil, 0, noTagSortOrder))
         for tag in tags where tag.parentTagID == nil {
-            items.append((tag.name, tag, tag.colorIndex, tag.sortOrder))
+            items.append((truncateTabName(tag.name), tag, tag.colorIndex, tag.sortOrder))
         }
         items.sort { $0.order < $1.order }
         return items.map { ($0.label, $0.tag, $0.colorIndex) }
+    }
+
+    // タブ名を半角幅換算で10文字（全角5文字）に切り詰める
+    private func truncateTabName(_ text: String) -> String {
+        var width: CGFloat = 0
+        var result = ""
+        let maxWidth: CGFloat = 10 // 全角5文字 = 半角10文字
+        for ch in text {
+            let w: CGFloat = ch.isASCII ? 1.0 : 2.0
+            if width + w > maxWidth {
+                return result + "…"
+            }
+            width += w
+            result.append(ch)
+        }
+        return result
     }
 
     // 「すべて」タブかどうか
