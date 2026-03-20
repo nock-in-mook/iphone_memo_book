@@ -1,47 +1,50 @@
 # 引き継ぎメモ
 
 ## 現在の状況
-- **main** ブランチで作業中
-- セッション032でフォルダ並び替えリデザイン・ルーレット改善・タグバッジ刷新を実施
+- **feature/tag-suggest-ui** ブランチで作業中（mainからの分岐）
+- セッション034でルーレット影の修正＋タグサジェストエンジン基盤＋UI実装途中
 
-### セッション032の主な変更点
-- フォルダ並び替えモードの大幅リデザイン（メモカード非表示、カプセルボタン、ドラッグ中背景色変化）
-- 並び替え中のクリップ解除（タブが上にはみ出せる）
-- 並び替え中は最大化ボタン非表示
-- 完了時のアニメーション＋最後のタブにフォーカス
-- experiment/frosted-folderブランチをmainにマージ
-- 「よく見る」タブの左右列を同色グラデ＋極小ドロップシャドウに
-- カラーラボ追加（設定画面から配色パターンプレビュー）
-- ダーク系パレット7色削除（黒テキスト統一）
-- ノイズテクスチャ全削除（PaperTextureOverlay等）
-- ルーレット: セクター色を完全不透明、テキスト色で選択/非選択を区別
-- ルーレット: context.resolve+measureでフォントサイズ実測フィット
-- タグバッジ: 親子めり込みデザイン（下端揃え）
-- タグバッジ: 半角幅換算で文字数制限
-- タグバッジ: 子タグに白い縁取り
-- 子タグ編集プレビューを角丸長方形に修正
+### セッション034の主な変更点
+- **ルーレット影の修正**:
+  - インナーシャドウ左端の隙間を三角関数で正確に計算
+  - TagDialViewの.shadow()が上下に漏れる問題 → DialEdgeArcShape（弧形図形）で影を出す方式に変更（クリップ不要）
+  - インナーシャドウ調整（7px / opacity 0.3）
+  - トレー背景のshadow y:2→0に修正
+- **タグサジェストエンジン基盤**:
+  - TagFrequency / TagCooccurrence / TagSuggestDismissalモデル作成
+  - TagSuggestEngine: 6層スコアリング（辞書/学習/時間帯/連続/共起/否定）
+  - メモ確定時に自動学習フック
+  - TagSuggestDictionary.jsonをバンドルリソースに登録
+- **タグサジェストUI（途中）**:
+  - MainViewにオーバーレイ表示（縦3候補）
+  - 1秒デバウンス、タグ未選択時のみ表示
+  - 設定ON/OFF対応
+  - **未解決バグ**: 辞書カテゴリ名とタグ名の文字列比較が失敗（Unicode正規化の疑い）
+- **ROADMAP整理**: アイデアメモを各Phaseに統合、不要項目削除
 
 ## ブランチ構成
-- **main**: 全作業統合済み（experiment/frosted-folderマージ完了）
+- **main**: ルーレット影修正＋サジェストエンジン基盤まで統合済み
+- **feature/tag-suggest-ui**: サジェストUI実装中（デバッグ途中）
+
+## 次のアクション（優先順）
+1. **タグサジェストのUnicode問題修正** — カテゴリ名「健康」とタグ名「健康」の比較が失敗する原因を特定・修正
+2. デバッグオーバーレイを削除してサジェストUIを完成
+3. 辞書の大幅拡張（容量増えてもOK、AI級の精度目標）
+4. 存在しないタグのサジェスト→タップで新規作成の仕組み
+5. ToDoリストモードの実装（Phase 6）
+6. 実機での全体動作確認
 
 ## 主要ファイル
-- **TabbedMemoListView.swift**: メモ一覧、フォルダタブ、子タグドロワー、並び替えモード、よく見る配色、conditionalClipped
-- **MemoInputView.swift**: 入力欄、タグバッジ（親子めり込みデザイン）、truncateByWidth
-- **TagDialView.swift**: ルーレット、セクター不透明化、resolve+measureフィット
-- **MainView.swift**: 並び替えモード連携（isTabReorderMode）
-- **ColorLabView.swift**: カラーラボ（12パターン×10色）
-- **SettingsView.swift**: カラーラボへのリンク追加
+- **TagSuggestEngine.swift**: サジェストエンジン本体（Services/）
+- **TagFrequency.swift / TagCooccurrence.swift / TagSuggestDismissal.swift**: 学習データモデル（Models/）
+- **TagSuggestDictionary.json**: 4449語の事前辞書
+- **TagDialView.swift**: ルーレット描画（DialEdgeArcShape影、インナーシャドウ）
+- **MemoInputView.swift**: 入力欄、DialEdgeArcShape定義
+- **MainView.swift**: サジェストUI統合、デバッグオーバーレイ
 
 ## 環境
 - **Mac②（新）**: MacBook Air — Xcode 26.3, シミュレータ iPhone 17 Pro Max (iOS 26.3.1)
 - 実機: 15promax (26.3.1) (00008130-0006252E2E40001C)
-
-## 次のアクション
-1. タグサジェストUI統合（エンジン実装済み、表示のみ未実装）
-2. ToDoリストモードの実装（Phase 6）
-3. 実機での全体動作確認
-4. Specialメニュー（爆速整理モード等）
-5. その他ROADMAPのタスク
 
 ## 注意点
 - DerivedData キャッシュ → `rm -rf ~/Library/Developer/Xcode/DerivedData/SokuMemoKun-*`
@@ -49,3 +52,4 @@
 - SourceKitの偽陽性エラー多発→ビルドは成功する
 - **バンドルID**: com.sokumemokun.app
 - **テストデータバージョン**: sampleDataV8
+- **デバッグ表示が残ってる**: MainView/TagSuggestEngineにデバッグオーバーレイ・ログあり（リリース前に削除）
