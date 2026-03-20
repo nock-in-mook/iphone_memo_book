@@ -207,6 +207,7 @@ enum GridSizeOption: Int, CaseIterable {
     case grid2x3 = 2   // 2×3
     case grid1x2 = 3   // 1×2
     case full = 4       // 1列・全文表示
+    case titleOnly = 5  // タイトルのみ
 
     var columns: Int {
         switch self {
@@ -215,6 +216,7 @@ enum GridSizeOption: Int, CaseIterable {
         case .grid2x3: return 2
         case .grid1x2: return 1
         case .full: return 1
+        case .titleOnly: return 2
         }
     }
 
@@ -225,6 +227,57 @@ enum GridSizeOption: Int, CaseIterable {
         case .grid2x3: return "2×3"
         case .grid1x2: return "1×2"
         case .full: return "1(全文)"
+        case .titleOnly: return "タイトル"
+        }
+    }
+
+    // 通常フォルダ用の選択肢
+    static var normalOptions: [GridSizeOption] {
+        [.grid3x8, .grid2x6, .grid2x3, .grid1x2, .full, .titleOnly]
+    }
+
+    // 「よく見る」フォルダ用の選択肢（2列固定ベース）
+    static var frequentOptions: [GridSizeOption] {
+        [.grid2x6, .grid2x3, .grid1x2, .full, .titleOnly]
+    }
+}
+
+// 「よく見る」フォルダ専用グリッドオプション
+enum FrequentGridOption: Int, CaseIterable {
+    case grid2x8 = 0   // 2×8（各列8件）
+    case grid2x6 = 1   // 2×6（各列6件）
+    case grid2x3 = 2   // 2×3（各列3件）
+    case full = 3       // 2×1（全文）
+    case titleOnly = 4  // タイトルのみ（1列）
+
+    var itemsPerColumn: Int {
+        switch self {
+        case .grid2x8: return 8
+        case .grid2x6: return 6
+        case .grid2x3: return 3
+        case .full: return 6
+        case .titleOnly: return 20
+        }
+    }
+
+    var label: String {
+        switch self {
+        case .grid2x8: return "2×8"
+        case .grid2x6: return "2×6"
+        case .grid2x3: return "2×3"
+        case .full: return "2(全文)"
+        case .titleOnly: return "タイトル"
+        }
+    }
+
+    // 対応するGridSizeOption（カード描画用）
+    var cardGridSize: GridSizeOption {
+        switch self {
+        case .grid2x8: return .grid3x8
+        case .grid2x6: return .grid2x6
+        case .grid2x3: return .grid2x3
+        case .full: return .full
+        case .titleOnly: return .titleOnly
         }
     }
 }
@@ -329,6 +382,8 @@ struct TabbedMemoListView: View {
     @AppStorage("noTagGridSize") private var noTagGridSize: Int = 2
     // すべて用のグリッドサイズ
     @AppStorage("allTagGridSize") private var allTagGridSize: Int = 2
+    // よく見る用のグリッドサイズ
+    @AppStorage("frequentTabGridSize") private var frequentTabGridSize: Int = 1
     // コールバック
     var onAddMemo: ((UUID?, UUID?) -> Void)?  // (親タグID, 子タグID)
     var onEditMemo: ((Memo) -> Void)?
@@ -404,14 +459,16 @@ struct TabbedMemoListView: View {
         tabItems[selectedTabIndex].colorIndex == frequentTabColorIndex
     }
 
-    // よく見るメモ（閲覧回数順、上位6件）
+    // よく見るメモ（閲覧回数順、件数はグリッド設定に応じて可変）
     private var frequentMemos: [Memo] {
-        Array(allMemos.filter { $0.viewCount > 0 }.sorted { $0.viewCount > $1.viewCount }.prefix(6))
+        let limit = currentFrequentGridOption.itemsPerColumn
+        return Array(allMemos.filter { $0.viewCount > 0 }.sorted { $0.viewCount > $1.viewCount }.prefix(limit))
     }
 
-    // 最近見たメモ（最終閲覧日時順、上位6件）
+    // 最近見たメモ（最終閲覧日時順、件数はグリッド設定に応じて可変）
     private var recentMemos: [Memo] {
-        Array(allMemos.filter { $0.lastViewedAt != nil }.sorted { ($0.lastViewedAt ?? .distantPast) > ($1.lastViewedAt ?? .distantPast) }.prefix(6))
+        let limit = currentFrequentGridOption.itemsPerColumn
+        return Array(allMemos.filter { $0.lastViewedAt != nil }.sorted { ($0.lastViewedAt ?? .distantPast) > ($1.lastViewedAt ?? .distantPast) }.prefix(limit))
     }
 
     // 現在の親タグ（あれば）
@@ -435,6 +492,9 @@ struct TabbedMemoListView: View {
     // 現在のタブのグリッドサイズ
     private var currentGridSize: GridSizeOption {
         let item = tabItems[selectedTabIndex]
+        if item.colorIndex == frequentTabColorIndex {
+            return currentFrequentGridOption.cardGridSize
+        }
         if item.colorIndex == allTabColorIndex {
             return GridSizeOption(rawValue: allTagGridSize) ?? .grid3x8
         }
@@ -442,6 +502,11 @@ struct TabbedMemoListView: View {
             return GridSizeOption(rawValue: tag.gridSize) ?? .grid3x8
         }
         return GridSizeOption(rawValue: noTagGridSize) ?? .grid3x8
+    }
+
+    // 「よく見る」フォルダ専用のグリッドオプション
+    private var currentFrequentGridOption: FrequentGridOption {
+        FrequentGridOption(rawValue: frequentTabGridSize) ?? .grid2x6
     }
 
     private var currentColumns: [GridItem] {
@@ -1230,12 +1295,9 @@ struct TabbedMemoListView: View {
     // MARK: - 「よく見る」タブ特殊レイアウト
 
     private func frequentTabContent(geo: GeometryProxy) -> some View {
-        let columns2x6 = [
-            GridItem(.flexible(), spacing: 8),
-            GridItem(.flexible(), spacing: 8)
-        ]
         let hasFrequent = !frequentMemos.isEmpty
         let hasRecent = !recentMemos.isEmpty
+        let isTitleMode = currentFrequentGridOption == .titleOnly
 
         return ScrollView {
             VStack(spacing: 0) {
@@ -1256,6 +1318,18 @@ struct TabbedMemoListView: View {
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.top, 40)
+                } else if isTitleMode {
+                    // タイトルのみモード（1列リスト）
+                    VStack(spacing: 0) {
+                        if hasFrequent {
+                            frequentTitleSection(title: "よく見る", memos: frequentMemos, color: frequentColumnColors.left)
+                        }
+                        if hasRecent {
+                            frequentTitleSection(title: "最近見た", memos: recentMemos, color: frequentColumnColors.right)
+                                .padding(.top, hasFrequent ? 12 : 0)
+                        }
+                    }
+                    .padding(.horizontal, 6)
                 } else {
                     // 左右分割: よく見る | 最近
                     HStack(alignment: .top, spacing: 8) {
@@ -1304,6 +1378,29 @@ struct TabbedMemoListView: View {
             }
             .padding(.bottom, 40)
         }
+        .animation(.easeInOut(duration: 0.2), value: frequentTabGridSize)
+    }
+
+    // 「よく見る」タイトルのみモード用セクション
+    private func frequentTitleSection(title: String, memos: [Memo], color: Color) -> some View {
+        VStack(spacing: 4) {
+            Text(title)
+                .font(.system(size: 12, weight: .semibold, design: .rounded))
+                .foregroundStyle(.secondary)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 8)
+            VStack(spacing: 2) {
+                ForEach(memos) { memo in
+                    memoGridItem(memo: memo, availableHeight: 0)
+                }
+            }
+        }
+        .padding(8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(color)
+                .shadow(color: .black.opacity(0.3), radius: 0.5, x: -0.5, y: 0.5)
+        )
     }
 
     // MARK: - 子タグ引き出しドロワー
@@ -1509,26 +1606,48 @@ struct TabbedMemoListView: View {
 
     // グリッドサイズ切替ボタン
     private var gridSizeButton: some View {
-        Menu {
-            Section("メモの表示数") {
-            ForEach(GridSizeOption.allCases.reversed(), id: \.rawValue) { option in
-                Button {
-                    setGridSize(option)
-                } label: {
-                    HStack {
-                        Text(option.label)
-                        if currentGridSize == option {
-                            Image(systemName: "checkmark")
+        let isFrequent = tabItems[selectedTabIndex].colorIndex == frequentTabColorIndex
+        let displayLabel = isFrequent ? currentFrequentGridOption.label : currentGridSize.label
+
+        return Menu {
+            if isFrequent {
+                // 「よく見る」フォルダ専用メニュー
+                Section("表示形式") {
+                    ForEach(FrequentGridOption.allCases.reversed(), id: \.rawValue) { option in
+                        Button {
+                            frequentTabGridSize = option.rawValue
+                        } label: {
+                            HStack {
+                                Text(option.label)
+                                if currentFrequentGridOption == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
                         }
                     }
                 }
-            }
+            } else {
+                // 通常フォルダ用メニュー
+                Section("メモの表示数") {
+                    ForEach(GridSizeOption.normalOptions.reversed(), id: \.rawValue) { option in
+                        Button {
+                            setGridSize(option)
+                        } label: {
+                            HStack {
+                                Text(option.label)
+                                if currentGridSize == option {
+                                    Image(systemName: "checkmark")
+                                }
+                            }
+                        }
+                    }
+                }
             }
         } label: {
             HStack(spacing: 5) {
                 Image(systemName: "square.grid.2x2")
                     .font(.system(size: 15))
-                Text(currentGridSize.label)
+                Text(displayLabel)
                     .font(.system(size: 15, weight: .medium, design: .rounded))
             }
             .foregroundStyle(.secondary)
@@ -1895,6 +2014,7 @@ struct MemoCardView: View {
         case .grid2x3: return 16
         case .grid1x2: return 17
         case .full: return 18
+        case .titleOnly: return 14
         }
     }
 
@@ -1905,6 +2025,7 @@ struct MemoCardView: View {
         case .grid2x3: return 14
         case .grid1x2: return 15
         case .full: return 16
+        case .titleOnly: return 12
         }
     }
 
@@ -1915,6 +2036,7 @@ struct MemoCardView: View {
         case .grid2x3: return 5
         case .grid1x2: return 4
         case .full: return 0  // 0 = 無制限
+        case .titleOnly: return 0
         }
     }
 
@@ -1925,6 +2047,7 @@ struct MemoCardView: View {
         case .grid2x3: return 10
         case .grid1x2: return 12
         case .full: return 12
+        case .titleOnly: return 6
         }
     }
 
@@ -1932,9 +2055,10 @@ struct MemoCardView: View {
 
     // 全文モードでは高さ固定しない
     private var isFullMode: Bool { gridSize == .full }
+    private var isTitleOnly: Bool { gridSize == .titleOnly }
 
     private var cardHeight: CGFloat? {
-        if isFullMode { return nil }  // 全文モードは高さ自動
+        if isFullMode || isTitleOnly { return nil }
         guard availableHeight > 0 else {
             switch gridSize {
             case .grid3x8: return 40
@@ -1942,6 +2066,7 @@ struct MemoCardView: View {
             case .grid2x3: return 120
             case .grid1x2: return 180
             case .full: return nil
+            case .titleOnly: return nil
             }
         }
         let rows: CGFloat
@@ -1951,6 +2076,7 @@ struct MemoCardView: View {
         case .grid2x3: rows = 3
         case .grid1x2: rows = 2
         case .full: return nil
+        case .titleOnly: return nil
         }
         let spacing: CGFloat = 8
         let topPadding: CGFloat = 58
@@ -1960,52 +2086,84 @@ struct MemoCardView: View {
     }
 
     var body: some View {
-        ZStack(alignment: .topTrailing) {
-            VStack(alignment: .leading, spacing: 2) {
-                // タイトルがあれば表示、なければスキップ
-                if !memo.title.isEmpty {
-                    Text(memo.title)
-                        .font(.system(size: titleFont, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
+        if isTitleOnly {
+            // タイトルのみモード
+            HStack(spacing: 4) {
+                Text(memo.title.isEmpty ? "無題" : memo.title)
+                    .font(.system(size: titleFont, weight: memo.title.isEmpty ? .regular : .semibold, design: .rounded))
+                    .foregroundStyle(memo.title.isEmpty ? .gray.opacity(0.5) : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
+                Spacer()
+                // 右端マーク
+                HStack(spacing: 2) {
+                    if memo.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.blue.opacity(0.6))
+                    }
+                    if memo.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.orange.opacity(0.6))
+                    }
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color(uiColor: .systemBackground))
+            .contentShape(RoundedRectangle(cornerRadius: 4))
+            .onTapGesture { onTap?() }
+            .clipShape(RoundedRectangle(cornerRadius: 4))
+            .shadow(color: .black.opacity(0.06), radius: 1, x: 0, y: 1)
+        } else {
+            // 通常カードモード
+            ZStack(alignment: .topTrailing) {
+                VStack(alignment: .leading, spacing: 2) {
+                    if !memo.title.isEmpty {
+                        Text(memo.title)
+                            .font(.system(size: titleFont, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .truncationMode(.tail)
+                    }
+
+                    Text(memo.content)
+                        .font(.system(size: bodyFont))
+                        .foregroundStyle(.secondary)
+                        .lineLimit(bodyLines == 0 ? nil : bodyLines)
                         .truncationMode(.tail)
                 }
+                .frame(maxWidth: .infinity, alignment: .topLeading)
+                .padding(cardPadding)
 
-                Text(memo.content)
-                    .font(.system(size: bodyFont))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(bodyLines == 0 ? nil : bodyLines)
-                    .truncationMode(.tail)
+                // 右上マーク
+                VStack(spacing: 2) {
+                    if memo.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.blue.opacity(0.6))
+                    }
+                    if memo.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 8))
+                            .foregroundStyle(.orange.opacity(0.6))
+                    }
+                    if memo.isMarkdown {
+                        Text("M↓")
+                            .font(.system(size: 9, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.gray.opacity(0.5))
+                    }
+                }
+                .padding(3)
             }
-            .frame(maxWidth: .infinity, alignment: .topLeading)
-            .padding(cardPadding)
-
-            // 右上マーク（ロック・ピン・マークダウン）
-            VStack(spacing: 2) {
-                if memo.isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.blue.opacity(0.6))
-                }
-                if memo.isPinned {
-                    Image(systemName: "pin.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.orange.opacity(0.6))
-                }
-                if memo.isMarkdown {
-                    Text("M↓")
-                        .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.gray.opacity(0.5))
-                }
-            }
-            .padding(3)
+            .frame(height: gridSize == .grid3x8 ? 36 : gridSize == .grid2x6 ? 48 : gridSize == .grid2x3 ? 104 : gridSize == .grid1x2 ? 160 : cardHeight, alignment: .topLeading)
+            .background(Color(uiColor: .systemBackground))
+            .contentShape(RoundedRectangle(cornerRadius: 6))
+            .onTapGesture { onTap?() }
+            .clipShape(RoundedRectangle(cornerRadius: 6))
+            .shadow(color: .black.opacity(0.1), radius: 2, x: -1, y: 1)
+            .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
         }
-        .frame(height: gridSize == .grid3x8 ? 36 : gridSize == .grid2x6 ? 48 : gridSize == .grid2x3 ? 104 : gridSize == .grid1x2 ? 160 : cardHeight, alignment: .topLeading)
-        .background(Color(uiColor: .systemBackground))
-        .contentShape(RoundedRectangle(cornerRadius: 6))
-        .onTapGesture { onTap?() }
-        .clipShape(RoundedRectangle(cornerRadius: 6))
-        .shadow(color: .black.opacity(0.1), radius: 2, x: -1, y: 1)
-        .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
     }
 }
 
