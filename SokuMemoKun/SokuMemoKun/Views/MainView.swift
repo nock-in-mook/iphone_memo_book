@@ -465,23 +465,9 @@ struct MainView: View {
         && !suggestions.isEmpty
     }
 
-    // デバッグ: サジェストの状態表示（リリース前に削除）
-    private var suggestDebugText: String {
-        "cnt=\(suggestions.count) \(suggestEngine.lastDebugInfo)"
-    }
-
     // サジェストオーバーレイ
     @ViewBuilder
     private var tagSuggestOverlay: some View {
-        // デバッグ表示（リリース前に削除）
-        Text(suggestDebugText)
-            .font(.system(size: 18, weight: .bold))
-            .foregroundStyle(.red)
-            .padding(12)
-            .frame(maxWidth: .infinity)
-            .background(Color.yellow)
-            .cornerRadius(8)
-
         if shouldShowSuggestions {
             VStack(spacing: 6) {
                 // 閉じるボタン
@@ -559,24 +545,18 @@ struct MainView: View {
     // デバウンス付きサジェスト更新（1秒待つ）
     private func triggerSuggest() {
         suggestDebounceTask?.cancel()
-        print("[Suggest] triggerSuggest: enabled=\(tagSuggestEnabled), tagID=\(String(describing: viewModel.selectedTagID)), dismissed=\(suggestDismissed)")
-        guard tagSuggestEnabled && viewModel.selectedTagID == nil && !suggestDismissed else {
-            print("[Suggest] ガード落ち")
-            return
-        }
+        guard tagSuggestEnabled && viewModel.selectedTagID == nil && !suggestDismissed else { return }
         suggestDebounceTask = Task {
             try? await Task.sleep(nanoseconds: 1_000_000_000) // 1秒
             guard !Task.isCancelled else { return }
             await MainActor.run {
-                let result = suggestEngine.suggest(
+                suggestions = suggestEngine.suggest(
                     title: viewModel.titleText,
                     body: viewModel.inputText,
                     tags: tags,
                     context: modelContext,
                     limit: 3
                 )
-                print("[Suggest] 結果: \(result.count)件 — \(result.map { "\($0.parentName)\($0.childName.map { ">"+$0 } ?? "")" })")
-                suggestions = result
             }
         }
     }
