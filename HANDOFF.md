@@ -37,9 +37,11 @@
 - 実機: 15promax (26.3.1) (00008130-0006252E2E40001C)
 
 ## 次のアクション
-1. 実機での全体動作確認
-2. Specialメニュー（爆速整理モード等）
-3. その他ROADMAPのタスク
+1. タグサジェストUI統合（エンジン実装済み、表示のみ未実装）
+2. ToDoリストモードの実装（Phase 6）
+3. 実機での全体動作確認
+4. Specialメニュー（爆速整理モード等）
+5. その他ROADMAPのタスク
 
 ## 注意点
 - DerivedData キャッシュ → `rm -rf ~/Library/Developer/Xcode/DerivedData/SokuMemoKun-*`
