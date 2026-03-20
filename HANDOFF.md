@@ -1,54 +1,49 @@
 # 引き継ぎメモ
 
 ## 現在の状況
-- **experiment/frosted-folder** ブランチで作業中
-- セッション031でロック機能・タブドラッグ並び替え・各種UI改善を実装
+- **main** ブランチで作業中
+- セッション032でフォルダ並び替えリデザイン・ルーレット改善・タグバッジ刷新を実施
 
-### セッション031の主な変更点
-- メモカードの削除防止ロック機能（isLocked、鍵マーク、トースト表示、タグ削除時のロック中メモ保護）
-- フォルダタブのドラッグ並び替え（ぷるぷるモード、浮遊タブ、自動スクロール、触覚フィードバック）
-- タグ付け取っ手の右スワイプ完全収納・左スワイプ全開
-- ルーレットにドロップシャドウ追加（トレー側レイヤーで描画）
-- すべて・よく見るタブのメモ作成ボタン非表示
-- グリッドボタン色をゴミ箱と統一（.tint(.secondary)）
-- タブ背景テクスチャをタブ行から除外（隙間からノイズが見えてた問題修正）
-- 選択中タブのscaleEffect(1.08)で拡大表示
-- タブシャドウをシャープに調整
-
-### 解決済み: シートの伸び縮み問題
-- iOS 26シミュレータ固有のバグと確認（セッション031で実機検証済み）
-- **実機では発生しない** → 対応不要
+### セッション032の主な変更点
+- フォルダ並び替えモードの大幅リデザイン（メモカード非表示、カプセルボタン、ドラッグ中背景色変化）
+- 並び替え中のクリップ解除（タブが上にはみ出せる）
+- 並び替え中は最大化ボタン非表示
+- 完了時のアニメーション＋最後のタブにフォーカス
+- experiment/frosted-folderブランチをmainにマージ
+- 「よく見る」タブの左右列を同色グラデ＋極小ドロップシャドウに
+- カラーラボ追加（設定画面から配色パターンプレビュー）
+- ダーク系パレット7色削除（黒テキスト統一）
+- ノイズテクスチャ全削除（PaperTextureOverlay等）
+- ルーレット: セクター色を完全不透明、テキスト色で選択/非選択を区別
+- ルーレット: context.resolve+measureでフォントサイズ実測フィット
+- タグバッジ: 親子めり込みデザイン（下端揃え）
+- タグバッジ: 半角幅換算で文字数制限
+- タグバッジ: 子タグに白い縁取り
+- 子タグ編集プレビューを角丸長方形に修正
 
 ## ブランチ構成
-- **main**: セッション027まで
-- **experiment/frosted-folder**: セッション028-031（テクスチャ・影・UI改善・よく見るフォルダ・タグ編集改善・ロック機能・ドラッグ並び替え）← 現在
+- **main**: 全作業統合済み（experiment/frosted-folderマージ完了）
 
 ## 主要ファイル
-- **TabbedMemoListView.swift**: メモ一覧、フォルダタブ、子タグドロワー、背景一元管理、よく見るタブ、色変更シート、ロック機能、タブドラッグ並び替え
-- **MemoInputView.swift**: 入力欄、Undo/Redo、最大化ボタン修正、ルーレットスワイプ収納
-- **MainView.swift**: iPad対応、子タグ反映修正、アニメーション時短
-- **MemoInputViewModel.swift**: Undo/Redoスタック、hasText判定、閲覧追跡
-- **Memo.swift**: viewCount / lastViewedAt / isLocked 追加
-- **TagEditView.swift**: ColorPaletteGrid、TagDetailEditView（リアルタブプレビュー）、ドラッグ並び替え
-- **NewTagSheetView.swift**: 親タグ時リアルタブプレビュー
-- **TagDialView.swift**: ルーレット描画、ドロップシャドウ（トレー側で描画）
+- **TabbedMemoListView.swift**: メモ一覧、フォルダタブ、子タグドロワー、並び替えモード、よく見る配色、conditionalClipped
+- **MemoInputView.swift**: 入力欄、タグバッジ（親子めり込みデザイン）、truncateByWidth
+- **TagDialView.swift**: ルーレット、セクター不透明化、resolve+measureフィット
+- **MainView.swift**: 並び替えモード連携（isTabReorderMode）
+- **ColorLabView.swift**: カラーラボ（12パターン×10色）
+- **SettingsView.swift**: カラーラボへのリンク追加
 
 ## 環境
 - **Mac②（新）**: MacBook Air — Xcode 26.3, シミュレータ iPhone 17 Pro Max (iOS 26.3.1)
 - 実機: 15promax (26.3.1) (00008130-0006252E2E40001C)
 
 ## 次のアクション
-1. **選択中タブのscaleEffectアニメーションもたつき** → 実機で確認してから対応判断
-2. **タブの並び替えグラフィカルモードの微調整**（実機での挙動確認）
-3. ブランチをmainにマージするか判断
-4. Specialメニュー（爆速整理モード等）
-5. その他ROADMAPのタスク
+1. 実機での全体動作確認
+2. Specialメニュー（爆速整理モード等）
+3. その他ROADMAPのタスク
 
 ## 注意点
 - DerivedData キャッシュ → `rm -rf ~/Library/Developer/Xcode/DerivedData/SokuMemoKun-*`
 - **ビルドキャッシュが頑固**: DerivedData削除+アンインストール+clean+フルリビルドが確実
 - SourceKitの偽陽性エラー多発→ビルドは成功する
 - **バンドルID**: com.sokumemokun.app
-- **sheet(isPresented:)のState再利用バグ**: 特殊タブ色変更で発覚。sheet(item:)+独立Viewで解決済み
-- **ForEach(0..<count, id: \.self)のcontextMenuキャプチャ問題**: indexが古い値を保持する場合がある
 - **テストデータバージョン**: sampleDataV8
