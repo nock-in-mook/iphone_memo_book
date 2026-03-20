@@ -2118,6 +2118,7 @@ struct MemoCardView: View {
                     Text(memo.title)
                         .font(.system(size: titleFont, weight: .semibold, design: .rounded))
                         .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                         .truncationMode(.tail)
                 }
 
