@@ -16,6 +16,7 @@ struct MemoInputView: View {
     @Query(sort: \Tag.name) private var tags: [Tag]
     @AppStorage("coloredFrame") private var coloredFrame = true
     @FocusState private var isTextEditorFocused: Bool
+    @FocusState private var isTitleFocused: Bool
 
     // 新規タグ作成シート
     @State private var showNewTagSheet = false
@@ -24,6 +25,8 @@ struct MemoInputView: View {
     @State private var isEditing = true
     // 削除確認ダイアログ
     @State private var showDeleteAlert = false
+    // 本文クリア確認ダイアログ
+    @State private var showClearBodyAlert = false
     // 子タグ追加時の親タグ未選択警告
     @State private var showNoParentAlert = false
     // タグ長押し編集/削除
@@ -216,6 +219,25 @@ struct MemoInputView: View {
                     .padding(.bottom, 8)
                 }
             }
+            .overlay(alignment: .bottomLeading) {
+                // 本文クリアボタン（本文があるときだけ表示）
+                if !viewModel.inputText.isEmpty {
+                    Button {
+                        showClearBodyAlert = true
+                    } label: {
+                        Image(systemName: "eraser")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.white)
+                            .frame(width: 28, height: 28)
+                            .background(
+                                Circle().fill(Color.orange.opacity(0.6))
+                            )
+                            .shadow(color: .black.opacity(0.2), radius: 2, x: 1, y: 1)
+                    }
+                    .padding(.leading, 8)
+                    .padding(.bottom, 8)
+                }
+            }
             .overlay {
                 // トレー外タップで収納（ルーレット表示中のみ透明オーバーレイを表示）
                 if showParentDial {
@@ -247,6 +269,14 @@ struct MemoInputView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.selectedTagID)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
+        .alert("本文をクリアします。よろしいですか？", isPresented: $showClearBodyAlert) {
+            Button("クリア", role: .destructive) {
+                viewModel.inputText = ""
+            }
+            Button("キャンセル", role: .cancel) {}
+        } message: {
+            Text("タイトルとタグはそのまま残ります。")
+        }
         .alert("このメモを削除します。よろしいですか？", isPresented: $showDeleteAlert) {
             Button("削除", role: .destructive) {
                 var transaction = Transaction()
@@ -362,10 +392,25 @@ struct MemoInputView: View {
         HStack(spacing: 0) {
             // タイトルエリア（残りスペースを使い切る）
             HStack(spacing: 4) {
-                TextField("タイトル（任意）", text: $viewModel.titleText)
-                    .font(.system(size: 17, weight: .semibold, design: .rounded))
-                    .lineLimit(1)
-                    .truncationMode(.tail)
+                ZStack(alignment: .leading) {
+                    // TextFieldは常に存在（フォーカス時のみ見える）
+                    TextField("タイトル（任意）", text: $viewModel.titleText)
+                        .font(.system(size: 17, weight: .semibold, design: .rounded))
+                        .focused($isTitleFocused)
+                        .opacity(isTitleFocused ? 1 : 0)
+
+                    // 非フォーカス時: Text + 自動縮小を上に重ねる
+                    if !isTitleFocused {
+                        Text(viewModel.titleText.isEmpty ? "タイトル（任意）" : viewModel.titleText)
+                            .font(.system(size: 17, weight: .semibold, design: .rounded))
+                            .foregroundStyle(viewModel.titleText.isEmpty ? .gray.opacity(0.4) : .primary)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.7)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .contentShape(Rectangle())
+                            .onTapGesture { isTitleFocused = true }
+                    }
+                }
 
                 // タイトル×ボタン（テキストがあるときだけ表示）
                 if !viewModel.titleText.isEmpty {
@@ -381,8 +426,9 @@ struct MemoInputView: View {
             }
 
             // 縦線セパレータ
-            Divider()
-                .frame(height: 24)
+            Rectangle()
+                .fill(Color.secondary.opacity(0.3))
+                .frame(width: 1, height: 24)
                 .padding(.horizontal, 8)
 
             // タグエリア（内容に応じて可変幅）
@@ -424,42 +470,42 @@ struct MemoInputView: View {
             } else {
                 let info = selectedTagInfo
                 if let childInfo = selectedChildTagInfo {
-                    // 表示名を半角幅換算で制限（親: 10単位=全角5/半角10、子: 8単位=全角4/半角8）
+                    // 表示名を半角幅換算で制限（親: 10単位=全角5文字、子: 10単位）
                     let parentDisplay = truncateByWidth(info.name, maxWidth: 10)
                     let childDisplay = truncateByWidth(childInfo.name, maxWidth: 10)
                     // 親タグ＋右下に子タグめり込みデザイン
-                    HStack(alignment: .bottom, spacing: -6) {
+                    HStack(alignment: .bottom, spacing: -4) {
                         // 親タグ
                         Text(parentDisplay)
-                            .font(.system(size: 16, weight: .semibold, design: .rounded))
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
-                            .padding(.leading, 10)
-                            .padding(.trailing, 14)
-                            .padding(.vertical, 5)
-                            .background(RoundedRectangle(cornerRadius: 7).fill(info.color))
+                            .padding(.leading, 7)
+                            .padding(.trailing, 10)
+                            .padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(info.color))
                         // 子タグ
                         Text(childDisplay)
-                            .font(.system(size: 13, weight: .medium, design: .rounded))
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
                             .background(
-                                RoundedRectangle(cornerRadius: 5).fill(childInfo.color)
+                                RoundedRectangle(cornerRadius: 4).fill(childInfo.color)
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 5)
+                                RoundedRectangle(cornerRadius: 4)
                                     .stroke(Color.white, lineWidth: 1.5)
                             )
                     }
                 } else {
                     // 親タグのみ
                     Text(truncateByWidth(info.name, maxWidth: 12))
-                        .font(.system(size: 16, weight: .semibold, design: .rounded))
-                        .padding(.horizontal, 10)
-                        .padding(.vertical, 5)
-                        .background(RoundedRectangle(cornerRadius: 7).fill(info.color))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(info.color))
                 }
             }
         }
