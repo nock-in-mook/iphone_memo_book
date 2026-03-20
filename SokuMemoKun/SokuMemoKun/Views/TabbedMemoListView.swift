@@ -2153,7 +2153,7 @@ struct TabBarView: View {
                             }
                         }
                         .padding(.horizontal, 8)
-                        .padding(.top, 4)
+                        .padding(.top, 10)
                         .fixedSize(horizontal: true, vertical: false)
                         .background(
                             GeometryReader { contentGeo in
@@ -2195,7 +2195,7 @@ struct TabBarView: View {
                                     .id("addTab")
                                 }
                                 .padding(.horizontal, 8)
-                                .padding(.top, 4)
+                                .padding(.top, 10)
                             }
                             .onChange(of: selectedTabIndex) { oldValue, newValue in
                                 onSelectModeReset()
@@ -2250,7 +2250,7 @@ struct TabBarView: View {
                             .allowsHitTesting(false)
                     }
                 }
-                .frame(height: 36)
+                .frame(height: 44)
                 // 通常時はクリップ、並び替え中は上にはみ出せるようクリップ解除
                 .conditionalClipped(!isReorderMode)
                 .background(
