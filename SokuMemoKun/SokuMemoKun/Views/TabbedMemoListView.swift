@@ -634,7 +634,7 @@ struct TabbedMemoListView: View {
             ZStack {
                 // タグ色はnormalMemoContent領域だけ（タブ行は透明）
                 VStack(spacing: 0) {
-                    Color.clear.frame(height: 36)
+                    Color.clear.frame(height: 44)
                     // 並び替え中はドラッグ中タブの色、通常時はフォルダ色
                     if isInReorderMode, let dragColor = draggingTabColor {
                         dragColor
