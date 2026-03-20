@@ -107,9 +107,11 @@ struct MainView: View {
                         }
 
                         tabbedMemoList
-                            .overlay(alignment: .top) {
-                                tagSuggestOverlay
-                            }
+                    }
+                    .overlay(alignment: .center) {
+                        // サジェストを画面中央付近に表示（フォルダタブ位置に依存しない）
+                        tagSuggestOverlay
+                            .offset(y: -geo.size.height * 0.08)
                     }
                 }
             }
@@ -745,7 +747,13 @@ struct MainView: View {
     // デバウンス付きサジェスト更新（1秒待つ）
     private func triggerSuggest() {
         suggestDebounceTask?.cancel()
-        guard tagSuggestEnabled && viewModel.selectedTagID == nil && !suggestDismissed else { return }
+        // テキストが空なら候補を消して終了
+        let hasContent = !viewModel.titleText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            || !viewModel.inputText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+        guard tagSuggestEnabled && viewModel.selectedTagID == nil && !suggestDismissed && hasContent else {
+            if !hasContent { suggestions = [] }
+            return
+        }
         suggestDebounceTask = Task {
             try? await Task.sleep(nanoseconds: 1_000_000_000) // 1秒
             guard !Task.isCancelled else { return }
