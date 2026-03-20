@@ -7,6 +7,9 @@ struct NewTagSheetView: View {
     var parentTagID: UUID? = nil
     // 追加完了時に新タグIDを返すコールバック
     var onTagCreated: ((UUID) -> Void)? = nil
+    // 初期値（サジェストから色指定で飛んできた場合に使用）
+    var initialName: String = ""
+    var initialColorIndex: Int = 1
 
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -132,6 +135,10 @@ struct NewTagSheetView: View {
             }
         }
         .presentationDetents([.medium])
+        .onAppear {
+            if !initialName.isEmpty { tagName = initialName }
+            if initialColorIndex != 1 { selectedColorIndex = initialColorIndex }
+        }
     }
 
     private func saveTag() {

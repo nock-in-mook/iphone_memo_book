@@ -26,6 +26,10 @@ struct MainView: View {
     @State private var pendingSaveTagID: UUID? = nil
     // フォルダタブ並び替えモード中フラグ
     @State private var isTabReorderMode = false
+    // サジェスト新規タグ作成ダイアログ
+    @State private var showNewTagConfirm = false
+    @State private var pendingNewTagName = ""
+    @State private var showNewTagColorSheet = false
     @AppStorage("defaultMarkdown") private var defaultMarkdown = false
     @AppStorage("markdownEnabled") private var markdownEnabled = false
     @Environment(\.modelContext) private var modelContext
@@ -331,6 +335,29 @@ struct MainView: View {
                 }
                 Button("キャンセル", role: .cancel) {}
             }
+            .confirmationDialog(
+                "親タグ「\(pendingNewTagName)」を作成します",
+                isPresented: $showNewTagConfirm,
+                titleVisibility: .visible
+            ) {
+                Button("おまかせカラー") {
+                    createNewTagWithAutoColor()
+                }
+                Button("色を指定") {
+                    showNewTagColorSheet = true
+                }
+                Button("キャンセル", role: .cancel) {}
+            }
+            .sheet(isPresented: $showNewTagColorSheet) {
+                NewTagSheetView(
+                    onTagCreated: { newTagID in
+                        viewModel.selectedTagID = newTagID
+                        viewModel.onTagChanged(tags: tags)
+                    },
+                    initialName: pendingNewTagName,
+                    initialColorIndex: 1 // アクア（デフォルト）
+                )
+            }
             .onAppear {
                 viewModel.suggestEngine = suggestEngine
                 viewModel.suggestContext = modelContext
@@ -594,18 +621,12 @@ struct MainView: View {
         .padding(.horizontal, 8)
     }
 
-    // サジェストをタップ → 既存タグ適用 or 新規タグ作成
+    // サジェストをタップ → 既存タグ適用 or 新規タグ確認ダイアログ
     private func applySuggestion(_ suggestion: TagSuggestEngine.Suggestion) {
         if suggestion.kind == .newTag {
-            // 新規タグ作成（親タグとして追加）
-            let colorIndex = pickDistinctColor(tags: tags)
-            let newTag = Tag(name: suggestion.parentName, colorIndex: colorIndex)
-            let maxOrder = tags.filter { $0.parentTagID == nil }.map { $0.sortOrder }.max() ?? 0
-            newTag.sortOrder = maxOrder + 1
-            modelContext.insert(newTag)
-            try? modelContext.save()
-            viewModel.selectedTagID = newTag.id
-            viewModel.onTagChanged(tags: tags + [newTag])
+            // 新規タグ → 確認ダイアログを表示
+            pendingNewTagName = suggestion.parentName
+            showNewTagConfirm = true
         } else {
             viewModel.selectedTagID = suggestion.parentID
             if let childID = suggestion.childID {
@@ -614,6 +635,18 @@ struct MainView: View {
             viewModel.onTagChanged(tags: tags)
         }
         suggestions = []
+    }
+
+    // おまかせカラーで新規タグを即作成
+    private func createNewTagWithAutoColor() {
+        let colorIndex = pickDistinctColor(tags: tags)
+        let newTag = Tag(name: pendingNewTagName, colorIndex: colorIndex)
+        let maxOrder = tags.filter { $0.parentTagID == nil }.map { $0.sortOrder }.max() ?? 0
+        newTag.sortOrder = maxOrder + 1
+        modelContext.insert(newTag)
+        try? modelContext.save()
+        viewModel.selectedTagID = newTag.id
+        viewModel.onTagChanged(tags: tags + [newTag])
     }
 
     // RGBから色相(0〜360)を計算
