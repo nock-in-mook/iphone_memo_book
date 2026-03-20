@@ -48,7 +48,7 @@ struct SettingsView: View {
                         Label("タグ色でフレームを彩色", systemImage: "paintbrush")
                     }
                     Toggle(isOn: $showCharCount) {
-                        Label("文字数・行数カウンター", systemImage: "number")
+                        Label("文字数カウンター", systemImage: "number")
                     }
                     Toggle(isOn: $showLineNumbers) {
                         Label("行番号を表示", systemImage: "list.number")

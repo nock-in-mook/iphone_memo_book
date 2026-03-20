@@ -244,13 +244,22 @@ struct MemoDetailView: View {
                     }
                 }
 
-                // 文字数カウンター
+                // 文字数カウンター（フロートバッジ）
                 if showCharCount && !editText.isEmpty {
-                    let chars = editText.count
-                    let lines = editText.components(separatedBy: "\n").count
-                    Text("\(chars)字 · \(lines)行")
+                    Text("\(editText.count)")
                         .font(.system(size: 10, design: .monospaced))
-                        .foregroundStyle(.tertiary)
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(
+                            Capsule()
+                                .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                                .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+                        )
+                        .overlay(
+                            Capsule()
+                                .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
+                        )
                         .padding(.leading, showLineNumbers ? 44 : 12)
                         .padding(.bottom, 8)
                 }

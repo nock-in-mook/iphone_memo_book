@@ -149,13 +149,6 @@ struct MemoInputView: View {
         return nil
     }
 
-    // 文字数・行数ラベル
-    private var charCountLabel: String {
-        let chars = viewModel.inputText.count
-        let lines = viewModel.inputText.components(separatedBy: "\n").count
-        return "\(chars)字 · \(lines)行"
-    }
-
     var body: some View {
         VStack(spacing: 0) {
             // ヘッダー: タイトル + タグ
@@ -247,11 +240,22 @@ struct MemoInputView: View {
                                 .shadow(color: .black.opacity(0.2), radius: 2, x: 1, y: 1)
                         }
                     }
-                    // 文字数カウンター
+                    // 文字数カウンター（フロートバッジ）
                     if showCharCount && !viewModel.inputText.isEmpty {
-                        Text(charCountLabel)
+                        Text("\(viewModel.inputText.count)")
                             .font(.system(size: 10, design: .monospaced))
-                            .foregroundStyle(.tertiary)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 6)
+                            .padding(.vertical, 2)
+                            .background(
+                                Capsule()
+                                    .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                                    .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+                            )
+                            .overlay(
+                                Capsule()
+                                    .stroke(Color.gray.opacity(0.2), lineWidth: 0.5)
+                            )
                     }
                 }
                 .padding(.leading, 8)
