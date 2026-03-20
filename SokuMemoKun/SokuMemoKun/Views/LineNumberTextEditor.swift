@@ -183,3 +183,22 @@ private class GutterDrawView: UIView {
         }
     }
 }
+
+// MARK: - 閲覧モード用の行番号（SwiftUI純正、ScrollView内で使用）
+
+struct ReadOnlyLineNumbers: View {
+    let text: String
+
+    var body: some View {
+        VStack(alignment: .trailing, spacing: 0) {
+            let lines = text.components(separatedBy: "\n")
+            ForEach(Array(lines.enumerated()), id: \.offset) { index, _ in
+                Text("\(index + 1)")
+                    .font(.system(size: 11, design: .monospaced))
+                    .foregroundStyle(.tertiary)
+                    .frame(height: 22, alignment: .top)
+            }
+        }
+        .padding(.top, 2)
+    }
+}

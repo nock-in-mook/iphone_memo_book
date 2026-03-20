@@ -253,7 +253,7 @@ struct MemoDetailView: View {
                         .padding(.vertical, 2)
                         .background(
                             Capsule()
-                                .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                                .fill(Color(uiColor: .systemBackground))
                                 .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
                         )
                         .overlay(
@@ -273,12 +273,19 @@ struct MemoDetailView: View {
                         .padding(.horizontal, 12)
                         .padding(.vertical, 8)
                 } else {
-                    Text(memo.content)
-                        .font(.system(size: 17))
-                        .foregroundStyle(.primary)
-                        .frame(maxWidth: .infinity, alignment: .topLeading)
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 8)
+                    HStack(alignment: .top, spacing: 0) {
+                        if showLineNumbers && !memo.content.isEmpty {
+                            ReadOnlyLineNumbers(text: memo.content)
+                                .frame(width: 36)
+                        }
+                        Text(memo.content)
+                            .font(.system(size: 17))
+                            .foregroundStyle(.primary)
+                            .frame(maxWidth: .infinity, alignment: .topLeading)
+                            .padding(.leading, showLineNumbers ? 6 : 12)
+                            .padding(.trailing, 12)
+                    }
+                    .padding(.vertical, 8)
                 }
             }
             .frame(maxHeight: .infinity)

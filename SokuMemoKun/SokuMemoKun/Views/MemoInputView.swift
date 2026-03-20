@@ -169,14 +169,21 @@ struct MemoInputView: View {
                         .padding(.top, 0)
                     } else {
                         ScrollView {
-                            Text(viewModel.inputText.isEmpty ? " " : viewModel.inputText)
-                                .font(.system(size: 17))
-                                .foregroundStyle(viewModel.inputText.isEmpty ? .clear : .primary)
-                                .frame(maxWidth: .infinity, alignment: .topLeading)
-                                .padding(.leading, 15)
-                                .padding(.trailing, 9)
-                                .padding(.top, 24)
-                                .padding(.bottom, 40)
+                            HStack(alignment: .top, spacing: 0) {
+                                // 閲覧モードでも行番号表示
+                                if showLineNumbers && !viewModel.inputText.isEmpty {
+                                    ReadOnlyLineNumbers(text: viewModel.inputText)
+                                        .frame(width: 36)
+                                }
+                                Text(viewModel.inputText.isEmpty ? " " : viewModel.inputText)
+                                    .font(.system(size: 17))
+                                    .foregroundStyle(viewModel.inputText.isEmpty ? .clear : .primary)
+                                    .frame(maxWidth: .infinity, alignment: .topLeading)
+                                    .padding(.leading, showLineNumbers ? 6 : 15)
+                                    .padding(.trailing, 9)
+                            }
+                            .padding(.top, 24)
+                            .padding(.bottom, 40)
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
@@ -249,7 +256,7 @@ struct MemoInputView: View {
                             .padding(.vertical, 2)
                             .background(
                                 Capsule()
-                                    .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                                    .fill(Color(uiColor: .systemBackground))
                                     .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
                             )
                             .overlay(
