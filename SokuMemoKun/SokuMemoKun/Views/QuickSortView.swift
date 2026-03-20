@@ -66,6 +66,7 @@ struct QuickSortView: View {
 
     // 現在の表示番号（スキップ済みを除いた番号）
     private var displayNumber: Int {
+        guard !targetMemos.isEmpty else { return 0 }
         var count = 0
         for i in 0...min(currentIndex, targetMemos.count - 1) {
             if !skippedIndices.contains(i) { count += 1 }
@@ -722,6 +723,7 @@ struct QuickSortView: View {
 
     // 前後のメモのサジェストを先読み
     private func prefetchSuggestions() {
+        guard !targetMemos.isEmpty else { return }
         let prefetchRange = max(0, currentIndex - 1)...min(targetMemos.count - 1, currentIndex + 2)
         for i in prefetchRange {
             if suggestCache[i] == nil && !skippedIndices.contains(i) {
