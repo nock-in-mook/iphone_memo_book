@@ -607,13 +607,12 @@ struct MainView: View {
     private func applySuggestion(_ suggestion: TagSuggestEngine.Suggestion) {
         if suggestion.kind == .newTag {
             // 新規タグ作成（親タグとして追加）
-            let newTag = Tag(name: suggestion.parentName, colorIndex: Int.random(in: 1...27))
-            // sortOrderは既存の最大値+1
+            let colorIndex = pickDistinctColor(tags: tags)
+            let newTag = Tag(name: suggestion.parentName, colorIndex: colorIndex)
             let maxOrder = tags.filter { $0.parentTagID == nil }.map { $0.sortOrder }.max() ?? 0
             newTag.sortOrder = maxOrder + 1
             modelContext.insert(newTag)
             try? modelContext.save()
-            // 作成したタグを選択
             viewModel.selectedTagID = newTag.id
             viewModel.onTagChanged(tags: tags + [newTag])
         } else {
@@ -624,6 +623,114 @@ struct MainView: View {
             viewModel.onTagChanged(tags: tags)
         }
         suggestions = []
+    }
+
+    // RGBから色相(0〜360)を計算
+    private func hueFromColorIndex(_ index: Int) -> Double {
+        // tabColorsのRGB値から色相を算出（TabbedMemoListViewのパレット対応）
+        let rgbTable: [(r: Double, g: Double, b: Double)] = [
+            (0.82, 0.80, 0.76), // 0: タグなし
+            (0.55, 0.80, 0.95), // 1: 水色
+            (0.95, 0.70, 0.55), // 2: オレンジ
+            (0.70, 0.90, 0.70), // 3: 緑
+            (0.90, 0.70, 0.90), // 4: 紫
+            (0.95, 0.85, 0.55), // 5: 黄色
+            (0.95, 0.60, 0.60), // 6: 赤
+            (0.60, 0.75, 0.95), // 7: 青
+            (0.80, 0.92, 0.98), // 8: ベビーブルー
+            (0.98, 0.85, 0.80), // 9: ピーチ
+            (0.85, 0.95, 0.85), // 10: ミント
+            (0.95, 0.85, 0.95), // 11: ラベンダー
+            (0.98, 0.95, 0.80), // 12: クリーム
+            (0.98, 0.82, 0.82), // 13: サーモンピンク
+            (0.82, 0.88, 0.98), // 14: ペリウィンクル
+            (0.35, 0.65, 0.80), // 15: ティール
+            (0.80, 0.50, 0.35), // 16: テラコッタ
+            (0.40, 0.70, 0.50), // 17: フォレスト
+            (0.65, 0.45, 0.70), // 18: プラム
+            (0.80, 0.70, 0.40), // 19: マスタード
+            (0.75, 0.40, 0.40), // 20: ワインレッド
+            (0.40, 0.55, 0.80), // 21: インディゴ
+            (0.50, 0.85, 0.80), // 22: ターコイズ
+            (0.95, 0.55, 0.40), // 23: コーラル
+            (0.60, 0.82, 0.55), // 24: ライム
+            (0.75, 0.55, 0.85), // 25: アメジスト
+            (0.90, 0.80, 0.50), // 26: ゴールド
+            (0.85, 0.45, 0.55), // 27: ローズ
+            (0.50, 0.65, 0.85), // 28: スレートブルー
+            (0.85, 0.78, 0.68), // 29: サンド
+            (0.72, 0.82, 0.75), // 30: セージ
+            (0.78, 0.72, 0.65), // 31: モカ
+            (0.88, 0.85, 0.78), // 32: アイボリー
+            (0.68, 0.75, 0.70), // 33: オリーブグレー
+            (0.82, 0.70, 0.62), // 34: キャメル
+            (0.75, 0.80, 0.82), // 35: ブルーグレー
+            (0.98, 0.45, 0.52), // 36: ホットピンク
+            (0.30, 0.75, 0.93), // 37: スカイブルー
+            (0.55, 0.88, 0.45), // 38: ブライトグリーン
+            (0.98, 0.75, 0.30), // 39: マンゴー
+            (0.60, 0.40, 0.90), // 40: バイオレット
+            (0.98, 0.42, 0.30), // 41: トマト
+            (0.25, 0.82, 0.75), // 42: エメラルド
+            (0.75, 0.68, 0.72), // 43: モーヴ
+            (0.68, 0.78, 0.75), // 44: ダスティミント
+            (0.82, 0.75, 0.72), // 45: ダスティローズ
+            (0.72, 0.72, 0.80), // 46: ダスティブルー
+            (0.78, 0.80, 0.68), // 47: カーキ
+            (0.80, 0.68, 0.68), // 48: ベージュピンク
+            (0.68, 0.75, 0.82), // 49: ストーンブルー
+        ]
+        guard index >= 0 && index < rgbTable.count else { return 0 }
+        let (r, g, b) = rgbTable[index]
+        let maxC = max(r, g, b)
+        let minC = min(r, g, b)
+        let delta = maxC - minC
+        if delta < 0.01 { return 0 } // 無彩色
+        var hue: Double
+        if maxC == r {
+            hue = 60.0 * (((g - b) / delta).truncatingRemainder(dividingBy: 6))
+        } else if maxC == g {
+            hue = 60.0 * (((b - r) / delta) + 2)
+        } else {
+            hue = 60.0 * (((r - g) / delta) + 4)
+        }
+        if hue < 0 { hue += 360 }
+        return hue
+    }
+
+    // 色相の距離（環状）
+    private func hueDist(_ h1: Double, _ h2: Double) -> Double {
+        let d = abs(h1 - h2)
+        return min(d, 360 - d)
+    }
+
+    // 最後尾2タグと異なる系統 ＆ 既存タグと被らない色を選ぶ
+    private func pickDistinctColor(tags: [Tag]) -> Int {
+        let parentTags = tags.filter { $0.parentTagID == nil }
+            .sorted { $0.sortOrder < $1.sortOrder }
+        let usedIndices = Set(parentTags.map { $0.colorIndex })
+
+        // 最後尾2つの色相を取得
+        let tail2Hues: [Double] = parentTags.suffix(2).map { hueFromColorIndex($0.colorIndex) }
+
+        // 候補: 1〜49（全カラーパレット、0=タグなしは除外）
+        let candidates = Array(1...49)
+
+        // 各候補のスコア = 最後尾2色との色相距離の最小値（大きいほど良い）
+        var scored: [(index: Int, dist: Double)] = candidates.map { idx in
+            let hue = hueFromColorIndex(idx)
+            let minDist = tail2Hues.isEmpty ? 180.0 : tail2Hues.map { hueDist(hue, $0) }.min()!
+            return (idx, minDist)
+        }
+        // 色相距離が大きい順にソート
+        scored.sort { $0.dist > $1.dist }
+
+        // 未使用で最も色相が離れたものを選ぶ
+        if let best = scored.first(where: { !usedIndices.contains($0.index) }) {
+            return best.index
+        }
+        // 全色使われてる場合は色相距離だけで選ぶ
+        return scored.first?.index ?? 1
     }
 
     // デバウンス付きサジェスト更新（1秒待つ）
