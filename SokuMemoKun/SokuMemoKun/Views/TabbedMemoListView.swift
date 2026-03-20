@@ -2113,25 +2113,24 @@ struct MemoCardView: View {
             .shadow(color: .black.opacity(0.06), radius: 1, x: 0, y: 1)
         } else {
             // 通常カードモード
-            ZStack(alignment: .topTrailing) {
-                VStack(alignment: .leading, spacing: 2) {
-                    if !memo.title.isEmpty {
-                        Text(memo.title)
-                            .font(.system(size: titleFont, weight: .semibold, design: .rounded))
-                            .lineLimit(1)
-                            .truncationMode(.tail)
-                    }
-
-                    Text(memo.content)
-                        .font(.system(size: bodyFont))
-                        .foregroundStyle(.secondary)
-                        .lineLimit(bodyLines == 0 ? nil : bodyLines)
+            VStack(alignment: .leading, spacing: 2) {
+                if !memo.title.isEmpty {
+                    Text(memo.title)
+                        .font(.system(size: titleFont, weight: .semibold, design: .rounded))
+                        .lineLimit(1)
                         .truncationMode(.tail)
                 }
-                .frame(maxWidth: .infinity, alignment: .topLeading)
-                .padding(cardPadding)
 
-                // 右上マーク
+                Text(memo.content)
+                    .font(.system(size: bodyFont))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(bodyLines == 0 ? nil : bodyLines)
+                    .truncationMode(.tail)
+            }
+            .frame(maxWidth: .infinity, alignment: .topLeading)
+            .padding(cardPadding)
+            .overlay(alignment: .topTrailing) {
+                // 右上マーク（overlayでテキスト幅に影響させない）
                 VStack(spacing: 2) {
                     if memo.isLocked {
                         Image(systemName: "lock.fill")
