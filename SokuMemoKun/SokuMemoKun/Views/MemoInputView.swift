@@ -242,7 +242,7 @@ struct MemoInputView: View {
                     }
                     // 文字数カウンター（フロートバッジ）
                     if showCharCount && !viewModel.inputText.isEmpty {
-                        Text("\(viewModel.inputText.count)文字")
+                        Text("\(viewModel.inputText.count.formatted())文字")
                             .font(.system(size: 10, design: .monospaced))
                             .foregroundStyle(.secondary)
                             .padding(.horizontal, 6)

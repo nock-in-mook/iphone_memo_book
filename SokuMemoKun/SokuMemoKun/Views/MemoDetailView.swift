@@ -246,7 +246,7 @@ struct MemoDetailView: View {
 
                 // 文字数カウンター（フロートバッジ）
                 if showCharCount && !editText.isEmpty {
-                    Text("\(editText.count)文字")
+                    Text("\(editText.count.formatted())文字")
                         .font(.system(size: 10, design: .monospaced))
                         .foregroundStyle(.secondary)
                         .padding(.horizontal, 6)
