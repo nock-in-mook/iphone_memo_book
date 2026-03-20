@@ -35,19 +35,19 @@ private let tabColors: [Color] = [
     Color(red: 0.82, green: 0.88, blue: 0.98),  // ペリウィンクル
     // 15〜21: 深め
     Color(red: 0.35, green: 0.65, blue: 0.80),  // ティール
-    Color(red: 0.80, green: 0.50, blue: 0.35),  // テラコッタ
+    Color(red: 0.85, green: 0.60, blue: 0.45),  // テラコッタ
     Color(red: 0.40, green: 0.70, blue: 0.50),  // フォレスト
-    Color(red: 0.65, green: 0.45, blue: 0.70),  // プラム
+    Color(red: 0.75, green: 0.58, blue: 0.78),  // プラム
     Color(red: 0.80, green: 0.70, blue: 0.40),  // マスタード
-    Color(red: 0.75, green: 0.40, blue: 0.40),  // ワインレッド
-    Color(red: 0.40, green: 0.55, blue: 0.80),  // インディゴ
+    Color(red: 0.82, green: 0.52, blue: 0.52),  // ワインレッド
+    Color(red: 0.52, green: 0.62, blue: 0.85),  // インディゴ
     // 22〜28: アクセント
     Color(red: 0.50, green: 0.85, blue: 0.80),  // ターコイズ
     Color(red: 0.95, green: 0.55, blue: 0.40),  // コーラル
     Color(red: 0.60, green: 0.82, blue: 0.55),  // ライム
     Color(red: 0.75, green: 0.55, blue: 0.85),  // アメジスト
     Color(red: 0.90, green: 0.80, blue: 0.50),  // ゴールド
-    Color(red: 0.85, green: 0.45, blue: 0.55),  // ローズ
+    Color(red: 0.88, green: 0.55, blue: 0.62),  // ローズ
     Color(red: 0.50, green: 0.65, blue: 0.85),  // スレートブルー
     // 29〜35: ナチュラル系
     Color(red: 0.85, green: 0.78, blue: 0.68),  // サンド
@@ -62,7 +62,7 @@ private let tabColors: [Color] = [
     Color(red: 0.30, green: 0.75, blue: 0.93),  // スカイブルー
     Color(red: 0.55, green: 0.88, blue: 0.45),  // ブライトグリーン
     Color(red: 0.98, green: 0.75, blue: 0.30),  // マンゴー
-    Color(red: 0.60, green: 0.40, blue: 0.90),  // バイオレット
+    Color(red: 0.68, green: 0.52, blue: 0.92),  // バイオレット
     Color(red: 0.98, green: 0.42, blue: 0.30),  // トマト
     Color(red: 0.25, green: 0.82, blue: 0.75),  // エメラルド
     // 43〜49: くすみ系（ニュアンスカラー）
@@ -79,7 +79,7 @@ private let tabColors: [Color] = [
     Color(red: 0.72, green: 0.58, blue: 0.52),  // ココア
     Color(red: 0.62, green: 0.68, blue: 0.82),  // ウェッジウッド
     Color(red: 0.85, green: 0.72, blue: 0.52),  // ハニー
-    Color(red: 0.68, green: 0.52, blue: 0.58),  // ボルドー
+    Color(red: 0.78, green: 0.60, blue: 0.65),  // ボルドー
     Color(red: 0.52, green: 0.72, blue: 0.78),  // ナイルブルー
     // 57〜63: ポップ系
     Color(red: 0.98, green: 0.60, blue: 0.75),  // フラミンゴ
@@ -104,14 +104,14 @@ private let tabColors: [Color] = [
 
 // 色の名前（インデックス対応）
 let tabColorNames: [String] = [
-    "タグなし",           // 0
-    "水色",              // 1
+    "タグナシ",           // 0
+    "スカイ",             // 1
     "オレンジ",           // 2
-    "緑",               // 3
-    "紫",               // 4
-    "黄色",              // 5
-    "赤",               // 6
-    "青",               // 7
+    "グリーン",           // 3
+    "パープル",           // 4
+    "イエロー",           // 5
+    "レッド",             // 6
+    "ブルー",             // 7
     "ベビーブルー",        // 8
     "ピーチ",            // 9
     "ミント",            // 10
@@ -181,7 +181,7 @@ let tabColorNames: [String] = [
 
 // 色名取得関数
 func tagColorName(for index: Int) -> String {
-    guard index >= 0 && index < tabColorNames.count else { return "不明" }
+    guard index >= 0 && index < tabColorNames.count else { return "ノーカラー" }
     return tabColorNames[index]
 }
 
