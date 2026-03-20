@@ -99,19 +99,24 @@ struct MemoInputView: View {
                 }
 
             VStack(spacing: 0) {
-                // ヘッダー: タグ色 + タグ名
+                // ヘッダー: 種別ラベル + 色付きバッジ
                 VStack(spacing: 8) {
-                    Circle()
-                        .fill(tagColor(for: tag.colorIndex))
-                        .frame(width: 32, height: 32)
-                        .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
-
-                    Text(tag.name)
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-
                     Text(longPressedIsChild ? "子タグ" : "親タグ")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary)
+
+                    // タグ名バッジ（色付き）
+                    let displayName = tag.name.count > 10 ? String(tag.name.prefix(10)) + "…" : tag.name
+                    Text(displayName)
+                        .font(.system(size: 15, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 8)
+                        .background(
+                            RoundedRectangle(cornerRadius: 10)
+                                .fill(tagColor(for: tag.colorIndex))
+                                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                        )
                 }
                 .padding(.top, 20)
                 .padding(.bottom, 16)
