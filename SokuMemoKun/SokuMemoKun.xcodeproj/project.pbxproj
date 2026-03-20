@@ -36,6 +36,9 @@
 		TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000007 /* TagSuggestEngine.swift */; };
 		TAGSUG000000000000000A /* TagSuggestDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000009 /* TagSuggestDictionary.json */; };
 		LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = LNTXT00000000000000001 /* LineNumberTextEditor.swift */; };
+		QSORT0000000000000002 /* QuickSortView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000001 /* QuickSortView.swift */; };
+		QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000003 /* QuickSortFilterView.swift */; };
+		QSORT0000000000000006 /* QuickSortResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000005 /* QuickSortResultView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -69,6 +72,9 @@
 		'A1000000000000000000B8' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownToolbar.swift; sourceTree = "<group>"; };
 		'A1000000000000000000B9' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTextEditor.swift; sourceTree = "<group>"; };
 		LNTXT00000000000000001 /* LineNumberTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineNumberTextEditor.swift; sourceTree = "<group>"; };
+		QSORT0000000000000001 /* QuickSortView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortView.swift; sourceTree = "<group>"; };
+		QSORT0000000000000003 /* QuickSortFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortFilterView.swift; sourceTree = "<group>"; };
+		QSORT0000000000000005 /* QuickSortResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortResultView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -138,6 +144,9 @@
 				A1000000000000000000B9,
 				863DCF5D059F41899ADDD158 /* MemoDetailView.swift */,
 				LNTXT00000000000000001 /* LineNumberTextEditor.swift */,
+				QSORT0000000000000001 /* QuickSortView.swift */,
+				QSORT0000000000000003 /* QuickSortFilterView.swift */,
+				QSORT0000000000000005 /* QuickSortResultView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -264,6 +273,9 @@
 				TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */,
 				TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */,
 				LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */,
+				QSORT0000000000000002 /* QuickSortView.swift in Sources */,
+				QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */,
+				QSORT0000000000000006 /* QuickSortResultView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

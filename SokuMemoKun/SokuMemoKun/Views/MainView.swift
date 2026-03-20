@@ -26,6 +26,10 @@ struct MainView: View {
     @State private var pendingSaveTagID: UUID? = nil
     // フォルダタブ並び替えモード中フラグ
     @State private var isTabReorderMode = false
+    // 爆速振り分けモード
+    @State private var showQuickSortFilter = false
+    @State private var showQuickSort = false
+    @State private var quickSortMemos: [Memo] = []
     // サジェスト新規タグ作成ダイアログ
     @State private var showNewTagConfirm = false
     @State private var pendingNewTagName = ""
@@ -81,18 +85,35 @@ struct MainView: View {
                             // Specialメニュー用スペース（入力欄とフォルダの間）
                             // 並び替えモード中は非表示（全体を上に詰める）
                             if !isInputExpanded && !isTabReorderMode {
-                                Button {
-                                    withAnimation(.spring(response: 0.35)) {
-                                        isMemoListExpanded = true
+                                HStack(spacing: 0) {
+                                    // 爆速振り分けボタン
+                                    Button {
+                                        showQuickSortFilter = true
+                                    } label: {
+                                        Image(systemName: "bolt.fill")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(.orange.opacity(0.7))
+                                            .frame(width: 44, height: 30)
                                     }
-                                } label: {
-                                    Image(systemName: "chevron.compact.up")
-                                        .font(.system(size: 18, weight: .semibold))
-                                        .foregroundStyle(.secondary.opacity(0.5))
-                                        .frame(maxWidth: .infinity)
-                                        .frame(height: 30)
+                                    .buttonStyle(.plain)
+
+                                    // 中央: メモ一覧最大化
+                                    Button {
+                                        withAnimation(.spring(response: 0.35)) {
+                                            isMemoListExpanded = true
+                                        }
+                                    } label: {
+                                        Image(systemName: "chevron.compact.up")
+                                            .font(.system(size: 18, weight: .semibold))
+                                            .foregroundStyle(.secondary.opacity(0.5))
+                                            .frame(maxWidth: .infinity)
+                                            .frame(height: 30)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    // 右のスペーサー（左右バランス用）
+                                    Color.clear.frame(width: 44, height: 30)
                                 }
-                                .buttonStyle(.plain)
                             }
                         } else {
                             Button {
@@ -258,6 +279,21 @@ struct MainView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: showSavedToast)
+            .sheet(isPresented: $showQuickSortFilter) {
+                QuickSortFilterView { memos in
+                    quickSortMemos = memos
+                    // シートが閉じた後にfullScreenCoverを表示
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                        showQuickSort = true
+                    }
+                }
+            }
+            .fullScreenCover(isPresented: $showQuickSort) {
+                QuickSortView(
+                    targetMemos: quickSortMemos,
+                    onDismiss: { showQuickSort = false }
+                )
+            }
             .sheet(isPresented: $showSettings, onDismiss: {
                 // 設定画面を閉じた時にマスタースイッチの状態を反映
                 if !markdownEnabled {
