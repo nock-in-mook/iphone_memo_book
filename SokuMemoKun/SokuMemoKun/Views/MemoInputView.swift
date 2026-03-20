@@ -220,8 +220,8 @@ struct MemoInputView: View {
                 }
             }
             .overlay(alignment: .bottomLeading) {
-                // 本文クリアボタン（本文があるときだけ表示）
-                if !viewModel.inputText.isEmpty {
+                // 本文クリアボタン（編集中かつ本文があるときだけ表示）
+                if isTextEditorFocused && !viewModel.inputText.isEmpty {
                     Button {
                         showClearBodyAlert = true
                     } label: {
