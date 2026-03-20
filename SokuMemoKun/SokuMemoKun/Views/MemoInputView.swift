@@ -358,20 +358,59 @@ struct MemoInputView: View {
 
     // MARK: - ヘッダー
 
+    // タグエリアの最大幅（親タグmax + 子タグmax + めり込み + ×ボタン）
+    private let tagAreaMaxWidth: CGFloat = 180
+
     private var headerRow: some View {
-        HStack(spacing: 6) {
-            TextField("タイトル（任意）", text: $viewModel.titleText)
-                .font(.system(size: 17, weight: .semibold, design: .rounded))
+        HStack(spacing: 0) {
+            // タイトルエリア（残りスペースを使い切る）
+            HStack(spacing: 4) {
+                TextField("タイトル（任意）", text: $viewModel.titleText)
+                    .font(.system(size: 17, weight: .semibold, design: .rounded))
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
-            Spacer()
-
-            // タグ表示（タップでルーレット展開）
-            tagDisplay
-                .onTapGesture {
-                    withAnimation(.spring(response: 0.3)) {
-                        showParentDial = true
+                // タイトル×ボタン（テキストがあるときだけ表示）
+                if !viewModel.titleText.isEmpty {
+                    Button {
+                        viewModel.titleText = ""
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 16))
+                            .foregroundStyle(.secondary.opacity(0.5))
                     }
+                    .buttonStyle(.plain)
                 }
+            }
+
+            // 縦線セパレータ
+            Divider()
+                .frame(height: 24)
+                .padding(.horizontal, 8)
+
+            // タグエリア（固定最大幅）
+            HStack(spacing: 4) {
+                tagDisplay
+                    .onTapGesture {
+                        withAnimation(.spring(response: 0.3)) {
+                            showParentDial = true
+                        }
+                    }
+
+                // タグ×ボタン（タグ選択中のみ表示）
+                if viewModel.selectedTagID != nil {
+                    Button {
+                        viewModel.selectedTagID = nil
+                        viewModel.selectedChildTagID = nil
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.system(size: 14))
+                            .foregroundStyle(.secondary.opacity(0.5))
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .frame(maxWidth: tagAreaMaxWidth, alignment: .trailing)
         }
         .padding(.horizontal, 10)
         .padding(.top, 10)
