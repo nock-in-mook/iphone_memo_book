@@ -340,7 +340,14 @@ struct MainView: View {
                     newTagConfirmDialog
                 }
             }
-            .sheet(isPresented: $showNewTagColorSheet) {
+            .sheet(isPresented: $showNewTagColorSheet, onDismiss: {
+                // タグが作成されなかった（キャンセル）→ ダイアログに戻る
+                if viewModel.selectedTagID == nil || tags.first(where: { $0.name == pendingNewTagName }) == nil {
+                    showNewTagConfirm = true
+                } else {
+                    suggestions = [] // 作成確定で消す
+                }
+            }) {
                 NewTagSheetView(
                     onTagCreated: { newTagID in
                         viewModel.selectedTagID = newTagID
@@ -616,7 +623,7 @@ struct MainView: View {
     // サジェストをタップ → 既存タグ適用 or 新規タグ確認ダイアログ
     private func applySuggestion(_ suggestion: TagSuggestEngine.Suggestion) {
         if suggestion.kind == .newTag {
-            // 新規タグ → 確認ダイアログを表示
+            // 新規タグ → 確認ダイアログを表示（サジェストリストは消さない）
             pendingNewTagName = suggestion.parentName
             showNewTagConfirm = true
         } else {
@@ -625,8 +632,8 @@ struct MainView: View {
                 viewModel.selectedChildTagID = childID
             }
             viewModel.onTagChanged(tags: tags)
+            suggestions = [] // 既存タグ適用時のみ消す
         }
-        suggestions = []
     }
 
     // おまかせカラーで新規タグを即作成
@@ -639,6 +646,7 @@ struct MainView: View {
         try? modelContext.save()
         viewModel.selectedTagID = newTag.id
         viewModel.onTagChanged(tags: tags + [newTag])
+        suggestions = [] // 作成確定で消す
     }
 
     // RGBから色相(0〜360)を計算
