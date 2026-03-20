@@ -390,6 +390,10 @@ struct MemoInputView: View {
             // 既存メモ読み込み時は閲覧モードで開始
             isEditing = false
             isTextEditorFocused = false
+            // 段階的読み込み: ワンフレーム後に残りを読み込む
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                viewModel.finishDeferredLoading()
+            }
         }
         .onChange(of: viewModel.inputText) { _, newValue in
             // 最大文字数制限

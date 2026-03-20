@@ -23,8 +23,14 @@ class MemoInputViewModel {
     var openFullEditor: Bool = false
     // loadMemo中フラグ（onChangeでの子タグリセットを防止）
     var isLoadingMemo: Bool = false
+    // 段階的読み込み中フラグ（auto-save・undoをスキップ）
+    var isDeferredLoading: Bool = false
+    // 段階的読み込みの残りテキスト
+    private var pendingFullText: String?
     // loadMemoが呼ばれた回数（Viewが閲覧モードに切り替えるトリガー）
     var loadMemoCounter: Int = 0
+    // 段階的読み込みの初期表示文字数
+    private static let initialLoadSize = 800
 
     // Undo/Redo（本文・タイトル・タグをまとめてスナップショット）
     private struct Snapshot: Equatable {
@@ -45,6 +51,7 @@ class MemoInputViewModel {
 
     // 変更時に呼ぶ（差分があればスナップショットを保存）
     func pushUndoIfNeeded() {
+        guard !isDeferredLoading else { return }
         let current = currentSnapshot
         if current != lastSnapshot {
             undoStack.append(lastSnapshot)
@@ -91,8 +98,9 @@ class MemoInputViewModel {
         hasText || selectedTagID != nil
     }
 
-    // テキスト変更時の自動保存
+    // テキスト変更時の自動保存（段階的読み込み中はスキップ）
     func onContentChanged(context: ModelContext, tags: [Tag]) {
+        guard !isDeferredLoading else { return }
         let trimmed = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         let titleTrimmed = titleText.trimmingCharacters(in: .whitespacesAndNewlines)
 
@@ -174,11 +182,10 @@ class MemoInputViewModel {
         resetUndoStack()
     }
 
-    // 既存メモを入力欄に読み込む
+    // 既存メモを入力欄に読み込む（長文は段階的に読み込み）
     func loadMemo(_ memo: Memo) {
         isLoadingMemo = true
         editingMemo = memo
-        inputText = memo.content
         titleText = memo.title
         isMarkdown = memo.isMarkdown
         // 親タグ = parentTagIDがnilのタグ、子タグ = parentTagIDがあるタグ
@@ -190,8 +197,30 @@ class MemoInputViewModel {
         // 閲覧追跡
         memo.viewCount += 1
         memo.lastViewedAt = Date()
+
+        // 段階的読み込み: 長文は最初に一部だけ表示
+        let content = memo.content
+        if content.count > Self.initialLoadSize {
+            isDeferredLoading = true
+            inputText = String(content.prefix(Self.initialLoadSize))
+            pendingFullText = content
+        } else {
+            inputText = content
+            pendingFullText = nil
+        }
+
         isLoadingMemo = false
         loadMemoCounter += 1
+        resetUndoStack()
+    }
+
+    // 残りテキストの読み込みを完了する（View側からワンフレーム後に呼ぶ）
+    func finishDeferredLoading() {
+        guard let fullText = pendingFullText else { return }
+        isDeferredLoading = true
+        inputText = fullText
+        pendingFullText = nil
+        isDeferredLoading = false
         resetUndoStack()
     }
 
