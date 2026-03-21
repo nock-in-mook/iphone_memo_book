@@ -67,6 +67,10 @@ struct TagDialView: View {
     @State private var childIsDragging = false
     @State private var childIsInternalChange = false
 
+    // sync抑制タイマー（onEnded後にsyncが暴発するのを防止）
+    @State private var parentSettling = false
+    @State private var childSettling = false
+
     // 長押しメニュー用
     @State private var longPressedSectorID: String?
     @State private var longPressedSectorIsChild = false
@@ -123,22 +127,47 @@ struct TagDialView: View {
                         parentRotation = clampedRotation(rawRot, count: parentOptions.count)
                     }
                 }
-                .onEnded { _ in
+                .onEnded { value in
                     if parentIsDragging {
+                        // snapTimerが走っていたらキャンセル
+                        snapTimer?.invalidate()
+                        snapTimer = nil
                         let snapped = clampedSnap(parentRotation, count: parentOptions.count)
-                        withAnimation(.spring(response: 0.3)) { parentRotation = snapped }
+                        // 移動量が小さければアニメーションなしで即スナップ
+                        let delta = abs(parentRotation - snapped)
+                        if delta < itemAngle * 0.3 {
+                            parentRotation = snapped
+                        } else {
+                            withAnimation(.easeOut(duration: 0.15)) { parentRotation = snapped }
+                        }
                         parentDragStart = snapped
                         parentIsInternalChange = true
+                        parentSettling = true
                         updateParentSelection()
                         parentIsDragging = false
+                        // 0.5秒後にsettling解除
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            parentSettling = false
+                        }
                     }
                     if childIsDragging {
+                        snapTimer?.invalidate()
+                        snapTimer = nil
                         let snapped = clampedSnap(childRotation, count: childOptions.count)
-                        withAnimation(.spring(response: 0.3)) { childRotation = snapped }
+                        let delta = abs(childRotation - snapped)
+                        if delta < itemAngle * 0.3 {
+                            childRotation = snapped
+                        } else {
+                            withAnimation(.easeOut(duration: 0.15)) { childRotation = snapped }
+                        }
                         childDragStart = snapped
                         childIsInternalChange = true
+                        childSettling = true
                         updateChildSelection()
                         childIsDragging = false
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            childSettling = false
+                        }
                     }
                 }
         )
@@ -156,20 +185,30 @@ struct TagDialView: View {
                 childRotation = clampedRotation(rawRot, count: childOptions.count)
             } else if childIsDragging {
                 let snapped = clampedSnap(childRotation, count: childOptions.count)
-                withAnimation(.spring(response: 0.3)) { childRotation = snapped }
+                withAnimation(.easeOut(duration: 0.15)) { childRotation = snapped }
                 childDragStart = snapped
                 childIsInternalChange = true
+                childSettling = true
                 updateChildSelection()
                 childIsDragging = false
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                    childSettling = false
+                }
             }
         }
-        .onChange(of: parentSelectedID) { _, _ in
-            if parentIsInternalChange { parentIsInternalChange = false }
-            else { syncParentRotation() }
+        .onChange(of: parentSelectedID) { old, new in
+            if parentIsInternalChange {
+                parentIsInternalChange = false
+            } else {
+                syncParentRotation()
+            }
         }
-        .onChange(of: childSelectedID) { _, _ in
-            if childIsInternalChange { childIsInternalChange = false }
-            else { syncChildRotation() }
+        .onChange(of: childSelectedID) { old, new in
+            if childIsInternalChange {
+                childIsInternalChange = false
+            } else {
+                syncChildRotation()
+            }
         }
         // 長押しメニューはMemoInputView側で表示（onLongPressコールバック経由）
     }
@@ -892,6 +931,10 @@ struct TagDialView: View {
     @State private var snapTimer: Timer?
 
     private func snapToTag(index: Int, isChild: Bool) {
+        // ドラッグ中・settling中はタップスナップを無視
+        if parentIsDragging || childIsDragging { return }
+        if isChild && childSettling { return }
+        if !isChild && parentSettling { return }
         let target = CGFloat(index) * itemAngle
         let current = isChild ? childRotation : parentRotation
         let totalDelta = target - current
@@ -974,18 +1017,32 @@ struct TagDialView: View {
     // MARK: - 同期・選択
 
     private func syncParentRotation() {
+        // ドラッグ中・snapTimer動作中・settling中は外部syncを拒否
+        guard !parentIsDragging, !parentSettling, snapTimer == nil else {
+            return
+        }
         let targetID = parentSelectedID?.uuidString ?? "none"
         if let index = parentOptions.firstIndex(where: { $0.id == targetID }) {
             let target = CGFloat(index) * itemAngle
+            // 既に正しい位置にいるなら何もしない
+            let currentIndex = snappedIndex(rotation: parentRotation, count: parentOptions.count)
+            guard currentIndex != index else { return }
             withAnimation(.easeOut(duration: 0.2)) { parentRotation = target }
             parentDragStart = target
         }
     }
 
     private func syncChildRotation() {
+        // ドラッグ中・snapTimer動作中・settling中は外部syncを拒否
+        guard !childIsDragging, !childSettling, snapTimer == nil else {
+            return
+        }
         let targetID = childSelectedID?.uuidString ?? "none"
         if let index = childOptions.firstIndex(where: { $0.id == targetID }) {
             let target = CGFloat(index) * itemAngle
+            // 既に正しい位置にいるなら何もしない
+            let currentIndex = snappedIndex(rotation: childRotation, count: childOptions.count)
+            guard currentIndex != index else { return }
             withAnimation(.easeOut(duration: 0.2)) { childRotation = target }
             childDragStart = target
         }
