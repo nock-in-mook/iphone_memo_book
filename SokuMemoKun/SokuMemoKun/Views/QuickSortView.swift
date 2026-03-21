@@ -67,6 +67,7 @@ struct QuickSortView: View {
 
     // 準備中
     @State private var loadingProgress = 0
+    @State private var carouselAppeared = false  // 登場アニメーション
 
     // 終了確認
     @State private var showExitConfirm = false
@@ -139,6 +140,13 @@ struct QuickSortView: View {
                 case .carousel:
                     if !activeMemos.isEmpty {
                         mainContent(geo: geo)
+                            .scaleEffect(carouselAppeared ? 1.0 : 0.85)
+                            .opacity(carouselAppeared ? 1.0 : 0)
+                            .onAppear {
+                                withAnimation(.spring(response: 0.5, dampingFraction: 0.7)) {
+                                    carouselAppeared = true
+                                }
+                            }
                     } else {
                         VStack(spacing: 12) {
                             Image(systemName: "checkmark.circle.fill")
@@ -234,13 +242,19 @@ struct QuickSortView: View {
         }
         .onAppear { }
         .onChange(of: scrolledMemoID) { oldID, newID in
-            // 前のメモを保存（oldIDで特定）
-            if let oldID = oldID, let oldMemo = activeMemos.first(where: { $0.id == oldID }) {
-                saveToMemo(oldMemo)
-            }
-            // 新しいメモに同期
+            // 新しいメモのタイトル・内容を即座に同期（チラつき防止）
             if let newID = newID, let memo = activeMemos.first(where: { $0.id == newID }) {
                 syncEditingState(for: memo)
+            }
+            // 前のメモの保存は遅延（スクロールをブロックしない＋連続スワイプ対応）
+            if let oldID = oldID {
+                let capturedNewID = newID
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                    guard scrolledMemoID == capturedNewID else { return }
+                    if let oldMemo = activeMemos.first(where: { $0.id == oldID }) {
+                        saveToMemo(oldMemo)
+                    }
+                }
             }
         }
         .onChange(of: selectedParentTagID) { _, _ in
