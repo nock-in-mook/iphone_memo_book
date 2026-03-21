@@ -1050,3 +1050,14 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - 爆速スクロール設計: 次セッションで「セル内包方式」実装予定
   - カード+ルーレット+サジェストを1つのCollectionViewセルに含め、State変更ゼロを目指す
 - ブランチ: feature/uikit-carousel（mainマージ前）
+
+---
+## メモレット_040_セル内包方式大工事 (2026-03-21)
+
+- セル内包方式の大工事実施（feature/uikit-carousel）
+- QuickSortCellView.swift 新規作成: カード+サジェスト+ルーレットを1セルに統合
+- 各セルが独立@Stateでタグ管理 → 親ビュー再描画ゼロ
+- CarouselView: フルページ方式(spacing:0)に変更
+- QuickSortView: 共有State大幅削除（512行追加/589行削除）
+- シミュレータビルド成功・起動確認済み
+
