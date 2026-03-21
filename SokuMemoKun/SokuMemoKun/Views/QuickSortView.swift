@@ -652,6 +652,7 @@ struct QuickSortView: View {
                 .fill(Color.gray)
                 .shadow(color: .black.opacity(0.2), radius: 3, x: -2, y: 0)
         )
+        .clipShape(RoundedRectangle(cornerRadius: 10))
     }
 
     // MARK: - 削除確認シート
