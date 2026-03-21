@@ -152,22 +152,29 @@ struct QuickSortView: View {
         let cardWidth = geo.size.width * 0.78
 
         VStack(spacing: 0) {
-            // ナビバー
+            // ナビバー（×と完了）
             navBar
                 .padding(.horizontal, 16)
-                .padding(.top, 8)
-                .padding(.bottom, 4)
+                .padding(.top, 6)
 
-            // 削除ゾーン
-            deleteZone
-                .frame(height: 36)
+            // カウンター（ドーンと大きく）
+            if !activeMemos.isEmpty {
+                Text("\(currentIndexInActive + 1) / \(activeMemos.count)")
+                    .font(.system(size: 28, weight: .black, design: .rounded))
+                    .foregroundStyle(.primary)
+                    .padding(.top, 4)
+            }
+
+            // 3方向矢印ガイド（三角配置）
+            arrowGuide
+                .padding(.top, 2)
 
             // タイトル（枠付き）
             titleArea
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
 
-            // カルーセル（横スクロール・スナップ付き）
+            // カルーセル（本文カード + タグバッジ重ね）
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(activeMemos, id: \.id) { memo in
@@ -182,40 +189,25 @@ struct QuickSortView: View {
             .scrollPosition(id: $scrolledMemoID)
             .padding(.top, 4)
 
-            // カウンター
-            if !activeMemos.isEmpty {
-                Text("\(currentIndexInActive + 1) / \(activeMemos.count)")
-                    .font(.system(size: 13, weight: .bold, design: .rounded))
-                    .foregroundStyle(.secondary.opacity(0.5))
-                    .padding(.top, 2)
-            }
-
-            // タグ表示（高さ固定）
-            if let memo = currentMemo {
-                currentTagsBar(memo: memo)
-                    .padding(.horizontal, 16)
-                    .padding(.top, 4)
-                    .frame(height: 28)
-            }
-
-            // 下部: サジェスト(左) + ルーレット(右) — 高さ固定でガタつき防止
+            // 下部: サジェスト(左) + ルーレット(右)
             HStack(alignment: .top, spacing: 0) {
                 suggestPanel
                     .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                 dialArea
             }
             .frame(height: 215)
+            .padding(.top, 4)
         }
     }
 
-    // MARK: - カルーセルのカード1枚
+    // MARK: - カルーセルのカード1枚（右下にタグバッジ重ね）
 
     @ViewBuilder
     private func cardItem(memo: Memo, width: CGFloat, height: CGFloat) -> some View {
         let isDeleting = deletingMemoID == memo.id
 
-        ZStack(alignment: .bottomLeading) {
-            // カード本体
+        ZStack(alignment: .bottomTrailing) {
+            // カード本体（テキスト表示のみ）
             VStack(alignment: .leading, spacing: 0) {
                 Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
                     .font(.system(size: 13))
@@ -228,12 +220,13 @@ struct QuickSortView: View {
             .cornerRadius(14)
             .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
 
-            // 「本文を確認」ボタン
+            // タグバッジ（右下、カードに被る形）
+            tagBadge(for: memo)
+                .offset(x: -8, y: 6)
+
+            // 「本文を確認」ボタン（左下）
             Button {
-                // まず現在のメモに同期
-                if scrolledMemoID != memo.id {
-                    scrolledMemoID = memo.id
-                }
+                if scrolledMemoID != memo.id { scrolledMemoID = memo.id }
                 showContentEditor = true
             } label: {
                 HStack(spacing: 4) {
@@ -246,6 +239,7 @@ struct QuickSortView: View {
                 .background(Capsule().fill(Color(uiColor: .secondarySystemBackground).opacity(0.8)))
             }
             .buttonStyle(.plain)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
             .padding(8)
         }
         .frame(width: width, height: height)
@@ -254,7 +248,6 @@ struct QuickSortView: View {
         .simultaneousGesture(
             DragGesture(minimumDistance: 20)
                 .onChanged { value in
-                    // 縦方向が支配的で上方向のときだけ反応
                     let t = value.translation
                     if t.height < -15 && abs(t.height) > abs(t.width) * 1.5 {
                         deletingMemoID = memo.id
@@ -278,7 +271,56 @@ struct QuickSortView: View {
         )
     }
 
-    // MARK: - ナビバー
+    // MARK: - タグバッジ（親+子タグ重ね表示、カード右下に被る）
+
+    @ViewBuilder
+    private func tagBadge(for memo: Memo) -> some View {
+        let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
+        let childTag = memo.tags.first(where: { $0.parentTagID != nil })
+
+        if parentTag != nil || childTag != nil {
+            ZStack(alignment: .topTrailing) {
+                // 親タグ（下層）
+                if let pt = parentTag {
+                    Text(pt.name)
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 5)
+                        .background(
+                            Capsule().fill(tagColor(for: pt.colorIndex))
+                                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                        )
+                }
+
+                // 子タグ（上層・右上にずらして重ねる）
+                if let ct = childTag {
+                    Text(ct.name)
+                        .font(.system(size: 10, weight: .bold, design: .rounded))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 3)
+                        .background(
+                            Capsule().fill(tagColor(for: ct.colorIndex))
+                                .shadow(color: .black.opacity(0.15), radius: 2, y: 1)
+                        )
+                        .offset(x: 8, y: -12)
+                }
+            }
+        } else {
+            // タグなし
+            Text("タグなし")
+                .font(.system(size: 11, weight: .medium, design: .rounded))
+                .foregroundStyle(.secondary.opacity(0.5))
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .background(
+                    Capsule().fill(Color.gray.opacity(0.12))
+                )
+        }
+    }
+
+    // MARK: - ナビバー（×と完了のみ）
 
     private var navBar: some View {
         HStack {
@@ -302,24 +344,43 @@ struct QuickSortView: View {
         }
     }
 
-    // MARK: - 削除ゾーン
+    // MARK: - 3方向矢印ガイド（三角配置）
 
-    private var deleteZone: some View {
-        let isActive = deletingMemoID != nil && deleteOffset < -30
-        return ZStack {
-            RoundedRectangle(cornerRadius: 12)
-                .fill(isActive ? Color.red.opacity(0.2) : Color.red.opacity(0.04))
-                .animation(.easeOut(duration: 0.15), value: isActive)
-            HStack(spacing: 6) {
+    private var arrowGuide: some View {
+        let isDeleteActive = deletingMemoID != nil && deleteOffset < -30
+
+        return VStack(spacing: 2) {
+            // 上: 削除（赤）
+            VStack(spacing: 0) {
                 Image(systemName: "arrow.up")
-                    .font(.system(size: isActive ? 22 : 14, weight: .bold))
+                    .font(.system(size: isDeleteActive ? 24 : 18, weight: .black))
                 Text("削除")
-                    .font(.system(size: isActive ? 18 : 13, weight: .bold, design: .rounded))
+                    .font(.system(size: isDeleteActive ? 14 : 11, weight: .bold, design: .rounded))
             }
-            .foregroundStyle(isActive ? .red : .red.opacity(0.25))
-            .animation(.easeOut(duration: 0.15), value: isActive)
+            .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.35))
+            .animation(.easeOut(duration: 0.15), value: isDeleteActive)
+
+            // 下: 左右（青）
+            HStack(spacing: 40) {
+                // 左: 前
+                HStack(spacing: 2) {
+                    Image(systemName: "arrow.left")
+                        .font(.system(size: 14, weight: .bold))
+                    Text("前")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                }
+                .foregroundStyle(.blue.opacity(0.3))
+
+                // 右: 次
+                HStack(spacing: 2) {
+                    Text("次")
+                        .font(.system(size: 11, weight: .bold, design: .rounded))
+                    Image(systemName: "arrow.right")
+                        .font(.system(size: 14, weight: .bold))
+                }
+                .foregroundStyle(.blue.opacity(0.3))
+            }
         }
-        .padding(.horizontal, 16)
     }
 
     // MARK: - タイトル（枠付き）
@@ -370,31 +431,6 @@ struct QuickSortView: View {
         }
     }
 
-    // MARK: - タグ表示
-
-    @ViewBuilder
-    private func currentTagsBar(memo: Memo) -> some View {
-        HStack(spacing: 6) {
-            ForEach(memo.tags, id: \.id) { tag in
-                HStack(spacing: 4) {
-                    Circle().fill(tagColor(for: tag.colorIndex)).frame(width: 8, height: 8)
-                    Text(tag.name).font(.system(size: 12, weight: .medium)).foregroundStyle(.secondary)
-                }
-                .padding(.horizontal, 8)
-                .padding(.vertical, 4)
-                .background(Capsule().fill(tagColor(for: tag.colorIndex).opacity(0.15)))
-            }
-            if memo.tags.isEmpty {
-                Text("タグなし")
-                    .font(.system(size: 12))
-                    .foregroundStyle(.secondary.opacity(0.4))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 4)
-                    .background(Capsule().fill(Color.gray.opacity(0.1)))
-            }
-            Spacer()
-        }
-    }
 
     // MARK: - サジェストパネル（枠付き）
 
