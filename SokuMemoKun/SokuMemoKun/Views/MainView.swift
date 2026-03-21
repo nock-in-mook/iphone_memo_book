@@ -290,14 +290,11 @@ struct MainView: View {
             .animation(.easeInOut(duration: 0.3), value: showSavedToast)
             .sheet(isPresented: $showQuickSortFilter) {
                 QuickSortFilterView { memos in
-                    quickSortMemos = memos
-                    // シートを閉じると同時にfullScreenCoverを予約
-                    showQuickSortFilter = false
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                        if !quickSortMemos.isEmpty {
-                            quickSortItem = QuickSortItem(memos: quickSortMemos)
-                            quickSortMemos = []
-                        }
+                    // fullScreenCoverを先に出す（シートの上に被さる）
+                    quickSortItem = QuickSortItem(memos: memos)
+                    // その後シートを閉じる
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                        showQuickSortFilter = false
                     }
                 }
             }
