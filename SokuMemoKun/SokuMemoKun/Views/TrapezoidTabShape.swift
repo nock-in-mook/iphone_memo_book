@@ -85,6 +85,18 @@ struct CardTitleTabShape: Shape {
     }
 }
 
+// 三角形（上向き）
+struct Triangle: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.midX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addLine(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.closeSubpath()
+        return path
+    }
+}
+
 // タブ＋カード本体を1つの連続パスで描く形状
 // タブとカードの縁取りが途切れず完璧に繋がる
 struct CardWithTabShape: Shape {

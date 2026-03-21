@@ -110,7 +110,7 @@ struct CarouselView: UIViewControllerRepresentable {
         let layout = SnapCenterFlowLayout()
         layout.scrollDirection = .horizontal
         layout.itemSize = CGSize(width: cardWidth, height: cardHeight)
-        layout.minimumLineSpacing = 12
+        layout.minimumLineSpacing = 200
         return layout
     }
 
@@ -180,7 +180,7 @@ struct CarouselView: UIViewControllerRepresentable {
     }
 }
 
-// 中央スナップ付きFlowLayout
+// 中央スナップ付きFlowLayout（velocity考慮で軽いフリックでもページング）
 class SnapCenterFlowLayout: UICollectionViewFlowLayout {
     override func targetContentOffset(
         forProposedContentOffset proposedContentOffset: CGPoint,
@@ -188,26 +188,22 @@ class SnapCenterFlowLayout: UICollectionViewFlowLayout {
     ) -> CGPoint {
         guard let cv = collectionView else { return proposedContentOffset }
 
-        let cvCenter = proposedContentOffset.x + cv.bounds.width / 2
-        let attrs = layoutAttributesForElements(in: CGRect(
-            x: proposedContentOffset.x,
-            y: 0,
-            width: cv.bounds.width,
-            height: cv.bounds.height
-        )) ?? []
+        let currentCenter = cv.contentOffset.x + cv.bounds.width / 2
+        let pageWidth = itemSize.width + minimumLineSpacing
 
-        var closest: UICollectionViewLayoutAttributes?
-        var minDist = CGFloat.greatestFiniteMagnitude
+        // 現在のインデックスを計算
+        let sideInset = (cv.bounds.width - itemSize.width) / 2
+        let currentIndex = round((cv.contentOffset.x + cv.bounds.width / 2 - sideInset - itemSize.width / 2) / pageWidth)
 
-        for attr in attrs {
-            let dist = abs(attr.center.x - cvCenter)
-            if dist < minDist {
-                minDist = dist
-                closest = attr
-            }
+        // velocityに応じて次/前にスナップ（閾値を低く設定）
+        var targetIndex = currentIndex
+        if velocity.x > 0.2 {
+            targetIndex = min(currentIndex + 1, CGFloat(cv.numberOfItems(inSection: 0) - 1))
+        } else if velocity.x < -0.2 {
+            targetIndex = max(currentIndex - 1, 0)
         }
 
-        guard let target = closest else { return proposedContentOffset }
-        return CGPoint(x: target.center.x - cv.bounds.width / 2, y: proposedContentOffset.y)
+        let targetX = targetIndex * pageWidth + sideInset + itemSize.width / 2 - cv.bounds.width / 2
+        return CGPoint(x: max(0, targetX), y: proposedContentOffset.y)
     }
 }

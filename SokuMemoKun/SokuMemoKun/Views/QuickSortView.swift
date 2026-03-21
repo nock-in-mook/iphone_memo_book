@@ -235,38 +235,13 @@ struct QuickSortView: View {
         }
         .onAppear { }
         .onChange(of: scrolledMemoID) { oldID, newID in
-            // スクロール中は軽量な同期のみ（タイトル・内容だけ更新、ルーレットは触らない）
-            if isCarouselScrolling {
-                if let newID = newID, let memo = activeMemos.first(where: { $0.id == newID }) {
-                    editingTitle = memo.title
-                    editingContent = memo.content
-                }
-                // 前のメモの保存は遅延
-                if let oldID = oldID {
-                    let capturedNewID = newID
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-                        guard scrolledMemoID == capturedNewID else { return }
-                        if let oldMemo = activeMemos.first(where: { $0.id == oldID }) {
-                            saveToMemo(oldMemo)
-                        }
-                    }
-                }
-                return
-            }
-            // スクロール停止時はフル同期
-            if let newID = newID, let memo = activeMemos.first(where: { $0.id == newID }) {
-                syncEditingState(for: memo)
-            }
+            // 前のメモを保存
             if let oldID = oldID, let oldMemo = activeMemos.first(where: { $0.id == oldID }) {
                 saveToMemo(oldMemo)
             }
-        }
-        .onChange(of: isCarouselScrolling) { _, isScrolling in
-            // スクロール停止時にフル同期
-            if !isScrolling {
-                if let newID = scrolledMemoID, let memo = activeMemos.first(where: { $0.id == newID }) {
-                    syncEditingState(for: memo)
-                }
+            // 新しいメモに同期
+            if let newID = newID, let memo = activeMemos.first(where: { $0.id == newID }) {
+                syncEditingState(for: memo)
             }
         }
         .onChange(of: selectedParentTagID) { _, _ in
@@ -302,6 +277,16 @@ struct QuickSortView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 2)
 
+            // 上部: サジェスト(左) + ルーレット(右) — スクロール中は更新を止める
+            HStack(alignment: .top, spacing: 0) {
+                suggestPanel
+                    .frame(maxWidth: .infinity, maxHeight: 300, alignment: .topLeading)
+                dialArea
+                    .frame(maxHeight: 300, alignment: .top)
+            }
+            .frame(height: 370, alignment: .top)
+            .clipped()
+
             // カルーセル（UICollectionViewベース）+ 操作ガイドoverlay
             CarouselView(
                 items: activeMemos,
@@ -314,23 +299,36 @@ struct QuickSortView: View {
                     AnyView(cardItem(memo: memo, width: cardWidth, height: geo.size.height * 0.32))
                 }
             )
-            .overlay(alignment: .top) {
+            .overlay(alignment: .bottom) {
                 arrowGuide
-                    .offset(y: 57)
+                    .offset(y: -10)
                     .allowsHitTesting(false)
             }
-
-            // 下部: サジェスト(左) + ルーレット(右) — スクロール中は更新を止める
-            HStack(alignment: .top, spacing: 0) {
-                suggestPanel
-                    .frame(maxWidth: .infinity, maxHeight: 250, alignment: .topLeading)
-                dialArea
-                    .frame(maxHeight: 250, alignment: .top)
+            .overlay {
+                // 左右の三角マーク（大きな青い三角形）
+                HStack {
+                    // 左三角
+                    if currentIndexInActive > 0 {
+                        Triangle()
+                            .fill(Color.blue.opacity(0.5))
+                            .frame(width: 18, height: 40)
+                            .rotationEffect(.degrees(-90))
+                    } else {
+                        Color.clear.frame(width: 18)
+                    }
+                    Spacer()
+                    // 右三角
+                    if currentIndexInActive < activeMemos.count - 1 {
+                        Triangle()
+                            .fill(Color.blue.opacity(0.5))
+                            .frame(width: 18, height: 40)
+                            .rotationEffect(.degrees(90))
+                    } else {
+                        Color.clear.frame(width: 18)
+                    }
+                }
+                .allowsHitTesting(false)
             }
-            .frame(height: 370, alignment: .top)
-            .clipped()
-            .opacity(isCarouselScrolling ? 0.3 : 1.0)
-            .animation(.easeOut(duration: 0.15), value: isCarouselScrolling)
         }
     }
 
@@ -419,20 +417,21 @@ struct QuickSortView: View {
         }
         .frame(width: width, height: height)
         .offset(y: isDeleting ? deleteOffset : 0)
-        .opacity(isDeleting ? max(0.0, 1.0 + Double(deleteOffset) / 300.0) : 1.0)
+        .opacity(isDeleting ? max(0.0, 1.0 - Double(deleteOffset) / 300.0) : 1.0)
         .simultaneousGesture(
             DragGesture(minimumDistance: 20)
                 .onChanged { value in
                     let t = value.translation
-                    if t.height < -15 && abs(t.height) > abs(t.width) * 1.5 {
+                    // 下スワイプで削除
+                    if t.height > 15 && abs(t.height) > abs(t.width) * 1.5 {
                         deletingMemoID = memo.id
                         deleteOffset = t.height
                     }
                 }
                 .onEnded { value in
                     guard deletingMemoID == memo.id else { return }
-                    if value.translation.height < -100 {
-                        withAnimation(.easeOut(duration: 0.2)) { deleteOffset = -500 }
+                    if value.translation.height > 100 {
+                        withAnimation(.easeOut(duration: 0.2)) { deleteOffset = 500 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                             deleteMemo(memo)
                             deletingMemoID = nil
@@ -830,42 +829,17 @@ struct QuickSortView: View {
     // MARK: - 3方向矢印ガイド（三角配置・でかく極太）
 
     private var arrowGuide: some View {
-        let isDeleteActive = deletingMemoID != nil && deleteOffset < -30
+        let isDeleteActive = deletingMemoID != nil && deleteOffset > 30
 
-        return HStack {
-            // 左: 前
-            VStack(spacing: -2) {
-                Image(systemName: "arrow.left")
-                    .font(.system(size: 28, weight: .black))
-                Text("前")
-                    .font(.system(size: 13, weight: .black, design: .rounded))
-            }
-            .foregroundStyle(currentIndexInActive > 0 ? .blue.opacity(0.35) : .gray.opacity(0.15))
-
-            Spacer()
-
-            // 中央: 削除
-            VStack(spacing: -2) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: isDeleteActive ? 38 : 28, weight: .black))
-                Text("削除")
-                    .font(.system(size: isDeleteActive ? 16 : 13, weight: .black, design: .rounded))
-            }
-            .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.35))
-            .animation(.easeOut(duration: 0.15), value: isDeleteActive)
-
-            Spacer()
-
-            // 右: 次
-            VStack(spacing: -2) {
-                Image(systemName: "arrow.right")
-                    .font(.system(size: 28, weight: .black))
-                Text("次")
-                    .font(.system(size: 13, weight: .black, design: .rounded))
-            }
-            .foregroundStyle(currentIndexInActive < activeMemos.count - 1 ? .blue.opacity(0.35) : .gray.opacity(0.15))
+        // 削除ガイド（下向き）
+        return VStack(spacing: -2) {
+            Text("削除")
+                .font(.system(size: isDeleteActive ? 16 : 13, weight: .black, design: .rounded))
+            Image(systemName: "arrow.down")
+                .font(.system(size: isDeleteActive ? 38 : 28, weight: .black))
         }
-        .padding(.horizontal, 16)
+        .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.35))
+        .animation(.easeOut(duration: 0.15), value: isDeleteActive)
     }
 
 
