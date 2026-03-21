@@ -563,10 +563,6 @@ struct QuickSortView: View {
                     ToolbarItem(placement: .topBarLeading) {
                         Button("戻る") { showContentEditor = false }
                     }
-                    ToolbarItem(placement: .topBarTrailing) {
-                        Button("確定") { applyContentEdit(); showContentEditor = false }
-                            .font(.system(size: 15, weight: .bold))
-                    }
                 }
         }
     }
