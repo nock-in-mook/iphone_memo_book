@@ -399,9 +399,9 @@ struct QuickSortView: View {
                 .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
                 .padding(.horizontal, 12)
             }
-            .frame(maxHeight: min(geo.size.height * 0.40, 340))
+            .frame(maxHeight: min(geo.size.height * 0.45, 400))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.top, 44)
+            .padding(.top, 80)
 
             // キーボード収納ボタン（右下）
             VStack {
