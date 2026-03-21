@@ -11,6 +11,7 @@ struct QuickSortCellView: View {
     var suggestEngine: TagSuggestEngine
     let showLeftArrow: Bool
     let showRightArrow: Bool
+    var isActive: Bool = false  // 現在表示中のセルだけtrue → ルーレット状態変更を有効化
 
     // コールバック（親ビューへの通知）
     var onTagChanged: (UUID) -> Void = { _ in }
@@ -49,27 +50,39 @@ struct QuickSortCellView: View {
         }
         .onAppear { initFromMemo() }
         .onChange(of: memo.tags.map(\.id)) { _, _ in initFromMemo() }
-        .onChange(of: selectedParentTagID) { _, _ in
-            if !isInternalTagChange { applyTagFromDial() }
+        .onChange(of: selectedParentTagID) { oldVal, newVal in
+            guard !isInternalTagChange else { return }
+            // 親タグが変わったら子タグをリセット（「子タグなし」にセンタリング）
+            if oldVal != newVal {
+                selectedChildTagID = nil
+            }
+            applyTagFromDial()
         }
         .onChange(of: selectedChildTagID) { _, _ in
-            if !isInternalTagChange { applyTagFromDial() }
+            guard !isInternalTagChange else { return }
+            applyTagFromDial()
         }
     }
 
     // MARK: - 初期化（memo.tagsからローカルStateを設定）
 
     private func initFromMemo() {
-        isInternalTagChange = true
         let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
         let childTag = memo.tags.first(where: { $0.parentTagID != nil })
-        selectedParentTagID = parentTag?.id
-        selectedChildTagID = childTag?.id
+        let newParentID = parentTag?.id
+        let newChildID = childTag?.id
+        // 値が変わった時だけ設定（不要なonChange発火を防止）
+        let needsUpdate = (newParentID != selectedParentTagID) || (newChildID != selectedChildTagID)
+        guard needsUpdate else { return }
+        isInternalTagChange = true
+        selectedParentTagID = newParentID
+        selectedChildTagID = newChildID
         if parentTag != nil {
             let hasChildren = tags.contains(where: { $0.parentTagID == parentTag?.id })
             if hasChildren { showChildDial = true }
         }
-        isInternalTagChange = false
+        // SwiftUIのonChangeは遅延発火するため、asyncでリセット
+        DispatchQueue.main.async { isInternalTagChange = false }
     }
 
     // MARK: - タグ操作（セル内で直接memo.tagsに書き込み）

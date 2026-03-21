@@ -43,7 +43,7 @@
 
 ## 環境
 - **Mac②（新）**: MacBook Air — Xcode 26.3, シミュレータ iPhone 17 Pro (iOS 26.3.1)
-- 実機: 15promax (26.3.1) — デバイスID: 30A153A2-9507-5499-8B3D-341320DA2AB3
+- 実機: 15promax (26.3.1) — デバイスID: 00008130-0006252E2E40001C
 - **ブランチ**: feature/uikit-carousel（mainにマージ前）
 
 ## 注意点

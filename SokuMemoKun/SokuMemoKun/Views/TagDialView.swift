@@ -210,6 +210,11 @@ struct TagDialView: View {
                 syncChildRotation()
             }
         }
+        // 子オプションが変わった時（親タグ切替時）もセンター同期
+        // settlingガードがあるのでドラッグ直後の暴発は防止される
+        .onChange(of: childOptions.map(\.id)) { _, _ in
+            syncChildRotation()
+        }
         // 長押しメニューはMemoInputView側で表示（onLongPressコールバック経由）
     }
 
@@ -1024,9 +1029,8 @@ struct TagDialView: View {
         let targetID = parentSelectedID?.uuidString ?? "none"
         if let index = parentOptions.firstIndex(where: { $0.id == targetID }) {
             let target = CGFloat(index) * itemAngle
-            // 既に正しい位置にいるなら何もしない
-            let currentIndex = snappedIndex(rotation: parentRotation, count: parentOptions.count)
-            guard currentIndex != index else { return }
+            // 既に正しい回転角度にいるなら何もしない
+            guard abs(parentRotation - target) > 0.5 else { return }
             withAnimation(.easeOut(duration: 0.2)) { parentRotation = target }
             parentDragStart = target
         }
@@ -1040,9 +1044,8 @@ struct TagDialView: View {
         let targetID = childSelectedID?.uuidString ?? "none"
         if let index = childOptions.firstIndex(where: { $0.id == targetID }) {
             let target = CGFloat(index) * itemAngle
-            // 既に正しい位置にいるなら何もしない
-            let currentIndex = snappedIndex(rotation: childRotation, count: childOptions.count)
-            guard currentIndex != index else { return }
+            // 既に正しい回転角度にいるなら何もしない
+            guard abs(childRotation - target) > 0.5 else { return }
             withAnimation(.easeOut(duration: 0.2)) { childRotation = target }
             childDragStart = target
         }

@@ -140,6 +140,11 @@ struct CarouselView: UIViewControllerRepresentable {
             DispatchQueue.main.async { self.parent.isScrolling = true }
         }
 
+        // スクロール中にリアルタイムでページ番号を更新
+        func scrollViewDidScroll(_ scrollView: UIScrollView) {
+            reportCenterItem()
+        }
+
         func scrollViewDidEndDecelerating(_ scrollView: UIScrollView) {
             isUserScrolling = false
             DispatchQueue.main.async { self.parent.isScrolling = false }

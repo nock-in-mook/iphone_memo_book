@@ -61,7 +61,7 @@ struct MemoDetailView: View {
     }
 
     private var childOptions: [(id: String, name: String, color: Color)] {
-        var list: [(String, String, Color)] = [("none", "なし", tagColor(for: 0))]
+        var list: [(String, String, Color)] = [("none", "子タグなし", tagColor(for: 0))]
         if let parentID = selectedTagID {
             for tag in allTags where tag.parentTagID == parentID {
                 list.append((tag.id.uuidString, tag.name, tagColor(for: tag.colorIndex)))

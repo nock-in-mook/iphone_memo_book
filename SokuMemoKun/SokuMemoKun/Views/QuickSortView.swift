@@ -230,8 +230,16 @@ struct QuickSortView: View {
         VStack(spacing: 0) {
             // カウンター（一番上）
             if !activeMemos.isEmpty {
-                HStack(alignment: .firstTextBaseline, spacing: 2) {
-                    Text("\(currentIndexInActive + 1)/\(activeMemos.count)")
+                let current = currentIndexInActive + 1
+                let total = activeMemos.count
+                let isLastPage = current == total
+                HStack(alignment: .firstTextBaseline, spacing: 0) {
+                    Text("\(current)")
+                        .font(.system(size: 32, weight: .black, design: .rounded))
+                        .foregroundStyle(isLastPage
+                            ? AnyShapeStyle(.linearGradient(colors: [.red, .orange, .yellow, .green, .blue, .purple], startPoint: .leading, endPoint: .trailing))
+                            : AnyShapeStyle(.blue))
+                    Text("/\(total)")
                         .font(.system(size: 32, weight: .black, design: .rounded))
                         .foregroundStyle(.primary)
                     Text("枚")
@@ -267,6 +275,7 @@ struct QuickSortView: View {
                             suggestEngine: suggestEngine,
                             showLeftArrow: activeIdx > 0,
                             showRightArrow: activeIdx < activeMemos.count - 1,
+                            isActive: memo.id == scrolledMemoID,
                             onTagChanged: { id in taggedMemoIDs.insert(id) },
                             onEditTapped: {
                                 scrolledMemoID = memo.id
