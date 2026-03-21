@@ -43,30 +43,41 @@ struct QuickSortCellView: View {
     @State private var showDeleteConfirm = false
 
     var body: some View {
-        VStack(spacing: 0) {
-            // ── メモカード（タイトル+本文+タグフッター）──
-            memoCard
-                .padding(.horizontal, 16)
-                .padding(.top, 4)
+        GeometryReader { geo in
+            let cardW = geo.size.width * 0.80
+            let cardH = geo.size.height * 0.35  // カード上下幅を控えめに
 
-            // ── ルーレット ──
-            dialArea
-                .frame(height: QuickSortCellView.dialAreaHeight, alignment: .top)
-                .clipped()
-                .padding(.top, 4)
+            VStack(spacing: 0) {
+                Spacer(minLength: 12)
 
-            // ── 仕切り線 ──
-            Rectangle()
-                .fill(Color.secondary.opacity(0.2))
-                .frame(height: 1)
-                .padding(.horizontal, 24)
-                .padding(.top, 2)
+                // ── メモカード（タイトル+本文+タグフッター）──
+                memoCard
+                    .frame(width: cardW, height: cardH)
+                    .frame(maxWidth: .infinity)
 
-            // ── コントロールパネル ──
-            controlPanel
-                .padding(.horizontal, 20)
-                .padding(.top, 6)
-                .padding(.bottom, 8)
+                Spacer(minLength: 10)
+
+                // ── ルーレット ──
+                dialArea
+                    .frame(height: QuickSortCellView.dialAreaHeight, alignment: .top)
+                    .clipped()
+
+                Spacer(minLength: 10)
+
+                // ── 仕切り線 ──
+                Rectangle()
+                    .fill(Color.secondary.opacity(0.2))
+                    .frame(height: 1)
+                    .padding(.horizontal, 30)
+
+                Spacer(minLength: 8)
+
+                // ── コントロールパネル ──
+                controlPanel
+                    .padding(.horizontal, 24)
+
+                Spacer(minLength: 12)
+            }
         }
         .onAppear {
             initFromMemo()
