@@ -27,7 +27,6 @@ struct QuickSortView: View {
 
     // カルーセル: scrollPosition で現在のカードを追跡
     @State private var scrolledMemoID: UUID?
-
     // 上フリック削除用
     @State private var deletingMemoID: UUID? = nil
     @State private var deleteOffset: CGFloat = 0
@@ -259,23 +258,28 @@ struct QuickSortView: View {
         let cardWidth = geo.size.width * 0.78
 
         VStack(spacing: 0) {
+            // カウンター（一番上）
+            if !activeMemos.isEmpty {
+                HStack(alignment: .firstTextBaseline, spacing: 2) {
+                    Text("\(currentIndexInActive + 1)/\(activeMemos.count)")
+                        .font(.system(size: 32, weight: .black, design: .rounded))
+                        .foregroundStyle(.primary)
+                    Text("枚")
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .foregroundStyle(.secondary)
+                }
+                .padding(.top, 4)
+            }
+
             // ナビバー（×と完了）
             navBar
                 .padding(.horizontal, 16)
-                .padding(.top, 6)
-
-            // カウンター（ドーンと大きく）
-            if !activeMemos.isEmpty {
-                Text("\(currentIndexInActive + 1) / \(activeMemos.count)")
-                    .font(.system(size: 32, weight: .black, design: .rounded))
-                    .foregroundStyle(.primary)
-                    .padding(.top, 2)
-            }
+                .padding(.top, 2)
 
             // 通常モード（常に表示、編集中はグレーアウト）
             arrowGuide
-                .padding(.top, 6)
-                .padding(.bottom, 8)
+                .padding(.top, 4)
+                .padding(.bottom, 6)
 
             // カルーセル（タブ付きカード）
             ScrollView(.horizontal, showsIndicators: false) {
@@ -802,39 +806,14 @@ struct QuickSortView: View {
     private var arrowGuide: some View {
         let isDeleteActive = deletingMemoID != nil && deleteOffset < -30
 
-        return VStack(spacing: 0) {
-            // 上: 削除（赤）
-            VStack(spacing: -2) {
-                Image(systemName: "arrow.up")
-                    .font(.system(size: isDeleteActive ? 50 : 40, weight: .black))
-                Text("削除")
-                    .font(.system(size: isDeleteActive ? 22 : 18, weight: .black, design: .rounded))
-            }
-            .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.3))
-            .animation(.easeOut(duration: 0.15), value: isDeleteActive)
-
-            // 下: 左右（青）
-            HStack(spacing: 50) {
-                // 左: 前
-                HStack(spacing: 2) {
-                    Image(systemName: "arrow.left")
-                        .font(.system(size: 30, weight: .black))
-                    Text("前")
-                        .font(.system(size: 18, weight: .black, design: .rounded))
-                }
-                .foregroundStyle(.blue.opacity(0.25))
-
-                // 右: 次
-                HStack(spacing: 2) {
-                    Text("次")
-                        .font(.system(size: 18, weight: .black, design: .rounded))
-                    Image(systemName: "arrow.right")
-                        .font(.system(size: 30, weight: .black))
-                }
-                .foregroundStyle(.blue.opacity(0.25))
-            }
-            .padding(.top, -4)
+        return VStack(spacing: -2) {
+            Image(systemName: "arrow.up")
+                .font(.system(size: isDeleteActive ? 50 : 40, weight: .black))
+            Text("削除")
+                .font(.system(size: isDeleteActive ? 22 : 18, weight: .black, design: .rounded))
         }
+        .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.4))
+        .animation(.easeOut(duration: 0.15), value: isDeleteActive)
     }
 
 
