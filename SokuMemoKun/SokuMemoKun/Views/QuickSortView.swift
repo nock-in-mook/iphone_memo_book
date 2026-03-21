@@ -276,12 +276,7 @@ struct QuickSortView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 2)
 
-            // 通常モード（常に表示、編集中はグレーアウト）
-            arrowGuide
-                .padding(.top, 4)
-                .padding(.bottom, 6)
-
-            // カルーセル（タブ付きカード）
+            // カルーセル（タブ付きカード）+ 操作ガイドoverlay
             ScrollView(.horizontal, showsIndicators: false) {
                 LazyHStack(spacing: 12) {
                     ForEach(activeMemos, id: \.id) { memo in
@@ -295,7 +290,11 @@ struct QuickSortView: View {
             .scrollTargetBehavior(.viewAligned)
             .scrollPosition(id: $scrolledMemoID)
             .scrollDisabled(isCardEditing)
-            .padding(.top, 2)
+            .overlay(alignment: .top) {
+                arrowGuide
+                    .offset(y: 57)
+                    .allowsHitTesting(false)
+            }
 
             // 下部: サジェスト(左) + ルーレット(右)
             HStack(alignment: .top, spacing: 0) {
@@ -806,14 +805,40 @@ struct QuickSortView: View {
     private var arrowGuide: some View {
         let isDeleteActive = deletingMemoID != nil && deleteOffset < -30
 
-        return VStack(spacing: -2) {
-            Image(systemName: "arrow.up")
-                .font(.system(size: isDeleteActive ? 50 : 40, weight: .black))
-            Text("削除")
-                .font(.system(size: isDeleteActive ? 22 : 18, weight: .black, design: .rounded))
+        return HStack {
+            // 左: 前
+            VStack(spacing: -2) {
+                Image(systemName: "arrow.left")
+                    .font(.system(size: 28, weight: .black))
+                Text("前")
+                    .font(.system(size: 13, weight: .black, design: .rounded))
+            }
+            .foregroundStyle(currentIndexInActive > 0 ? .blue.opacity(0.35) : .gray.opacity(0.15))
+
+            Spacer()
+
+            // 中央: 削除
+            VStack(spacing: -2) {
+                Image(systemName: "arrow.up")
+                    .font(.system(size: isDeleteActive ? 38 : 28, weight: .black))
+                Text("削除")
+                    .font(.system(size: isDeleteActive ? 16 : 13, weight: .black, design: .rounded))
+            }
+            .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.35))
+            .animation(.easeOut(duration: 0.15), value: isDeleteActive)
+
+            Spacer()
+
+            // 右: 次
+            VStack(spacing: -2) {
+                Image(systemName: "arrow.right")
+                    .font(.system(size: 28, weight: .black))
+                Text("次")
+                    .font(.system(size: 13, weight: .black, design: .rounded))
+            }
+            .foregroundStyle(currentIndexInActive < activeMemos.count - 1 ? .blue.opacity(0.35) : .gray.opacity(0.15))
         }
-        .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.4))
-        .animation(.easeOut(duration: 0.15), value: isDeleteActive)
+        .padding(.horizontal, 16)
     }
 
 
