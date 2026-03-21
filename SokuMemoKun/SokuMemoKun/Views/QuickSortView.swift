@@ -36,6 +36,10 @@ struct QuickSortView: View {
     // 本文閲覧/編集モード
     @State private var showContentEditor = false
 
+    // タグ追加シート
+    @State private var showNewTagSheet = false
+    @State private var newTagIsChild = false
+
     // サジェスト
     @State private var currentSuggestions: [TagSuggestEngine.Suggestion] = []
     @State private var suggestCache: [Int: [TagSuggestEngine.Suggestion]] = [:]
@@ -123,6 +127,21 @@ struct QuickSortView: View {
         }
         .sheet(isPresented: $showDeleteReview) { deleteReviewSheet }
         .fullScreenCover(isPresented: $showContentEditor) { contentEditorView }
+        .sheet(isPresented: $showNewTagSheet) {
+            NewTagSheetView(
+                parentTagID: newTagIsChild ? selectedParentTagID : nil,
+                onTagCreated: { newTagID in
+                    isInternalTagChange = true
+                    if newTagIsChild {
+                        selectedChildTagID = newTagID
+                    } else {
+                        selectedParentTagID = newTagID
+                    }
+                    isInternalTagChange = false
+                    applyTagFromDial()
+                }
+            )
+        }
         .onAppear {
             logger.warning("onAppear: targetMemos.count = \(self.targetMemos.count)")
             prepareAll()
@@ -539,36 +558,100 @@ struct QuickSortView: View {
         }
     }
 
-    // MARK: - ルーレット（右下）
+    // MARK: - ルーレット（トレー風・常時全開・子タグ常時表示）
 
-    private var dialArea: some View {
+    // ルーレットオプション生成
+    private var parentOptions: [(id: String, name: String, color: Color)] {
         let parentTags = tags.filter { $0.parentTagID == nil }.sorted { $0.sortOrder < $1.sortOrder }
+        return [("none", "タグなし", Color(white: 0.82))] +
+            parentTags.map { ($0.id.uuidString, $0.name, tagColor(for: $0.colorIndex)) }
+    }
+
+    private var childOptions: [(id: String, name: String, color: Color)] {
         let childTags: [Tag] = {
             guard let pid = selectedParentTagID else { return [] }
             return tags.filter { $0.parentTagID == pid }.sorted { $0.name < $1.name }
         }()
-        let parentOptions: [(id: String, name: String, color: Color)] =
-            [("none", "タグなし", Color(white: 0.82))] +
-            parentTags.map { ($0.id.uuidString, $0.name, tagColor(for: $0.colorIndex)) }
-        let childOptions: [(id: String, name: String, color: Color)] =
-            childTags.isEmpty ? [] :
-            [("none", "子タグなし", Color(white: 0.82))] +
+        // 親タグ未選択でも「子タグなし」だけ表示（常時子ダイアル表示のため）
+        return [("none", "子タグなし", Color(white: 0.82))] +
             childTags.map { ($0.id.uuidString, $0.name, tagColor(for: $0.colorIndex)) }
+    }
 
-        return TagDialView(
-            parentOptions: parentOptions,
-            parentSelectedID: $selectedParentTagID,
-            childOptions: childOptions,
-            childSelectedID: $selectedChildTagID,
-            showChild: $showChildDial,
-            isOpen: true,
-            childExternalDragY: $childExternalDragY,
-            onLongPress: nil
-        )
-        .frame(height: 211)
-        .onChange(of: childOptions.count) { _, newCount in
-            if newCount > 0 { showChildDial = true }
+    private var dialArea: some View {
+        VStack(spacing: 0) {
+            // ラベル（親タグ・子タグ）
+            ZStack(alignment: .trailing) {
+                Text("親タグ")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.trailing, 200)
+                Text("子タグ")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .padding(.trailing, 83)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .frame(height: 18)
+
+            // ルーレット本体
+            HStack(spacing: 0) {
+                TagDialView(
+                    parentOptions: parentOptions,
+                    parentSelectedID: $selectedParentTagID,
+                    childOptions: childOptions,
+                    childSelectedID: $selectedChildTagID,
+                    showChild: $showChildDial,
+                    isOpen: true,
+                    childExternalDragY: $childExternalDragY,
+                    onLongPress: nil
+                )
+                .background {
+                    DialEdgeArcShape(radius: 350, dialHeight: 211)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.5), radius: 3, x: -2, y: 0)
+                        .allowsHitTesting(false)
+                }
+                .offset(x: -27, y: -10)
+            }
+            .frame(height: 211)
+
+            // 追加ボタン
+            ZStack(alignment: .trailing) {
+                Button {
+                    showNewTagSheet = true
+                    newTagIsChild = false
+                } label: {
+                    Label("親タグ追加", systemImage: "plus.circle.fill")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                .padding(.trailing, 160)
+
+                Button {
+                    if selectedParentTagID == nil {
+                        // 親タグ未選択時は何もしない
+                    } else {
+                        showNewTagSheet = true
+                        newTagIsChild = true
+                    }
+                } label: {
+                    Label("子タグ追加", systemImage: "plus.circle")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.white.opacity(selectedParentTagID == nil ? 0.3 : 0.7))
+                }
+                .padding(.trailing, 50)
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.vertical, 4)
+            .offset(y: -13)
         }
+        .padding(.top, 6)
+        .padding(.trailing, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color.gray)
+                .shadow(color: .black.opacity(0.2), radius: 3, x: -2, y: 0)
+        )
     }
 
     // MARK: - 削除確認シート
