@@ -234,18 +234,19 @@ struct QuickSortView: View {
         .frame(width: width, height: height)
         .offset(y: isDeleting ? deleteOffset : 0)
         .opacity(isDeleting ? max(0.0, 1.0 + Double(deleteOffset) / 300.0) : 1.0)
-        .gesture(
-            DragGesture(minimumDistance: 10)
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 20)
                 .onChanged { value in
-                    // 上方向のみ（カルーセルの横スクロールと干渉しないように）
-                    if value.translation.height < -10 && abs(value.translation.width) < abs(value.translation.height) {
+                    // 縦方向が支配的で上方向のときだけ反応
+                    let t = value.translation
+                    if t.height < -15 && abs(t.height) > abs(t.width) * 1.5 {
                         deletingMemoID = memo.id
-                        deleteOffset = value.translation.height
+                        deleteOffset = t.height
                     }
                 }
                 .onEnded { value in
+                    guard deletingMemoID == memo.id else { return }
                     if value.translation.height < -100 {
-                        // 上フリック確定 → 削除
                         withAnimation(.easeOut(duration: 0.2)) { deleteOffset = -500 }
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
                             deleteMemo(memo)
