@@ -103,13 +103,8 @@ struct QuickSortCellView: View {
             if !focused { commitTitle() }
         }
         .onChange(of: isActive) { _, active in
-            if active {
-                triggerFlash()
-                // ページ切り替え時にルーレット回転演出
-                spinRouletteToCurrentTag()
-            } else {
-                flashTag = false; flashTitle = false
-            }
+            if active { triggerFlash() }
+            else { flashTag = false; flashTitle = false }
         }
         .overlay {
             if showDeleteConfirm {
@@ -202,35 +197,6 @@ struct QuickSortCellView: View {
             if hasChildren { showChildDial = true }
         }
         DispatchQueue.main.async { isInternalTagChange = false }
-    }
-
-    // ルーレット回転演出: 一度「タグなし」に戻してから実際のタグへ回す
-    private func spinRouletteToCurrentTag() {
-        let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
-        let childTag = memo.tags.first(where: { $0.parentTagID != nil })
-        guard parentTag != nil else { return }  // タグなしなら演出不要
-
-        let targetParentID = parentTag?.id
-        let targetChildID = childTag?.id
-
-        // まず「タグなし」位置へ強制リセット
-        isInternalTagChange = true
-        selectedParentTagID = nil
-        selectedChildTagID = nil
-        isInternalTagChange = false
-
-        // 少し待ってから実際のタグへ回転（TagDialViewのonChangeが回転アニメーション実行）
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.15) {
-            selectedParentTagID = targetParentID
-            if let pid = targetParentID {
-                let hasChildren = tags.contains(where: { $0.parentTagID == pid })
-                if hasChildren { showChildDial = true }
-            }
-            // 子タグは親が回り終わってからセット
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                selectedChildTagID = targetChildID
-            }
-        }
     }
 
     // MARK: - タグ操作
