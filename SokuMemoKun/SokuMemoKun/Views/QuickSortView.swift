@@ -67,7 +67,6 @@ struct QuickSortView: View {
 
     // 準備中
     @State private var loadingProgress = 0
-    @State private var carouselAppeared = false  // 登場アニメーション
 
     // 終了確認
     @State private var showExitConfirm = false
@@ -283,20 +282,17 @@ struct QuickSortView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 2)
 
-            // カルーセル（タブ付きカード）+ 操作ガイドoverlay
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
-                    ForEach(activeMemos, id: \.id) { memo in
-                        cardItem(memo: memo, width: cardWidth, height: geo.size.height * 0.32)
-                            .id(memo.id)
-                    }
+            // カルーセル（UICollectionViewベース）+ 操作ガイドoverlay
+            CarouselView(
+                items: activeMemos,
+                cardWidth: cardWidth,
+                cardHeight: geo.size.height * 0.32,
+                currentMemoID: $scrolledMemoID,
+                isScrollDisabled: isCardEditing,
+                cardContent: { memo in
+                    AnyView(cardItem(memo: memo, width: cardWidth, height: geo.size.height * 0.32))
                 }
-                .scrollTargetLayout()
-                .padding(.horizontal, (geo.size.width - cardWidth) / 2)
-            }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $scrolledMemoID)
-            .scrollDisabled(isCardEditing)
+            )
             .overlay(alignment: .top) {
                 arrowGuide
                     .offset(y: 57)
