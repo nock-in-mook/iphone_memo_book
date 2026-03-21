@@ -545,7 +545,7 @@ struct QuickSortView: View {
             Button {
                 startCurrentSet()
             } label: {
-                Text("セット\(currentSetIndex + 1)を開始")
+                Text("開始")
                     .font(.system(size: 17, weight: .bold, design: .rounded))
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)
@@ -1121,11 +1121,8 @@ struct QuickSortView: View {
                 )
                 cache[i] = result
 
-                // UI更新（数件ごとにまとめて更新）
-                if i % 5 == 0 || i == targetMemos.count - 1 {
-                    await MainActor.run {
-                        loadingProgress = i + 1
-                    }
+                await MainActor.run {
+                    loadingProgress = i + 1
                 }
             }
 
