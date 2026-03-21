@@ -288,15 +288,17 @@ struct MainView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: showSavedToast)
-            .sheet(isPresented: $showQuickSortFilter, onDismiss: {
-                // シートが完全に閉じた後にfullScreenCoverを表示
-                if !quickSortMemos.isEmpty {
-                    quickSortItem = QuickSortItem(memos: quickSortMemos)
-                    quickSortMemos = []
-                }
-            }) {
+            .sheet(isPresented: $showQuickSortFilter) {
                 QuickSortFilterView { memos in
                     quickSortMemos = memos
+                    // シートを閉じると同時にfullScreenCoverを予約
+                    showQuickSortFilter = false
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                        if !quickSortMemos.isEmpty {
+                            quickSortItem = QuickSortItem(memos: quickSortMemos)
+                            quickSortMemos = []
+                        }
+                    }
                 }
             }
             .fullScreenCover(item: $quickSortItem) { item in

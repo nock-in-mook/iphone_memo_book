@@ -376,19 +376,15 @@ struct QuickSortView: View {
                         }
                     } label: {
                         Text("キャンセル")
-                            .font(.system(size: 15))
+                            .font(.system(size: 17, weight: .medium))
                             .foregroundStyle(.white.opacity(0.9))
                     }
-                    Spacer()
-                    Text("編集中")
-                        .font(.system(size: 14, weight: .bold, design: .rounded))
-                        .foregroundStyle(.white.opacity(0.6))
                     Spacer()
                     Button {
                         exitEditMode(discard: false)
                     } label: {
                         Text("確定")
-                            .font(.system(size: 15, weight: .bold))
+                            .font(.system(size: 17, weight: .bold))
                             .foregroundStyle(.orange)
                     }
                 }
