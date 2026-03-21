@@ -23,7 +23,7 @@ struct SokuMemoKunApp: App {
 
     // 全データ削除→バリエーション豊富なサンプル投入
     private static func resetAndInsertSamples(container: ModelContainer) {
-        let key = "sampleDataV9"
+        let key = "sampleDataV10"
         guard !UserDefaults.standard.bool(forKey: key) else { return }
 
         let context = ModelContext(container)
@@ -507,6 +507,44 @@ struct SokuMemoKunApp: App {
             memo.updatedAt = memo.createdAt
 
             context.insert(memo)
+        }
+
+        // ── 古いメモ（3〜12ヶ月前・爆速モードテスト用）──
+        let oldMemoTexts = [
+            "去年のアイデアメモ", "昔書いたレシピ", "旅行の感想",
+            "読みかけの本リスト", "引っ越し前のTODO", "前の職場の連絡先",
+            "古い会議メモ", "半年前の日記", "使ってないサブスク一覧",
+            "ゴールデンウィーク計画", "夏休みの宿題リスト", "年末の大掃除リスト",
+            "去年の目標振り返り", "古いパスワードメモ（要削除）", "昔のプロジェクト反省点",
+            "前期の予算メモ", "去年の健康診断結果", "古いブックマーク整理",
+            "前のスマホの設定メモ", "昔の買い物リスト",
+        ]
+        let oldTitles = [
+            "古いメモ", "去年の記録", "整理候補", "要確認（古い）", "",
+            "思い出メモ", "アーカイブ候補", "", "前期のメモ", "",
+        ]
+        for i in 0..<20 {
+            let m = Memo(content: oldMemoTexts[i % oldMemoTexts.count], isMarkdown: false)
+            m.title = rng.pick(oldTitles)
+            // 3〜12ヶ月前にランダム配置
+            let daysAgo = Double(90 + rng.nextInt(270)) // 90〜360日前
+            let hoursAgo = Double(rng.nextInt(24))
+            m.createdAt = Date().addingTimeInterval(-(daysAgo * 86400 + hoursAgo * 3600))
+            m.updatedAt = m.createdAt
+            // タグ: 40%なし、30%親のみ、30%親+子
+            let roll = rng.nextInt(10)
+            if roll < 4 {
+                // タグなし
+            } else if roll < 7 {
+                m.tags.append(rng.pick(tags.parents))
+            } else {
+                let parent = rng.pick(tags.parents)
+                m.tags.append(parent)
+                if let childList = tags.children[parent.id], !childList.isEmpty {
+                    m.tags.append(rng.pick(childList))
+                }
+            }
+            context.insert(m)
         }
 
         // ── 検索テスト用「Claude」メモ（各タグにランダム個数）──
