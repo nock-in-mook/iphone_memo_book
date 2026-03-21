@@ -20,6 +20,7 @@ struct QuickSortFilterView: View {
     @State private var selectedTagIDs: Set<UUID> = []
 
     var onStart: ([Memo]) -> Void
+    var onCancel: (() -> Void)? = nil
 
     // 3ヶ月前の基準日
     private var threeMonthsAgo: Date {
@@ -209,7 +210,7 @@ struct QuickSortFilterView: View {
 
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("閉じる") { dismiss() }
+                    Button("閉じる") { onCancel?() ?? dismiss() }
                 }
             }
         }

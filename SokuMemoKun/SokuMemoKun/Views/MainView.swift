@@ -4,11 +4,6 @@ import os
 
 private let qsLogger = Logger(subsystem: "com.sokumemokun.app", category: "QuickSort")
 
-// 爆速振り分けモード用のラッパー（fullScreenCover(item:)で確実にデータを渡すため）
-struct QuickSortItem: Identifiable {
-    let id = UUID()
-    let memos: [Memo]
-}
 
 struct MainView: View {
     @State private var viewModel = MemoInputViewModel()
@@ -36,9 +31,7 @@ struct MainView: View {
     // フォルダタブ並び替えモード中フラグ
     @State private var isTabReorderMode = false
     // 爆速振り分けモード
-    @State private var showQuickSortFilter = false
-    @State private var quickSortMemos: [Memo] = []
-    @State private var quickSortItem: QuickSortItem? = nil
+    @State private var showQuickSort = false
     // サジェスト新規タグ作成ダイアログ
     @State private var showNewTagConfirm = false
     @State private var pendingNewTagName = ""
@@ -97,7 +90,7 @@ struct MainView: View {
                                 HStack(spacing: 0) {
                                     // 爆速振り分けボタン
                                     Button {
-                                        showQuickSortFilter = true
+                                        showQuickSort = true
                                     } label: {
                                         Image(systemName: "bolt.fill")
                                             .font(.system(size: 13, weight: .semibold))
@@ -288,21 +281,8 @@ struct MainView: View {
                 }
             }
             .animation(.easeInOut(duration: 0.3), value: showSavedToast)
-            .sheet(isPresented: $showQuickSortFilter) {
-                QuickSortFilterView { memos in
-                    // fullScreenCoverを先に出す（シートの上に被さる）
-                    quickSortItem = QuickSortItem(memos: memos)
-                    // その後シートを閉じる
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                        showQuickSortFilter = false
-                    }
-                }
-            }
-            .fullScreenCover(item: $quickSortItem) { item in
-                QuickSortView(
-                    targetMemos: item.memos,
-                    onDismiss: { quickSortItem = nil }
-                )
+            .fullScreenCover(isPresented: $showQuickSort) {
+                QuickSortView(onDismiss: { showQuickSort = false })
             }
             .sheet(isPresented: $showSettings, onDismiss: {
                 // 設定画面を閉じた時にマスタースイッチの状態を反映

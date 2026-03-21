@@ -9,8 +9,12 @@ struct QuickSortView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
 
-    let targetMemos: [Memo]
     var onDismiss: () -> Void
+
+    // フェーズ管理: フィルタ選択 → 準備中 → カルーセル
+    enum Phase { case filter, loading, carousel }
+    @State private var phase: Phase = .filter
+    @State private var targetMemos: [Memo] = []
 
     @State private var suggestEngine = TagSuggestEngine()
 
@@ -55,8 +59,7 @@ struct QuickSortView: View {
     @State private var deleteQueue: [Memo] = []
     @State private var skippedIndices: Set<Int> = []
 
-    // 準備中フラグ
-    @State private var isLoading = true
+    // 準備中
     @State private var loadingProgress = 0
 
     // 終了確認
@@ -87,7 +90,19 @@ struct QuickSortView: View {
             ZStack {
                 Color(uiColor: .systemGroupedBackground).ignoresSafeArea()
 
-                if isLoading {
+                switch phase {
+                case .filter:
+                    // フィルタ選択画面（fullScreenCover内）
+                    QuickSortFilterView(
+                        onStart: { memos in
+                            targetMemos = memos
+                            phase = .loading
+                            prepareAll()
+                        },
+                        onCancel: { onDismiss() }
+                    )
+
+                case .loading:
                     // 準備中画面
                     VStack(spacing: 16) {
                         Image(systemName: "bolt.fill")
@@ -102,21 +117,24 @@ struct QuickSortView: View {
                             .tint(.orange)
                             .frame(width: 200)
                     }
-                } else if !activeMemos.isEmpty {
-                    mainContent(geo: geo)
-                } else {
-                    VStack(spacing: 12) {
-                        Image(systemName: "checkmark.circle.fill")
-                            .font(.system(size: 48))
-                            .foregroundStyle(.green)
-                        Text("対象のメモがありません")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.secondary)
+
+                case .carousel:
+                    if !activeMemos.isEmpty {
+                        mainContent(geo: geo)
+                    } else {
+                        VStack(spacing: 12) {
+                            Image(systemName: "checkmark.circle.fill")
+                                .font(.system(size: 48))
+                                .foregroundStyle(.green)
+                            Text("対象のメモがありません")
+                                .font(.system(size: 17, weight: .medium))
+                                .foregroundStyle(.secondary)
+                        }
                     }
                 }
 
-                // カード編集モード（背景グレーアウト + カードが浮き上がる）
-                if isCardEditing {
+                // カード編集モード
+                if phase == .carousel && isCardEditing {
                     cardEditOverlay(geo: geo)
                 }
 
@@ -187,10 +205,7 @@ struct QuickSortView: View {
                 }
             )
         }
-        .onAppear {
-            logger.warning("onAppear: targetMemos.count = \(self.targetMemos.count)")
-            prepareAll()
-        }
+        .onAppear { }
         .onChange(of: scrolledMemoID) { oldID, newID in
             // 前のメモを保存（oldIDで特定）
             if let oldID = oldID, let oldMemo = activeMemos.first(where: { $0.id == oldID }) {
@@ -956,7 +971,6 @@ struct QuickSortView: View {
 
     // 起動時に全メモのサジェストを一括計算
     private func prepareAll() {
-        isLoading = true
         loadingProgress = 0
 
         // バックグラウンドで計算してメインスレッドにUI更新
@@ -989,7 +1003,7 @@ struct QuickSortView: View {
                     scrolledMemoID = first.id
                     syncEditingState(for: first)
                 }
-                isLoading = false
+                phase = .carousel
             }
         }
     }
