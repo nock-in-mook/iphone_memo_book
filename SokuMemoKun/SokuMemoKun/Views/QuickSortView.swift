@@ -314,25 +314,78 @@ struct QuickSortView: View {
         let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
         let borderColor = parentTag != nil ? tagColor(for: parentTag!.colorIndex) : Color.clear
 
-        VStack(alignment: .leading, spacing: 0) {
-            // タイトルタブ行（7割幅のタブ + 鉛筆ボタン）
-            HStack(spacing: 6) {
-                // タイトルタブ（7割幅、左端はカード角丸に合わせる）
+        ZStack(alignment: .topLeading) {
+            let tabH: CGFloat = 34
+            let tabW: CGFloat = width * 0.68
+
+            // カード本体（タブ分だけ上にスペース）
+            VStack(alignment: .leading, spacing: 0) {
+                // タブ分のスペーサー
+                Color.clear.frame(height: tabH - 2)
+
+                // 本文
+                Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
+                    .font(.system(size: 13))
+                    .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
+                    .lineLimit(nil)
+                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    .padding(12)
+
+                // タグフッター（右寄せ）
+                HStack(spacing: 6) {
+                    Text("タグ:")
+                        .font(.system(size: 12, weight: .medium))
+                        .foregroundStyle(.secondary)
+
+                    Spacer()
+
+                    if parentTag != nil {
+                        tagBadge(for: memo)
+                    } else {
+                        Text("なし")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.secondary.opacity(0.5))
+                    }
+                }
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .background(Color(uiColor: .secondarySystemBackground).opacity(0.4))
+                .overlay(
+                    Rectangle()
+                        .frame(height: parentTag != nil ? 2 : 0)
+                        .foregroundStyle(borderColor),
+                    alignment: .top
+                )
+            }
+            .background(Color(uiColor: .systemBackground))
+            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 14, bottomTrailingRadius: 14, topTrailingRadius: 14))
+            .overlay(
+                UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 14, bottomTrailingRadius: 14, topTrailingRadius: 14)
+                    .stroke(parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1), lineWidth: 1.5)
+            )
+            .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+
+            // タイトルタブ（左上、7割幅、カードの上に飛び出す）
+            HStack(spacing: 0) {
                 Text(title.isEmpty ? "タイトルなし" : title)
                     .font(.system(size: 16, weight: .bold, design: .rounded))
                     .foregroundColor(title.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
                     .lineLimit(1)
                     .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .frame(maxWidth: width * 0.7, alignment: .leading)
-                    .background(Color(uiColor: .secondarySystemBackground).opacity(0.6))
-                    .clipShape(UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 0, bottomTrailingRadius: 10, topTrailingRadius: 0))
+                    .frame(height: tabH)
+                    .frame(width: tabW, alignment: .leading)
+                    .background(
+                        TrapezoidTabShape()
+                            .fill(parentTag != nil
+                                ? Color(uiColor: .secondarySystemBackground).opacity(0.8)
+                                : Color(uiColor: .secondarySystemBackground).opacity(0.6))
+                    )
                     .overlay(
-                        UnevenRoundedRectangle(topLeadingRadius: 14, bottomLeadingRadius: 0, bottomTrailingRadius: 10, topTrailingRadius: 0)
-                            .stroke(borderColor, lineWidth: parentTag != nil ? 1.5 : 0)
+                        TrapezoidTabShape()
+                            .stroke(parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1), lineWidth: 1.5)
                     )
 
-                // 鉛筆ボタン（タブの右隣）
+                // 鉛筆ボタン（タブの右横、カードの外エリア）
                 Button {
                     if scrolledMemoID != memo.id { scrolledMemoID = memo.id }
                     enterEditMode()
@@ -342,51 +395,9 @@ struct QuickSortView: View {
                         .foregroundStyle(.orange)
                 }
                 .buttonStyle(.plain)
-
-                Spacer()
+                .padding(.leading, 6)
             }
-
-            // 本文
-            Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
-                .font(.system(size: 13))
-                .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                .lineLimit(nil)
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                .padding(12)
-
-            // タグフッター（右寄せ、タグ色縁取り）
-            HStack(spacing: 6) {
-                Text("タグ:")
-                    .font(.system(size: 12, weight: .medium))
-                    .foregroundStyle(.secondary)
-
-                Spacer()
-
-                if parentTag != nil {
-                    tagBadge(for: memo)
-                } else {
-                    Text("なし")
-                        .font(.system(size: 13, weight: .medium))
-                        .foregroundStyle(.secondary.opacity(0.5))
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(Color(uiColor: .secondarySystemBackground).opacity(0.4))
-            .overlay(
-                Rectangle()
-                    .frame(height: parentTag != nil ? 2 : 0)
-                    .foregroundStyle(borderColor),
-                alignment: .top
-            )
         }
-        .background(Color(uiColor: .systemBackground))
-        .cornerRadius(14)
-        .overlay(
-            RoundedRectangle(cornerRadius: 14)
-                .stroke(parentTag != nil ? borderColor.opacity(0.5) : Color.clear, lineWidth: parentTag != nil ? 1.5 : 0)
-        )
-        .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
         .frame(width: width, height: height)
         .offset(y: isDeleting ? deleteOffset : 0)
         .opacity(isDeleting ? max(0.0, 1.0 + Double(deleteOffset) / 300.0) : 1.0)
