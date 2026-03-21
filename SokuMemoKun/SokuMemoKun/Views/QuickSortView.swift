@@ -769,15 +769,24 @@ struct QuickSortView: View {
         updateSuggestions()
     }
 
-    // 指定したメモに現在の編集内容を保存
+    // 指定したメモに現在の編集内容を保存（変更があったときだけupdatedAt更新）
     private func saveToMemo(_ memo: Memo) {
         let origTitle = memo.title
         let origContent = memo.content
-        memo.title = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        memo.content = editingContent
-        if memo.title != origTitle && !memo.title.isEmpty { titledMemoIDs.insert(memo.id) }
-        if memo.content != origContent { editedMemoIDs.insert(memo.id) }
-        memo.updatedAt = Date()
+        let newTitle = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+        var changed = false
+
+        if newTitle != origTitle {
+            memo.title = newTitle
+            if !newTitle.isEmpty { titledMemoIDs.insert(memo.id) }
+            changed = true
+        }
+        if editingContent != origContent {
+            memo.content = editingContent
+            editedMemoIDs.insert(memo.id)
+            changed = true
+        }
+        if changed { memo.updatedAt = Date() }
         isEditingTitle = false
     }
 
@@ -810,9 +819,9 @@ struct QuickSortView: View {
         memo.tags.removeAll()
         if let pid = selectedParentTagID, let tag = tags.first(where: { $0.id == pid }) { memo.tags.append(tag) }
         if let cid = selectedChildTagID, let tag = tags.first(where: { $0.id == cid }) { memo.tags.append(tag) }
-        memo.updatedAt = Date()
         let newTags = Set(memo.tags.map { $0.id })
         if originalTags != newTags {
+            memo.updatedAt = Date()
             taggedMemoIDs.insert(memo.id)
             suggestEngine.learn(title: memo.title, body: memo.content, tagIDs: memo.tags.map { $0.id }, context: modelContext)
         }
