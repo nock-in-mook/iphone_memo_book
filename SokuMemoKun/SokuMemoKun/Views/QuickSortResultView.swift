@@ -8,6 +8,7 @@ struct QuickSortResultView: View {
     let deletedCount: Int
     let deletedMemos: [Memo]
     var onReviewDeleted: () -> Void
+    var onNextSet: (() -> Void)? = nil  // 次のセットがある場合
     var onClose: () -> Void
 
     private var totalActions: Int {
@@ -84,11 +85,17 @@ struct QuickSortResultView: View {
                         .buttonStyle(.plain)
                     }
 
-                    Button {
-                        onClose()
-                    } label: {
-                        Text("完了")
-                            .font(.system(size: 17, weight: .bold, design: .rounded))
+                    if let onNextSet = onNextSet {
+                        // 次のセットへ
+                        Button {
+                            onNextSet()
+                        } label: {
+                            HStack(spacing: 8) {
+                                Text("次のセットへ")
+                                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                                Image(systemName: "arrow.right")
+                                    .font(.system(size: 15, weight: .bold))
+                            }
                             .foregroundStyle(.white)
                             .frame(maxWidth: .infinity)
                             .frame(height: 52)
@@ -96,8 +103,37 @@ struct QuickSortResultView: View {
                                 RoundedRectangle(cornerRadius: 14)
                                     .fill(Color.orange)
                             )
+                        }
+                        .buttonStyle(.plain)
+
+                        // 終了する
+                        Button {
+                            onClose()
+                        } label: {
+                            Text("終了する")
+                                .font(.system(size: 15, weight: .medium))
+                                .foregroundStyle(.secondary)
+                                .frame(maxWidth: .infinity)
+                                .padding(.vertical, 10)
+                        }
+                        .buttonStyle(.plain)
+                    } else {
+                        // 最終セット or 単一セット
+                        Button {
+                            onClose()
+                        } label: {
+                            Text("完了")
+                                .font(.system(size: 17, weight: .bold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .frame(maxWidth: .infinity)
+                                .frame(height: 52)
+                                .background(
+                                    RoundedRectangle(cornerRadius: 14)
+                                        .fill(Color.orange)
+                                )
+                        }
+                        .buttonStyle(.plain)
                     }
-                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)

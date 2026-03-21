@@ -181,19 +181,12 @@ struct QuickSortFilterView: View {
             // 開始ボタン（固定フッター）
             VStack {
                 Button {
-                    let memos = Array(filteredMemos.prefix(50))
-                    onStart(memos)
+                    onStart(filteredMemos)
                 } label: {
                     HStack(spacing: 8) {
                         Image(systemName: "bolt.fill")
-                        let count = filteredCount
-                        if count > 50 {
-                            Text("開始（先頭50 / \(count)件）")
-                                .font(.system(size: 17, weight: .bold, design: .rounded))
-                        } else {
-                            Text("開始（\(count)件）")
-                                .font(.system(size: 17, weight: .bold, design: .rounded))
-                        }
+                        Text("開始（\(filteredCount)件）")
+                            .font(.system(size: 17, weight: .bold, design: .rounded))
                     }
                     .foregroundStyle(.white)
                     .frame(maxWidth: .infinity)

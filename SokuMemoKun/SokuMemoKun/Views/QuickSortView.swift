@@ -11,10 +11,17 @@ struct QuickSortView: View {
 
     var onDismiss: () -> Void
 
-    // フェーズ管理: フィルタ選択 → 準備中 → カルーセル
-    enum Phase { case filter, loading, carousel }
+    // フェーズ管理: フィルタ選択 → セット確認 → 準備中 → カルーセル
+    enum Phase { case filter, setConfirm, loading, carousel }
     @State private var phase: Phase = .filter
-    @State private var targetMemos: [Memo] = []
+
+    // セット管理
+    private let setSize = 50
+    @State private var allFilteredMemos: [Memo] = []  // フィルタ後の全メモ
+    @State private var targetMemos: [Memo] = []       // 現在のセット
+    @State private var currentSetIndex = 0            // 現在のセット番号（0始まり）
+    private var totalSets: Int { max(1, (allFilteredMemos.count + setSize - 1) / setSize) }
+    private var isLastSet: Bool { currentSetIndex >= totalSets - 1 }
 
     @State private var suggestEngine = TagSuggestEngine()
 
@@ -95,12 +102,24 @@ struct QuickSortView: View {
                     // フィルタ選択画面（fullScreenCover内）
                     QuickSortFilterView(
                         onStart: { memos in
-                            targetMemos = memos
-                            phase = .loading
-                            prepareAll()
+                            allFilteredMemos = memos
+                            currentSetIndex = 0
+                            if memos.count > setSize {
+                                // セット確認画面へ
+                                phase = .setConfirm
+                            } else {
+                                // そのまま開始
+                                targetMemos = memos
+                                phase = .loading
+                                prepareAll()
+                            }
                         },
                         onCancel: { onDismiss() }
                     )
+
+                case .setConfirm:
+                    // セット確認画面
+                    setConfirmView
 
                 case .loading:
                     // 準備中画面
@@ -151,6 +170,15 @@ struct QuickSortView: View {
                         deletedCount: deleteQueue.count,
                         deletedMemos: deleteQueue,
                         onReviewDeleted: { showResult = false; showDeleteReview = true },
+                        onNextSet: isLastSet ? nil : {
+                            // 現在のセットの削除を実行
+                            for m in deleteQueue { modelContext.delete(m) }
+                            try? modelContext.save()
+                            showResult = false
+                            // 次のセットへ
+                            currentSetIndex += 1
+                            startCurrentSet()
+                        },
                         onClose: {
                             for m in deleteQueue { modelContext.delete(m) }
                             try? modelContext.save()
@@ -451,6 +479,113 @@ struct QuickSortView: View {
             Button("破棄する", role: .destructive) { exitEditMode(discard: true) }
             Button("編集に戻る", role: .cancel) {}
         }
+    }
+
+    // MARK: - セット確認画面
+
+    private var setConfirmView: some View {
+        VStack(spacing: 0) {
+            Spacer()
+
+            VStack(spacing: 16) {
+                Image(systemName: "rectangle.stack.fill")
+                    .font(.system(size: 44))
+                    .foregroundStyle(.orange)
+
+                Text("セットを組みます")
+                    .font(.system(size: 22, weight: .bold, design: .rounded))
+
+                Text("一度に処理できるのは\(setSize)枚までです。\n下記のようにセットを組んで、順番に処理します。")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary)
+                    .multilineTextAlignment(.center)
+                    .padding(.horizontal, 20)
+
+                // セット一覧
+                VStack(spacing: 0) {
+                    ForEach(0..<totalSets, id: \.self) { i in
+                        let start = i * setSize + 1
+                        let end = min((i + 1) * setSize, allFilteredMemos.count)
+                        let isCurrent = i == currentSetIndex
+
+                        HStack {
+                            Image(systemName: isCurrent ? "play.circle.fill" : "circle")
+                                .font(.system(size: 18))
+                                .foregroundStyle(isCurrent ? .orange : .secondary.opacity(0.3))
+
+                            Text("セット\(i + 1)")
+                                .font(.system(size: 15, weight: isCurrent ? .bold : .medium, design: .rounded))
+
+                            Spacer()
+
+                            Text("\(start)〜\(end)枚目（\(end - start + 1)枚）")
+                                .font(.system(size: 13))
+                                .foregroundStyle(.secondary)
+                        }
+                        .padding(.horizontal, 16)
+                        .padding(.vertical, 10)
+
+                        if i < totalSets - 1 {
+                            Divider().padding(.leading, 50)
+                        }
+                    }
+                }
+                .background(Color(uiColor: .secondarySystemBackground))
+                .cornerRadius(12)
+                .padding(.horizontal, 20)
+
+                Text("途中でいつでも保存・終了できます")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary.opacity(0.6))
+            }
+
+            Spacer()
+
+            // 開始ボタン
+            Button {
+                startCurrentSet()
+            } label: {
+                Text("セット\(currentSetIndex + 1)を開始")
+                    .font(.system(size: 17, weight: .bold, design: .rounded))
+                    .foregroundStyle(.white)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 52)
+                    .background(RoundedRectangle(cornerRadius: 14).fill(Color.orange))
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 8)
+
+            // 閉じるボタン
+            Button {
+                onDismiss()
+            } label: {
+                Text("閉じる")
+                    .font(.system(size: 15))
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 10)
+            }
+            .padding(.bottom, 16)
+        }
+    }
+
+    // 現在のセットのメモを切り出して準備開始
+    private func startCurrentSet() {
+        let start = currentSetIndex * setSize
+        let end = min(start + setSize, allFilteredMemos.count)
+        targetMemos = Array(allFilteredMemos[start..<end])
+
+        // 前セットの状態をリセット
+        deleteQueue = []
+        taggedMemoIDs = []
+        titledMemoIDs = []
+        editedMemoIDs = []
+        suggestCache = [:]
+        scrolledMemoID = nil
+        currentSuggestions = []
+
+        phase = .loading
+        prepareAll()
     }
 
     private func enterEditMode() {
