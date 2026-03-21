@@ -2,43 +2,55 @@
 
 ## 現在の状況
 - **feature/uikit-carousel** ブランチで作業中（mainにはまだマージしていない）
-- セッション040で**セル内包方式の大工事**を実施完了
+- セッション041で**ルーレットのスナップ不具合を修正**（根本原因: タップとドラッグの同時発火）
+- **子タグなしのセンタリング修正**完了
+- **ページ番号リアルタイム更新 + 青色 + 最終ページレインボー**実装済み
 
-### セッション040の主な変更点
+### セッション041の主な変更点
 
-#### セル内包方式（大工事）
-- **QuickSortCellView.swift 新規作成**: カード + サジェスト + ルーレットを1つのUICollectionViewセルに統合
-- 各セルが独立した`@State`でタグ管理（`selectedParentTagID`, `selectedChildTagID`等）
-- 親ビュー（QuickSortView）の共有Stateを大幅削除 → カード切替時の再描画ゼロ
-- **CarouselView**: `spacing: 0`のフルページ方式に変更（セル幅=画面幅）
-- **QuickSortView**: 512行追加 / 589行削除の大幅リファクタ
-  - 削除: `syncEditingState`, `applyTagFromDial`, `suggestPanel`, `dialArea`, `cardItem`, `tagBadge`, `arrowGuide`等
-  - セルへの移管: タグ操作、サジェスト表示、ルーレット表示、削除ジェスチャー
-  - 新規タグ作成: セルからコールバック → 親がsheet表示 → memo.tagsに直接書き込み → セルのonChange検知
+#### ルーレットスナップ不具合修正（重要・全画面共通）
+- **根本原因**: `.simultaneousGesture(DragGesture())`とセクターの`.onTapGesture`が同時発火
+  - ドラッグ終了→正しい位置にスナップ→直後にタップ認識→`snapToTag`が別セクターに移動
+- **修正**: settlingガード方式（onEnded後0.5秒間、snapToTag・syncを完全ブロック）
+  - `parentSettling`/`childSettling`フラグ + `DispatchQueue.main.asyncAfter`で解除
+  - `snapToTag`にもドラッグ中・settling中のガードを追加
+- **syncの回転角度ベース比較**: index比較→`abs(rotation - target) > 0.5`に変更
+  - childOptionsが1個に減る時のクランプ誤判定を防止
+- springアニメーション → easeOut(0.15)に変更（バネ弾き防止）
 
-### 前セッション039の変更点（参考）
-- UICollectionViewベースのカルーセル置き換え
-- CardWithTabShape（タブ+カード一体パス描画）
-- 上下入れ替え（サジェスト+ルーレット上、カード下）
-- 削除を下スワイプに変更
+#### 子タグなしのセンタリング
+- `onChange(of: childOptions.map(\.id))`でsyncChildRotation呼び出し（settlingで暴発防止）
+- QuickSortCellViewで親タグ変更時に`selectedChildTagID = nil`をリセット
+- 「なし」→「子タグなし」に表記統一（MemoInputView・MemoDetailView・QuickSortCellView）
+
+#### ページ番号改善
+- `scrollViewDidScroll`でリアルタイム更新
+- 分子（現在ページ数）を青色表示
+- 最終ページでレインボーグラデーション
+
+#### その他
+- カルーセルフリック感度: 0.2のまま（変更なし）
+- `isActive`ガードは削除（settlingで代替）
 
 ## 次のアクション（優先順）
-1. **シミュレータで動作確認** — セル内包方式が正しく動くか検証
-2. **UIの微調整** — セル内のサジェスト+ルーレット配置、余白調整
-3. **ルーレットの横スクロール干渉チェック** — セル内ルーレットの縦ドラッグとカルーセルの横スクロールが共存するか確認
-4. **feature/uikit-carousel → main にマージ**
-5. 実機テストでパフォーマンス確認
-6. アプリアイコン
-7. 編集時/閲覧時の文字サイズ変更
+1. **爆速モードのUI大改修**（次のセッションで実施予定）
+   - サジェスト（タグ提案）を完全オフ（suggestPanel削除）
+   - ルーレットをMemoInputViewのトレー風UIに変更（取っ手・収納矢印なし、常に全開）
+   - ルーレット部分の横スワイプをページめくり対象外にする（カード部分のみ）
+   - CarouselCollectionViewサブクラス + `gestureRecognizerShouldBegin`方式が有力
+2. **feature/uikit-carousel → main にマージ**
+3. 実機テストでパフォーマンス確認
+4. アプリアイコン
+5. 編集時/閲覧時の文字サイズ変更
 
 ## 主要ファイル（爆速モード関連）
 - **QuickSortView.swift**: メイン画面（フェーズ管理・カルーセル・編集オーバーレイ・セット管理）
-- **QuickSortCellView.swift**: セル内包ビュー（カード+サジェスト+ルーレット統合）★NEW
+- **QuickSortCellView.swift**: セル内包ビュー（カード+ルーレット統合）
 - **CarouselView.swift**: UICollectionViewベースのカルーセル（フルページ方式）
 - **QuickSortFilterView.swift**: フィルタ選択
 - **QuickSortResultView.swift**: 戦績表示
 - **TrapezoidTabShape.swift**: TrapezoidTabShape, CardTitleTabShape, CardWithTabShape, Triangle の定義
-- **TagDialView.swift**: ルーレット（@Bindingのまま、セルから渡されるローカルStateをバインド）
+- **TagDialView.swift**: ルーレット（settlingガード・snapToTagブロック追加済み）
 - **MainView.swift**: ⚡ボタン→fullScreenCover起動
 
 ## 環境

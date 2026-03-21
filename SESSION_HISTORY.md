@@ -1061,3 +1061,26 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - QuickSortView: 共有State大幅削除（512行追加/589行削除）
 - シミュレータビルド成功・起動確認済み
 
+
+---
+## Memolette_041_ルーレットスナップ修正 (2026-03-22)
+
+### ルーレットスナップ不具合修正（全画面共通・根本修正）
+- 根本原因特定: `.simultaneousGesture(DragGesture())`とセクター`.onTapGesture`の同時発火
+- settlingガード方式で修正（onEnded後0.5秒間snapToTag・syncをブロック）
+- sync関数の比較をindex→回転角度ベースに変更（childOptionsクランプ誤判定防止）
+- springアニメーション → easeOutに変更（バネ弾き防止）
+- デバッグ表示（画面上に黄色い大文字）で原因を特定
+
+### 子タグなしのセンタリング修正
+- onChange(of: childOptions.map(\.id))でsyncChildRotation呼び出し
+- 「なし」→「子タグなし」に表記統一（3画面）
+
+### ページ番号改善
+- scrollViewDidScrollでリアルタイム更新
+- 分子を青色、最終ページでレインボー
+
+### 次セッション予定: 爆速モードUI大改修
+- サジェスト完全削除
+- ルーレットをトレー風UIに変更（取っ手・矢印なし）
+- ルーレット部分の横スワイプをページめくり対象外に
