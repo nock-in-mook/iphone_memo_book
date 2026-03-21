@@ -175,22 +175,36 @@ struct QuickSortCellView: View {
         }
     }
 
-    // MARK: - メモカード（タブ形状タイトル + 鉛筆ボタン + 本文 + タグフッター）
+    // MARK: - メモカード（CardWithTabShape一体成型 + 鉛筆ボタン）
 
     private var memoCard: some View {
         let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
         let borderColor: Color = parentTag != nil ? tagColor(for: parentTag!.colorIndex) : Color.clear
         let tabH: CGFloat = 34
-        let tabRatio: CGFloat = 0.68
+        let cardShape = CardWithTabShape(tabRatio: 0.68, tabHeight: tabH)
 
         return GeometryReader { geo in
-            let tabW = geo.size.width * tabRatio
+            let tabW = geo.size.width * 0.68
 
             ZStack(alignment: .topLeading) {
-                // カード本体（タブ分だけ上にスペース）
+                // カード全体（タブ＋本体を1つのShapeで描画）
                 VStack(alignment: .leading, spacing: 0) {
-                    // タブ分のスペーサー
-                    Color.clear.frame(height: tabH - 2)
+                    // タイトルタブ領域
+                    TextField("タイトルなし", text: $editingTitle)
+                        .font(.system(size: 16, weight: .bold, design: .rounded))
+                        .focused($isTitleFocused)
+                        .onSubmit { isTitleFocused = false }
+                        .lineLimit(1)
+                        .padding(.horizontal, 12)
+                        .frame(height: tabH - 2, alignment: .leading)
+                        .frame(width: tabW, alignment: .leading)
+                        .background(
+                            flashTitle
+                                ? Color.orange.opacity(0.2)
+                                : Color(uiColor: .secondarySystemBackground).opacity(
+                                    parentTag != nil ? 0.8 : 0.6
+                                )
+                        )
 
                     // 本文（タップで編集画面へ）
                     Text(memo.content.isEmpty ? "（本文なし）" : String(memo.content.prefix(200)))
@@ -232,77 +246,30 @@ struct QuickSortCellView: View {
                             .frame(height: parentTag != nil ? 2 : 0)
                             .foregroundStyle(borderColor)
                     }
-                    .overlay(
-                        RoundedRectangle(cornerRadius: 14)
-                            .stroke(flashTag ? Color.orange : Color.clear, lineWidth: 2)
-                            .clipShape(
-                                UnevenRoundedRectangle(
-                                    topLeadingRadius: 0, bottomLeadingRadius: 14,
-                                    bottomTrailingRadius: 14, topTrailingRadius: 0
-                                )
-                            )
-                    )
                 }
                 .background(Color(uiColor: .systemBackground))
-                .clipShape(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 0, bottomLeadingRadius: 14,
-                        bottomTrailingRadius: 14, topTrailingRadius: 14
-                    )
-                )
+                .clipShape(cardShape)
                 .overlay(
-                    UnevenRoundedRectangle(
-                        topLeadingRadius: 0, bottomLeadingRadius: 14,
-                        bottomTrailingRadius: 14, topTrailingRadius: 14
-                    )
-                    .stroke(
+                    cardShape.stroke(
                         parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1),
-                        lineWidth: 1.5
+                        lineWidth: 2.5
                     )
                 )
                 .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
 
-                // タイトルタブ（左上、7割幅、カード上に飛び出す）+ 鉛筆ボタン
-                HStack(spacing: 0) {
-                    TextField("タイトルなし", text: $editingTitle)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .focused($isTitleFocused)
-                        .onSubmit { isTitleFocused = false }
-                        .lineLimit(1)
-                        .padding(.horizontal, 12)
-                        .frame(height: tabH)
-                        .frame(width: tabW, alignment: .leading)
-                        .background(
-                            TrapezoidTabShape()
-                                .fill(flashTitle
-                                    ? Color.orange.opacity(0.2)
-                                    : Color(uiColor: .secondarySystemBackground).opacity(
-                                        parentTag != nil ? 0.8 : 0.6
-                                    ))
-                        )
-                        .overlay(
-                            TrapezoidTabShape()
-                                .stroke(
-                                    flashTitle
-                                        ? Color.orange
-                                        : (parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1)),
-                                    lineWidth: flashTitle ? 2 : 1.5
-                                )
-                        )
-
-                    // 鉛筆ボタン（タブの右横）
-                    Button {
-                        commitTitle()
-                        isTitleFocused = false
-                        onEditBody()
-                    } label: {
-                        Image(systemName: "square.and.pencil")
-                            .font(.system(size: 22, weight: .semibold))
-                            .foregroundStyle(.orange)
-                    }
-                    .buttonStyle(.plain)
-                    .padding(.leading, 6)
+                // 鉛筆ボタン（タブの右横、カードの外エリア）
+                Button {
+                    commitTitle()
+                    isTitleFocused = false
+                    onEditBody()
+                } label: {
+                    Image(systemName: "square.and.pencil")
+                        .font(.system(size: 22, weight: .semibold))
+                        .foregroundStyle(.orange)
                 }
+                .buttonStyle(.plain)
+                .frame(height: tabH - 2)
+                .offset(x: tabW + 6, y: 0)
             }
         }
     }
