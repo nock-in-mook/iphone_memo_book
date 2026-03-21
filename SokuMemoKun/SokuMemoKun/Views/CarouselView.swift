@@ -110,7 +110,7 @@ struct CarouselView: UIViewControllerRepresentable {
         let layout = SnapCenterFlowLayout()
         layout.scrollDirection = .horizontal
         layout.itemSize = CGSize(width: cardWidth, height: cardHeight)
-        layout.minimumLineSpacing = 200
+        layout.minimumLineSpacing = 0  // セル内包方式: フルページング
         return layout
     }
 
@@ -130,10 +130,9 @@ struct CarouselView: UIViewControllerRepresentable {
             self.parent = parent
         }
 
-        // 左右の余白（カードを中央配置するため）
+        // セル内包方式: フル幅セルのためインセットなし
         func collectionView(_ collectionView: UICollectionView, layout: UICollectionViewLayout, insetForSectionAt section: Int) -> UIEdgeInsets {
-            let side = (collectionView.bounds.width - parent.cardWidth) / 2
-            return UIEdgeInsets(top: 0, left: side, bottom: 0, right: side)
+            return .zero
         }
 
         func scrollViewWillBeginDragging(_ scrollView: UIScrollView) {

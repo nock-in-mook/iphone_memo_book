@@ -4,7 +4,7 @@ import os
 
 private let logger = Logger(subsystem: "com.sokumemokun.app", category: "QuickSort")
 
-// 爆速振り分けモード: メインカード画面（カルーセル方式）
+// 爆速振り分けモード: セル内包方式（カード+サジェスト+ルーレットを1セルに統合）
 struct QuickSortView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
@@ -17,36 +17,24 @@ struct QuickSortView: View {
 
     // セット管理
     private let setSize = 50
-    @State private var allFilteredMemos: [Memo] = []  // フィルタ後の全メモ
-    @State private var targetMemos: [Memo] = []       // 現在のセット
-    @State private var currentSetIndex = 0            // 現在のセット番号（0始まり）
+    @State private var allFilteredMemos: [Memo] = []
+    @State private var targetMemos: [Memo] = []
+    @State private var currentSetIndex = 0
     private var totalSets: Int { max(1, (allFilteredMemos.count + setSize - 1) / setSize) }
     private var isLastSet: Bool { currentSetIndex >= totalSets - 1 }
 
     @State private var suggestEngine = TagSuggestEngine()
 
-    // カルーセル: scrollPosition で現在のカードを追跡
+    // カルーセル
     @State private var scrolledMemoID: UUID?
-    @State private var isCarouselScrolling = false  // スクロール中フラグ
-    // 上フリック削除用
-    @State private var deletingMemoID: UUID? = nil
-    @State private var deleteOffset: CGFloat = 0
+    @State private var isCarouselScrolling = false
 
-    // ルーレット（子タグ表示デフォ）
-    @State private var selectedParentTagID: UUID? = nil
-    @State private var selectedChildTagID: UUID? = nil
-    @State private var showChildDial = true
-    @State private var childExternalDragY: CGFloat? = nil
-    @State private var isInternalTagChange = false
-
-    // 編集
+    // 編集オーバーレイ用
     @State private var editingTitle = ""
     @State private var editingContent = ""
     @State private var isKeyboardVisible = false
-
-    // カード編集モード
     @State private var isCardEditing = false
-    @State private var editingTitleSnapshot = ""  // 編集前スナップショット（差分検出用）
+    @State private var editingTitleSnapshot = ""
     @State private var editingContentSnapshot = ""
     @State private var showDiscardAlert = false
     @FocusState private var titleFieldFocused: Bool
@@ -54,9 +42,9 @@ struct QuickSortView: View {
     // タグ追加シート
     @State private var showNewTagSheet = false
     @State private var newTagIsChild = false
+    @State private var newTagParentID: UUID?  // 新規子タグ作成時の親タグID
 
-    // サジェスト
-    @State private var currentSuggestions: [TagSuggestEngine.Suggestion] = []
+    // サジェストキャッシュ
     @State private var suggestCache: [Int: [TagSuggestEngine.Suggestion]] = [:]
 
     // 変更ログ
@@ -99,16 +87,13 @@ struct QuickSortView: View {
 
                 switch phase {
                 case .filter:
-                    // フィルタ選択画面（fullScreenCover内）
                     QuickSortFilterView(
                         onStart: { memos in
                             allFilteredMemos = memos
                             currentSetIndex = 0
                             if memos.count > setSize {
-                                // セット確認画面へ
                                 phase = .setConfirm
                             } else {
-                                // そのまま開始
                                 targetMemos = memos
                                 phase = .loading
                                 prepareAll()
@@ -118,11 +103,9 @@ struct QuickSortView: View {
                     )
 
                 case .setConfirm:
-                    // セット確認画面
                     setConfirmView
 
                 case .loading:
-                    // 準備中画面
                     VStack(spacing: 16) {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 40))
@@ -171,11 +154,9 @@ struct QuickSortView: View {
                         deletedMemos: deleteQueue,
                         onReviewDeleted: { showResult = false; showDeleteReview = true },
                         onNextSet: isLastSet ? nil : {
-                            // 現在のセットの削除を実行
                             for m in deleteQueue { modelContext.delete(m) }
                             try? modelContext.save()
                             showResult = false
-                            // 次のセットへ
                             currentSetIndex += 1
                             startCurrentSet()
                         },
@@ -220,43 +201,31 @@ struct QuickSortView: View {
         .sheet(isPresented: $showDeleteReview) { deleteReviewSheet }
         .sheet(isPresented: $showNewTagSheet) {
             NewTagSheetView(
-                parentTagID: newTagIsChild ? selectedParentTagID : nil,
+                parentTagID: newTagIsChild ? newTagParentID : nil,
                 onTagCreated: { newTagID in
-                    isInternalTagChange = true
+                    // セルのonChange(memo.tags)が自動検知 → ルーレット同期
+                    guard let memo = currentMemo, let tag = tags.first(where: { $0.id == newTagID }) else { return }
                     if newTagIsChild {
-                        selectedChildTagID = newTagID
+                        memo.tags.removeAll(where: { $0.parentTagID != nil })
                     } else {
-                        selectedParentTagID = newTagID
+                        memo.tags.removeAll(where: { $0.parentTagID == nil })
                     }
-                    isInternalTagChange = false
-                    applyTagFromDial()
+                    memo.tags.append(tag)
+                    memo.updatedAt = Date()
+                    taggedMemoIDs.insert(memo.id)
                 }
             )
         }
-        .onAppear { }
-        .onChange(of: scrolledMemoID) { oldID, newID in
-            // 前のメモを保存
-            if let oldID = oldID, let oldMemo = activeMemos.first(where: { $0.id == oldID }) {
-                saveToMemo(oldMemo)
-            }
-            // 新しいメモに同期
-            if let newID = newID, let memo = activeMemos.first(where: { $0.id == newID }) {
-                syncEditingState(for: memo)
-            }
-        }
-        .onChange(of: selectedParentTagID) { _, _ in
-            if !isInternalTagChange { applyTagFromDial() }
-        }
-        .onChange(of: selectedChildTagID) { _, _ in
-            if !isInternalTagChange { applyTagFromDial() }
-        }
     }
 
-    // MARK: - メインコンテンツ
+    // MARK: - メインコンテンツ（セル内包方式）
 
     @ViewBuilder
     private func mainContent(geo: GeometryProxy) -> some View {
         let cardWidth = geo.size.width * 0.78
+        let headerHeight: CGFloat = 76
+        let cellHeight = geo.size.height - headerHeight
+        let cardHeight = max(cellHeight - 370, 200)
 
         VStack(spacing: 0) {
             // カウンター（一番上）
@@ -272,177 +241,48 @@ struct QuickSortView: View {
                 .padding(.top, 4)
             }
 
-            // ナビバー（×と完了）
+            // ナビバー
             navBar
                 .padding(.horizontal, 16)
                 .padding(.top, 2)
 
-            // 上部: サジェスト(左) + ルーレット(右) — スクロール中は更新を止める
-            HStack(alignment: .top, spacing: 0) {
-                suggestPanel
-                    .frame(maxWidth: .infinity, maxHeight: 300, alignment: .topLeading)
-                dialArea
-                    .frame(maxHeight: 300, alignment: .top)
-            }
-            .frame(height: 370, alignment: .top)
-            .clipped()
-
-            // カルーセル（UICollectionViewベース）+ 操作ガイドoverlay
+            // カルーセル（セル内包: カード+サジェスト+ルーレットが1セル）
             CarouselView(
                 items: activeMemos,
-                cardWidth: cardWidth,
-                cardHeight: geo.size.height * 0.32,
+                cardWidth: geo.size.width,
+                cardHeight: cellHeight,
                 currentMemoID: $scrolledMemoID,
                 isScrolling: $isCarouselScrolling,
                 isScrollDisabled: isCardEditing,
                 cardContent: { memo in
-                    AnyView(cardItem(memo: memo, width: cardWidth, height: geo.size.height * 0.32))
+                    let idx = targetMemos.firstIndex(where: { $0.id == memo.id }) ?? 0
+                    let suggestions = suggestCache[idx] ?? []
+                    let activeIdx = activeMemos.firstIndex(where: { $0.id == memo.id }) ?? 0
+                    return AnyView(
+                        QuickSortCellView(
+                            memo: memo,
+                            suggestions: suggestions,
+                            cardWidth: cardWidth,
+                            cardHeight: cardHeight,
+                            suggestEngine: suggestEngine,
+                            showLeftArrow: activeIdx > 0,
+                            showRightArrow: activeIdx < activeMemos.count - 1,
+                            onTagChanged: { id in taggedMemoIDs.insert(id) },
+                            onEditTapped: {
+                                scrolledMemoID = memo.id
+                                enterEditMode(for: memo)
+                            },
+                            onDelete: { deleteMemo($0) },
+                            onNewTagSheet: { isChild, parentID in
+                                newTagIsChild = isChild
+                                newTagParentID = parentID
+                                showNewTagSheet = true
+                            }
+                        )
+                    )
                 }
             )
-            .overlay(alignment: .bottom) {
-                arrowGuide
-                    .offset(y: -10)
-                    .allowsHitTesting(false)
-            }
-            .overlay {
-                // 左右の三角マーク（大きな青い三角形）
-                HStack {
-                    // 左三角
-                    if currentIndexInActive > 0 {
-                        Triangle()
-                            .fill(Color.blue.opacity(0.5))
-                            .frame(width: 18, height: 40)
-                            .rotationEffect(.degrees(-90))
-                    } else {
-                        Color.clear.frame(width: 18)
-                    }
-                    Spacer()
-                    // 右三角
-                    if currentIndexInActive < activeMemos.count - 1 {
-                        Triangle()
-                            .fill(Color.blue.opacity(0.5))
-                            .frame(width: 18, height: 40)
-                            .rotationEffect(.degrees(90))
-                    } else {
-                        Color.clear.frame(width: 18)
-                    }
-                }
-                .allowsHitTesting(false)
-            }
         }
-    }
-
-    // MARK: - カルーセルのカード1枚（タイトル欄+本文+タグフッター）
-
-    @ViewBuilder
-    private func cardItem(memo: Memo, width: CGFloat, height: CGFloat) -> some View {
-        let isDeleting = deletingMemoID == memo.id
-        let isCurrent = scrolledMemoID == memo.id
-        let title = isCurrent ? editingTitle : memo.title
-        let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
-        let borderColor = parentTag != nil ? tagColor(for: parentTag!.colorIndex) : Color.clear
-
-        ZStack(alignment: .topLeading) {
-            let tabH: CGFloat = 34
-            let tabW: CGFloat = width * 0.68
-            let cardShape = CardWithTabShape(tabRatio: 0.68, tabHeight: tabH)
-
-            // カード全体（タブ＋本体を1つのShapeで描画）
-            VStack(alignment: .leading, spacing: 0) {
-                // タイトルタブ領域
-                Text(title.isEmpty ? "タイトルなし" : title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(title.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 12)
-                    .frame(height: tabH - 2, alignment: .leading)
-                    .frame(width: tabW, alignment: .leading)
-                    .background(Color(uiColor: .secondarySystemBackground).opacity(
-                        parentTag != nil ? 0.8 : 0.6))
-
-                // 本文
-                Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
-                    .font(.system(size: 13))
-                    .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                    .lineLimit(nil)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(12)
-
-                // タグフッター（右寄せ）
-                HStack(spacing: 6) {
-                    Text("タグ:")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary)
-
-                    Spacer()
-
-                    if parentTag != nil {
-                        tagBadge(for: memo)
-                    } else {
-                        Text("なし")
-                            .font(.system(size: 13, weight: .medium))
-                            .foregroundStyle(.secondary.opacity(0.5))
-                    }
-                }
-                .padding(.horizontal, 12)
-                .padding(.vertical, 8)
-                .background(Color(uiColor: .secondarySystemBackground).opacity(0.4))
-                .overlay(
-                    Rectangle()
-                        .frame(height: parentTag != nil ? 2 : 0)
-                        .foregroundStyle(borderColor),
-                    alignment: .top
-                )
-            }
-            .background(Color(uiColor: .systemBackground))
-            .clipShape(cardShape)
-            .overlay(
-                cardShape
-                    .stroke(parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1), lineWidth: 2.5)
-            )
-            .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
-
-            // 鉛筆ボタン（タブの右横、カードの外エリア）
-            Button {
-                if scrolledMemoID != memo.id { scrolledMemoID = memo.id }
-                enterEditMode()
-            } label: {
-                Image(systemName: "square.and.pencil")
-                    .font(.system(size: 22, weight: .semibold))
-                    .foregroundStyle(.orange)
-            }
-            .buttonStyle(.plain)
-            .frame(height: tabH - 2)
-            .offset(x: tabW + 6, y: 0)
-        }
-        .frame(width: width, height: height)
-        .offset(y: isDeleting ? deleteOffset : 0)
-        .opacity(isDeleting ? max(0.0, 1.0 - Double(deleteOffset) / 300.0) : 1.0)
-        .simultaneousGesture(
-            DragGesture(minimumDistance: 20)
-                .onChanged { value in
-                    let t = value.translation
-                    // 下スワイプで削除
-                    if t.height > 15 && abs(t.height) > abs(t.width) * 1.5 {
-                        deletingMemoID = memo.id
-                        deleteOffset = t.height
-                    }
-                }
-                .onEnded { value in
-                    guard deletingMemoID == memo.id else { return }
-                    if value.translation.height > 100 {
-                        withAnimation(.easeOut(duration: 0.2)) { deleteOffset = 500 }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
-                            deleteMemo(memo)
-                            deletingMemoID = nil
-                            deleteOffset = 0
-                        }
-                    } else {
-                        withAnimation(.spring(response: 0.3)) { deleteOffset = 0 }
-                        deletingMemoID = nil
-                    }
-                }
-        )
     }
 
     // MARK: - カード編集オーバーレイ（背景グレーアウト + カードが浮き上がる）
@@ -450,17 +290,13 @@ struct QuickSortView: View {
     @ViewBuilder
     private func cardEditOverlay(geo: GeometryProxy) -> some View {
         ZStack {
-            // 背景グレーアウト
             Color.black.opacity(0.4)
                 .ignoresSafeArea()
                 .onTapGesture {
-                    // 背景タップでキーボード閉じる
                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                 }
 
-            // 浮かぶ編集カード
             VStack(spacing: 0) {
-                // 編集ヘッダー（キャンセル / 確定）
                 HStack {
                     Button {
                         if editingTitle != editingTitleSnapshot || editingContent != editingContentSnapshot {
@@ -485,9 +321,7 @@ struct QuickSortView: View {
                 .padding(.horizontal, 20)
                 .padding(.vertical, 10)
 
-                // 編集カード本体
                 VStack(alignment: .leading, spacing: 0) {
-                    // タイトル入力
                     TextField("タイトルを入力", text: $editingTitle)
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .focused($titleFieldFocused)
@@ -495,20 +329,17 @@ struct QuickSortView: View {
                         .padding(.top, 10)
                         .padding(.bottom, 6)
 
-                    // 仕切り線
                     Rectangle()
                         .fill(Color.secondary.opacity(0.3))
                         .frame(height: 1)
                         .padding(.horizontal, 10)
 
-                    // 本文入力
                     TextEditor(text: $editingContent)
                         .font(.system(size: 15))
                         .scrollContentBackground(.hidden)
                         .padding(.horizontal, 10)
                         .padding(.top, 4)
                         .frame(maxHeight: .infinity)
-
                 }
                 .background(Color(uiColor: .systemBackground))
                 .cornerRadius(16)
@@ -518,7 +349,6 @@ struct QuickSortView: View {
             .frame(maxHeight: min(geo.size.height * 0.45, 400))
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.top, 80)
-
         }
         .ignoresSafeArea(.keyboard)
         .transition(.opacity)
@@ -548,7 +378,6 @@ struct QuickSortView: View {
                     .multilineTextAlignment(.center)
                     .padding(.horizontal, 20)
 
-                // セット一覧
                 VStack(spacing: 0) {
                     ForEach(0..<totalSets, id: \.self) { i in
                         let start = i * setSize + 1
@@ -588,7 +417,6 @@ struct QuickSortView: View {
 
             Spacer()
 
-            // 開始ボタン
             Button {
                 startCurrentSet()
             } label: {
@@ -602,7 +430,6 @@ struct QuickSortView: View {
             .padding(.horizontal, 20)
             .padding(.bottom, 8)
 
-            // 閉じるボタン
             Button {
                 onDismiss()
             } label: {
@@ -622,113 +449,50 @@ struct QuickSortView: View {
         let end = min(start + setSize, allFilteredMemos.count)
         targetMemos = Array(allFilteredMemos[start..<end])
 
-        // 前セットの状態をリセット
         deleteQueue = []
         taggedMemoIDs = []
         titledMemoIDs = []
         editedMemoIDs = []
         suggestCache = [:]
         scrolledMemoID = nil
-        currentSuggestions = []
 
         phase = .loading
         prepareAll()
     }
 
-    private func enterEditMode() {
-        editingTitleSnapshot = editingTitle
-        editingContentSnapshot = editingContent
+    private func enterEditMode(for memo: Memo) {
+        editingTitle = memo.title
+        editingContent = memo.content
+        editingTitleSnapshot = memo.title
+        editingContentSnapshot = memo.content
         withAnimation(.spring(response: 0.3)) { isCardEditing = true }
-        // タイトル末尾にカーソル
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
             titleFieldFocused = true
         }
     }
 
     private func exitEditMode(discard: Bool) {
-        if discard {
-            editingTitle = editingTitleSnapshot
-            editingContent = editingContentSnapshot
-        } else {
-            // 確定: メモオブジェクトに反映
-            saveCurrent()
+        if !discard {
+            // 確定: メモに反映
+            if let memo = currentMemo {
+                let newTitle = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
+                if newTitle != memo.title {
+                    memo.title = newTitle
+                    memo.updatedAt = Date()
+                    if !newTitle.isEmpty { titledMemoIDs.insert(memo.id) }
+                }
+                if editingContent != memo.content {
+                    memo.content = editingContent
+                    memo.updatedAt = Date()
+                    editedMemoIDs.insert(memo.id)
+                }
+            }
         }
         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         withAnimation(.spring(response: 0.3)) { isCardEditing = false }
     }
 
-    // MARK: - タグバッジ（MemoInputViewのtagDisplayと同じデザイン・大きめ）
-
-    @ViewBuilder
-    private func tagBadge(for memo: Memo) -> some View {
-        let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
-        let childTag = memo.tags.first(where: { $0.parentTagID != nil })
-
-        if let pt = parentTag {
-            if let ct = childTag {
-                // 親タグ＋右下に子タグめり込み
-                HStack(alignment: .bottom, spacing: -6) {
-                    Text(pt.name)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .padding(.leading, 10)
-                        .padding(.trailing, 14)
-                        .padding(.vertical, 6)
-                        .background(
-                            RoundedRectangle(cornerRadius: 8)
-                                .fill(tagColor(for: pt.colorIndex))
-                                .shadow(color: .black.opacity(0.12), radius: 3, y: 2)
-                        )
-                    Text(ct.name)
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .fill(tagColor(for: ct.colorIndex))
-                                .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 6)
-                                .stroke(Color.white, lineWidth: 2)
-                        )
-                }
-            } else {
-                // 親タグのみ
-                Text(pt.name)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .lineLimit(1)
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(tagColor(for: pt.colorIndex))
-                            .shadow(color: .black.opacity(0.12), radius: 3, y: 2)
-                    )
-            }
-        } else {
-            // タグなし
-            HStack(spacing: 4) {
-                Image(systemName: "tag")
-                    .font(.system(size: 13))
-                Text("タグなし")
-                    .font(.system(size: 14, weight: .semibold, design: .rounded))
-            }
-            .foregroundStyle(.secondary.opacity(0.6))
-            .padding(.horizontal, 10)
-            .padding(.vertical, 6)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .fill(tagColor(for: 0))
-                    .shadow(color: .black.opacity(0.08), radius: 3, y: 2)
-            )
-        }
-    }
-
-    // MARK: - ナビバー（×と完了のみ）
+    // MARK: - ナビバー
 
     private var navBar: some View {
         HStack {
@@ -741,7 +505,6 @@ struct QuickSortView: View {
             }
             Spacer()
             Button {
-                saveCurrent()
                 withAnimation(.easeOut(duration: 0.25)) { showResult = true }
             } label: {
                 Text("完了")
@@ -754,7 +517,7 @@ struct QuickSortView: View {
         }
     }
 
-    // MARK: - 終了確認ダイアログ（リッチ）
+    // MARK: - 終了確認ダイアログ
 
     private var exitConfirmDialog: some View {
         ZStack {
@@ -765,7 +528,6 @@ struct QuickSortView: View {
                 }
 
             VStack(spacing: 0) {
-                // ヘッダー
                 VStack(spacing: 8) {
                     Image(systemName: "exclamationmark.triangle.fill")
                         .font(.system(size: 32))
@@ -791,7 +553,6 @@ struct QuickSortView: View {
 
                 Divider()
 
-                // 終了する
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) { showExitConfirm = false }
                     onDismiss()
@@ -806,7 +567,6 @@ struct QuickSortView: View {
 
                 Divider()
 
-                // 戻る
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) { showExitConfirm = false }
                 } label: {
@@ -824,167 +584,6 @@ struct QuickSortView: View {
             .padding(.horizontal, 40)
         }
         .transition(.opacity)
-    }
-
-    // MARK: - 3方向矢印ガイド（三角配置・でかく極太）
-
-    private var arrowGuide: some View {
-        let isDeleteActive = deletingMemoID != nil && deleteOffset > 30
-
-        // 削除ガイド（下向き）
-        return VStack(spacing: -2) {
-            Text("削除")
-                .font(.system(size: isDeleteActive ? 16 : 13, weight: .black, design: .rounded))
-            Image(systemName: "arrow.down")
-                .font(.system(size: isDeleteActive ? 38 : 28, weight: .black))
-        }
-        .foregroundStyle(isDeleteActive ? .red : .red.opacity(0.35))
-        .animation(.easeOut(duration: 0.15), value: isDeleteActive)
-    }
-
-
-
-    // MARK: - サジェストパネル（枠付き）
-
-    private var suggestPanel: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if !currentSuggestions.isEmpty {
-                let dictSugs = currentSuggestions.filter { $0.kind == .dictMatch }
-                let newSugs = currentSuggestions.filter { $0.kind == .newTag }
-                let histSugs = currentSuggestions.filter { $0.kind == .history }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("タグの提案")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 6)
-
-                    if !dictSugs.isEmpty { suggestSection(title: "おすすめ", icon: "tag.fill", items: dictSugs) }
-                    if !newSugs.isEmpty { suggestSection(title: "新規タグ", icon: "plus.circle.fill", items: newSugs) }
-                    if !histSugs.isEmpty { suggestSection(title: "履歴", icon: "clock.fill", items: histSugs) }
-                }
-                .padding(.bottom, 6)
-                .background(Color(uiColor: .secondarySystemBackground).opacity(0.9))
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-            }
-        }
-        .padding(.leading, 12)
-        .padding(.trailing, 4)
-    }
-
-    @ViewBuilder
-    private func suggestSection(title: String, icon: String, items: [TagSuggestEngine.Suggestion]) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 9)).foregroundStyle(.secondary)
-                Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 8)
-
-            ForEach(items) { suggestion in
-                Button { applySuggestion(suggestion) } label: {
-                    HStack(spacing: 4) {
-                        if suggestion.kind == .newTag {
-                            Image(systemName: "plus.circle.fill").font(.system(size: 12)).foregroundStyle(.green)
-                        } else if let pt = tags.first(where: { $0.id == suggestion.parentID }) {
-                            Circle().fill(tagColor(for: pt.colorIndex)).frame(width: 8, height: 8)
-                        }
-                        Text(suggestion.parentName).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary)
-                        if let cn = suggestion.childName {
-                            Image(systemName: "chevron.right").font(.system(size: 8)).foregroundStyle(.tertiary)
-                            Text(cn).font(.system(size: 12)).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(suggestion.kind == .newTag ? Color.green.opacity(0.08) : Color(uiColor: .systemBackground).opacity(0.95))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 4)
-            }
-        }
-    }
-
-    // MARK: - ルーレット（トレー風・常時全開・子タグ常時表示）
-
-    // ルーレットオプション生成
-    private var parentOptions: [(id: String, name: String, color: Color)] {
-        let parentTags = tags.filter { $0.parentTagID == nil }.sorted { $0.sortOrder < $1.sortOrder }
-        return [("none", "タグなし", Color(white: 0.82))] +
-            parentTags.map { ($0.id.uuidString, $0.name, tagColor(for: $0.colorIndex)) }
-    }
-
-    private var childOptions: [(id: String, name: String, color: Color)] {
-        let childTags: [Tag] = {
-            guard let pid = selectedParentTagID else { return [] }
-            return tags.filter { $0.parentTagID == pid }.sorted { $0.name < $1.name }
-        }()
-        // 親タグ未選択でも「子タグなし」だけ表示（常時子ダイアル表示のため）
-        return [("none", "子タグなし", Color(white: 0.82))] +
-            childTags.map { ($0.id.uuidString, $0.name, tagColor(for: $0.colorIndex)) }
-    }
-
-    private var dialArea: some View {
-        VStack(spacing: 0) {
-            // ラベル（親タグ・子タグ）
-            ZStack(alignment: .trailing) {
-                Text("親タグ")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary.opacity(0.5))
-                    .padding(.trailing, 165)
-                Text("子タグ")
-                    .font(.system(size: 10, weight: .medium, design: .rounded))
-                    .foregroundStyle(.secondary.opacity(0.5))
-                    .padding(.trailing, 50)
-            }
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            .frame(height: 14)
-
-            // ルーレット本体
-            TagDialView(
-                parentOptions: parentOptions,
-                parentSelectedID: $selectedParentTagID,
-                childOptions: childOptions,
-                childSelectedID: $selectedChildTagID,
-                showChild: $showChildDial,
-                isOpen: true,
-                childExternalDragY: $childExternalDragY,
-                onLongPress: nil
-            )
-            .frame(height: 211)
-
-            // 追加ボタン
-            HStack(spacing: 12) {
-                Spacer()
-                Button {
-                    showNewTagSheet = true
-                    newTagIsChild = false
-                } label: {
-                    Label("親タグ追加", systemImage: "plus.circle.fill")
-                        .font(.system(size: 12, weight: .medium))
-                        .foregroundStyle(.secondary.opacity(0.6))
-                }
-                Button {
-                    if selectedParentTagID != nil {
-                        showNewTagSheet = true
-                        newTagIsChild = true
-                    }
-                } label: {
-                    Label("子タグ追加", systemImage: "plus.circle")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary.opacity(selectedParentTagID == nil ? 0.25 : 0.5))
-                }
-            }
-            .padding(.trailing, 8)
-            .offset(y: -8)
-        }
     }
 
     // MARK: - 削除確認シート
@@ -1021,61 +620,12 @@ struct QuickSortView: View {
 
     // MARK: - アクション
 
-    // 現在のメモ情報をローカル編集状態に同期
-    private func syncEditingState(for memo: Memo) {
-        editingTitle = memo.title
-        editingContent = memo.content
-
-        isInternalTagChange = true
-        let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
-        let childTag = memo.tags.first(where: { $0.parentTagID != nil })
-        selectedParentTagID = parentTag?.id
-        selectedChildTagID = childTag?.id
-        if parentTag != nil {
-            let hasChildren = tags.contains(where: { $0.parentTagID == parentTag?.id })
-            if hasChildren { showChildDial = true }
-        }
-        isInternalTagChange = false
-
-        updateSuggestions()
-    }
-
-    // 指定したメモに現在の編集内容を保存（変更があったときだけupdatedAt更新）
-    private func saveToMemo(_ memo: Memo) {
-        let origTitle = memo.title
-        let origContent = memo.content
-        let newTitle = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        var changed = false
-
-        if newTitle != origTitle {
-            memo.title = newTitle
-            if !newTitle.isEmpty { titledMemoIDs.insert(memo.id) }
-            changed = true
-        }
-        if editingContent != origContent {
-            memo.content = editingContent
-            editedMemoIDs.insert(memo.id)
-            changed = true
-        }
-        if changed { memo.updatedAt = Date() }
-    }
-
-    private func saveCurrent() {
-        guard let memo = currentMemo else { return }
-        saveToMemo(memo)
-    }
-
     private func deleteMemo(_ memo: Memo) {
-        // 前のメモを保存してから
-        saveCurrent()
         deleteQueue.append(memo)
-        // カルーセルが自動で隣のカードを表示する
-        // scrolledMemoIDが削除されたカードを指していたら次のに移る
+        // 削除されたメモを指していたら次のカードに移動
         if scrolledMemoID == memo.id {
-            let remaining = activeMemos
-            if let first = remaining.first {
-                scrolledMemoID = first.id
-                syncEditingState(for: first)
+            if let next = activeMemos.first {
+                scrolledMemoID = next.id
             }
         }
         if activeMemos.isEmpty {
@@ -1083,55 +633,11 @@ struct QuickSortView: View {
         }
     }
 
-    private func applyTagFromDial() {
-        guard let memo = currentMemo else { return }
-        let originalTags = Set(memo.tags.map { $0.id })
-        memo.tags.removeAll()
-        if let pid = selectedParentTagID, let tag = tags.first(where: { $0.id == pid }) { memo.tags.append(tag) }
-        if let cid = selectedChildTagID, let tag = tags.first(where: { $0.id == cid }) { memo.tags.append(tag) }
-        let newTags = Set(memo.tags.map { $0.id })
-        if originalTags != newTags {
-            memo.updatedAt = Date()
-            taggedMemoIDs.insert(memo.id)
-            suggestEngine.learn(title: memo.title, body: memo.content, tagIDs: memo.tags.map { $0.id }, context: modelContext)
-        }
-    }
+    // MARK: - サジェスト一括計算
 
-    private func applySuggestion(_ suggestion: TagSuggestEngine.Suggestion) {
-        if suggestion.kind == .newTag { return }
-        isInternalTagChange = true
-        selectedParentTagID = suggestion.parentID
-        selectedChildTagID = suggestion.childID
-        isInternalTagChange = false
-        applyTagFromDial()
-    }
-
-    private func applyTitleEdit() {
-        guard let memo = currentMemo else { return }
-        let newTitle = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-        if newTitle != memo.title {
-            memo.title = newTitle
-            memo.updatedAt = Date()
-            if !newTitle.isEmpty { titledMemoIDs.insert(memo.id) }
-        }
-    }
-
-    private func applyContentEdit() {
-        guard let memo = currentMemo else { return }
-        if editingContent != memo.content {
-            memo.content = editingContent
-            memo.updatedAt = Date()
-            editedMemoIDs.insert(memo.id)
-        }
-    }
-
-    // MARK: - サジェスト
-
-    // 起動時に全メモのサジェストを一括計算
     private func prepareAll() {
         loadingProgress = 0
 
-        // バックグラウンドで計算してメインスレッドにUI更新
         Task {
             var cache: [Int: [TagSuggestEngine.Suggestion]] = [:]
             let allTags = tags
@@ -1153,24 +659,11 @@ struct QuickSortView: View {
                 suggestCache = cache
                 loadingProgress = targetMemos.count
 
-                // 初期表示
                 if let first = activeMemos.first {
                     scrolledMemoID = first.id
-                    syncEditingState(for: first)
                 }
                 phase = .carousel
             }
         }
     }
-
-    private func updateSuggestions() {
-        guard let memo = currentMemo else { currentSuggestions = []; return }
-        let idx = targetMemos.firstIndex(where: { $0.id == memo.id }) ?? 0
-        if let cached = suggestCache[idx] { currentSuggestions = cached; return }
-        // キャッシュにない場合（通常ありえないが安全のため）
-        let result = suggestEngine.suggest(title: memo.title, body: memo.content, tags: tags, context: modelContext, limit: 3)
-        currentSuggestions = result
-        suggestCache[idx] = result
-    }
 }
-
