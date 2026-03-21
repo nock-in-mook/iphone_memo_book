@@ -31,10 +31,13 @@ struct QuickSortView: View {
     // 編集
     @State private var editingTitle = ""
     @State private var editingContent = ""
-    @State private var isEditingTitle = false
 
-    // 本文閲覧/編集モード
-    @State private var showContentEditor = false
+    // カード編集モード
+    @State private var isCardEditing = false
+    @State private var editingTitleSnapshot = ""  // 編集前スナップショット（差分検出用）
+    @State private var editingContentSnapshot = ""
+    @State private var showDiscardAlert = false
+    @FocusState private var titleFieldFocused: Bool
 
     // タグ追加シート
     @State private var showNewTagSheet = false
@@ -134,7 +137,6 @@ struct QuickSortView: View {
             }
         }
         .sheet(isPresented: $showDeleteReview) { deleteReviewSheet }
-        .fullScreenCover(isPresented: $showContentEditor) { contentEditorView }
         .sheet(isPresented: $showNewTagSheet) {
             NewTagSheetView(
                 parentTagID: newTagIsChild ? selectedParentTagID : nil,
@@ -192,86 +194,99 @@ struct QuickSortView: View {
                     .padding(.top, 2)
             }
 
-            // 3方向矢印ガイド（三角配置・でかく）
-            arrowGuide
-                .padding(.top, 6)
-                .padding(.bottom, 8)
+            if isCardEditing {
+                // 編集モード: カードが拡大して編集可能
+                cardEditMode(geo: geo)
+            } else {
+                // 通常モード: 矢印ガイド + カルーセル + サジェスト + ルーレット
+                arrowGuide
+                    .padding(.top, 6)
+                    .padding(.bottom, 8)
 
-            // タイトル（枠付き）+ メモカード（接近配置）
-            titleArea
-                .padding(.horizontal, 16)
-
-            // カルーセル（本文カード + タグバッジ重ね）
-            ScrollView(.horizontal, showsIndicators: false) {
-                LazyHStack(spacing: 12) {
-                    ForEach(activeMemos, id: \.id) { memo in
-                        cardItem(memo: memo, width: cardWidth, height: geo.size.height * 0.25)
-                            .id(memo.id)
+                // カルーセル（タブ付きカード）
+                ScrollView(.horizontal, showsIndicators: false) {
+                    LazyHStack(spacing: 12) {
+                        ForEach(activeMemos, id: \.id) { memo in
+                            cardItem(memo: memo, width: cardWidth, height: geo.size.height * 0.32)
+                                .id(memo.id)
+                        }
                     }
+                    .scrollTargetLayout()
+                    .padding(.horizontal, (geo.size.width - cardWidth) / 2)
                 }
-                .scrollTargetLayout()
-                .padding(.horizontal, (geo.size.width - cardWidth) / 2)
-            }
-            .scrollTargetBehavior(.viewAligned)
-            .scrollPosition(id: $scrolledMemoID)
-            .padding(.top, 2)
+                .scrollTargetBehavior(.viewAligned)
+                .scrollPosition(id: $scrolledMemoID)
+                .padding(.top, 2)
 
-            // 下部: サジェスト(左) + ルーレット(右)
-            HStack(alignment: .top, spacing: 0) {
-                suggestPanel
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                dialArea
+                // 下部: サジェスト(左) + ルーレット(右)
+                HStack(alignment: .top, spacing: 0) {
+                    suggestPanel
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                    dialArea
+                }
+                .frame(height: 215)
+                .padding(.top, 4)
             }
-            .frame(height: 215)
-            .padding(.top, 4)
         }
     }
 
-    // MARK: - カルーセルのカード1枚（右下にタグバッジ重ね）
+    // MARK: - カルーセルのカード1枚（タブ付き：左上にタイトルタブ、右上に鉛筆ボタン）
 
     @ViewBuilder
     private func cardItem(memo: Memo, width: CGFloat, height: CGFloat) -> some View {
         let isDeleting = deletingMemoID == memo.id
+        let isCurrent = scrolledMemoID == memo.id
+        let title = isCurrent ? editingTitle : memo.title
 
-        ZStack(alignment: .bottomTrailing) {
-            // カード本体（テキスト表示のみ）
-            VStack(alignment: .leading, spacing: 0) {
-                Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
-                    .font(.system(size: 13))
-                    .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                    .lineLimit(nil)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                    .padding(12)
-            }
-            .background(Color(uiColor: .systemBackground))
-            .cornerRadius(14)
-            .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+        VStack(alignment: .leading, spacing: 0) {
+            // タブ行（タイトルタブ + 鉛筆ボタン）
+            HStack(spacing: 0) {
+                // タイトルタブ（左上に生える）
+                Text(title.isEmpty ? "タイトルなし" : title)
+                    .font(.system(size: 13, weight: .bold, design: .rounded))
+                    .foregroundColor(title.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(
+                        UnevenRoundedRectangle(topLeadingRadius: 8, bottomLeadingRadius: 0, bottomTrailingRadius: 0, topTrailingRadius: 8)
+                            .fill(Color(uiColor: .systemBackground))
+                    )
+                    .frame(maxWidth: width * 0.65, alignment: .leading)
 
-            // タグバッジ（右下、カードに被る形）
-            tagBadge(for: memo)
-                .offset(x: -8, y: 6)
+                Spacer()
 
-            // 「本文を確認」ボタン（左下・完全不透明）
-            Button {
-                if scrolledMemoID != memo.id { scrolledMemoID = memo.id }
-                showContentEditor = true
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "doc.text.magnifyingglass").font(.system(size: 11))
-                    Text("本文を確認").font(.system(size: 11, weight: .medium))
+                // 鉛筆ボタン（右上）
+                Button {
+                    if scrolledMemoID != memo.id { scrolledMemoID = memo.id }
+                    enterEditMode()
+                } label: {
+                    Image(systemName: "pencil.circle.fill")
+                        .font(.system(size: 26))
+                        .foregroundStyle(.orange)
                 }
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(
-                    Capsule()
-                        .fill(Color(uiColor: .secondarySystemBackground))
-                        .shadow(color: .black.opacity(0.08), radius: 2, y: 1)
-                )
+                .buttonStyle(.plain)
+                .padding(.trailing, 4)
             }
-            .buttonStyle(.plain)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .bottomLeading)
-            .padding(8)
+
+            // カード本体
+            ZStack(alignment: .bottomTrailing) {
+                VStack(alignment: .leading, spacing: 0) {
+                    Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
+                        .font(.system(size: 13))
+                        .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
+                        .lineLimit(nil)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        .padding(12)
+                }
+                .background(Color(uiColor: .systemBackground))
+                .cornerRadius(14)
+                .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
+
+                // タグバッジ（右下）
+                tagBadge(for: memo)
+                    .offset(x: -8, y: 6)
+            }
         }
         .frame(width: width, height: height)
         .offset(y: isDeleting ? deleteOffset : 0)
@@ -300,6 +315,98 @@ struct QuickSortView: View {
                     }
                 }
         )
+    }
+
+    // MARK: - カード編集モード（拡大して編集）
+
+    @ViewBuilder
+    private func cardEditMode(geo: GeometryProxy) -> some View {
+        VStack(spacing: 0) {
+            // 編集ヘッダー（キャンセル / 確定）
+            HStack {
+                Button {
+                    // 差分チェック
+                    if editingTitle != editingTitleSnapshot || editingContent != editingContentSnapshot {
+                        showDiscardAlert = true
+                    } else {
+                        exitEditMode(discard: true)
+                    }
+                } label: {
+                    Text("キャンセル")
+                        .font(.system(size: 15))
+                        .foregroundStyle(.blue)
+                }
+                Spacer()
+                Button {
+                    exitEditMode(discard: false)
+                } label: {
+                    Text("確定")
+                        .font(.system(size: 15, weight: .bold))
+                        .foregroundStyle(.orange)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 8)
+
+            // タイトル入力
+            VStack(alignment: .leading, spacing: 2) {
+                Text("タイトル")
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary.opacity(0.6))
+                    .padding(.leading, 4)
+
+                TextField("タイトルを入力", text: $editingTitle)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .focused($titleFieldFocused)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 10)
+                    .background(RoundedRectangle(cornerRadius: 10).fill(Color(uiColor: .systemBackground)))
+                    .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.orange.opacity(0.4), lineWidth: 1.5))
+            }
+            .padding(.horizontal, 16)
+
+            // 本文入力
+            TextEditor(text: $editingContent)
+                .font(.system(size: 15))
+                .scrollContentBackground(.hidden)
+                .padding(8)
+                .background(
+                    RoundedRectangle(cornerRadius: 12)
+                        .fill(Color(uiColor: .systemBackground))
+                )
+                .overlay(
+                    RoundedRectangle(cornerRadius: 12)
+                        .stroke(Color.secondary.opacity(0.15), lineWidth: 1)
+                )
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+
+            Spacer(minLength: 0)
+        }
+        .transition(.scale(scale: 0.95).combined(with: .opacity))
+        .alert("変更は保存されません。よろしいですか？", isPresented: $showDiscardAlert) {
+            Button("破棄する", role: .destructive) { exitEditMode(discard: true) }
+            Button("編集に戻る", role: .cancel) {}
+        }
+    }
+
+    private func enterEditMode() {
+        editingTitleSnapshot = editingTitle
+        editingContentSnapshot = editingContent
+        withAnimation(.spring(response: 0.3)) { isCardEditing = true }
+        // タイトル末尾にカーソル
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+            titleFieldFocused = true
+        }
+    }
+
+    private func exitEditMode(discard: Bool) {
+        if discard {
+            editingTitle = editingTitleSnapshot
+            editingContent = editingContentSnapshot
+        }
+        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+        withAnimation(.spring(response: 0.3)) { isCardEditing = false }
     }
 
     // MARK: - タグバッジ（MemoInputViewのtagDisplayと同じデザイン・大きめ）
@@ -511,61 +618,6 @@ struct QuickSortView: View {
         }
     }
 
-    // MARK: - タイトル（枠付き・左上に「タイトル」ラベル・右端に鉛筆ボタン）
-
-    private var titleArea: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // 「タイトル」ラベル
-            Text("タイトル")
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary.opacity(0.6))
-                .padding(.leading, 4)
-
-            HStack {
-                if isEditingTitle {
-                    TextField("タイトルを入力", text: $editingTitle)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .onSubmit { isEditingTitle = false; applyTitleEdit() }
-                } else {
-                    Text(editingTitle.isEmpty ? "タイトルなし" : editingTitle)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundColor(editingTitle.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                        .lineLimit(1)
-                    Spacer()
-                    // 鉛筆ボタン（タップでタイトル編集）
-                    Button {
-                        isEditingTitle = true
-                    } label: {
-                        Image(systemName: "pencil.circle.fill")
-                            .font(.system(size: 20))
-                            .foregroundStyle(.secondary.opacity(0.4))
-                    }
-                    .buttonStyle(.plain)
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 8)
-            .background(RoundedRectangle(cornerRadius: 10).fill(Color(uiColor: .systemBackground)))
-            .overlay(RoundedRectangle(cornerRadius: 10).stroke(Color.secondary.opacity(0.15), lineWidth: 1))
-        }
-    }
-
-    // MARK: - 本文閲覧/編集（全画面モーダル）
-
-    private var contentEditorView: some View {
-        NavigationStack {
-            TextEditor(text: $editingContent)
-                .font(.system(size: 15))
-                .padding(.horizontal, 8)
-                .navigationTitle(editingTitle.isEmpty ? "本文" : editingTitle)
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .topBarLeading) {
-                        Button("戻る") { showContentEditor = false }
-                    }
-                }
-        }
-    }
 
 
     // MARK: - サジェストパネル（枠付き）
@@ -749,7 +801,6 @@ struct QuickSortView: View {
     private func syncEditingState(for memo: Memo) {
         editingTitle = memo.title
         editingContent = memo.content
-        isEditingTitle = false
 
         isInternalTagChange = true
         let parentTag = memo.tags.first(where: { $0.parentTagID == nil })
@@ -783,7 +834,6 @@ struct QuickSortView: View {
             changed = true
         }
         if changed { memo.updatedAt = Date() }
-        isEditingTitle = false
     }
 
     private func saveCurrent() {
