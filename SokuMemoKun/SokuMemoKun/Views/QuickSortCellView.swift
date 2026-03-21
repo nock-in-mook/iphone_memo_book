@@ -1,17 +1,18 @@
 import SwiftUI
 import SwiftData
 
-// セル内包方式: カード+サジェスト+ルーレットを1セルに統合（爆速スクロール用）
+// セル内包方式: カード+ルーレットを1セルに統合（爆速スクロール用）
 // 各セルが独立したタグ状態を持ち、親ビューのState変更をゼロにする
 struct QuickSortCellView: View {
     let memo: Memo
-    let suggestions: [TagSuggestEngine.Suggestion]
     let cardWidth: CGFloat
     let cardHeight: CGFloat
-    var suggestEngine: TagSuggestEngine
     let showLeftArrow: Bool
     let showRightArrow: Bool
     var isActive: Bool = false  // 現在表示中のセルだけtrue → ルーレット状態変更を有効化
+
+    // ルーレット領域の高さ（CarouselViewのジェスチャーブロックにも使用）
+    static let dialAreaHeight: CGFloat = 250
 
     // コールバック（親ビューへの通知）
     var onTagChanged: (UUID) -> Void = { _ in }
@@ -35,15 +36,10 @@ struct QuickSortCellView: View {
 
     var body: some View {
         VStack(spacing: 0) {
-            // 上部: サジェスト(左) + ルーレット(右)
-            HStack(alignment: .top, spacing: 0) {
-                suggestPanel
-                    .frame(maxWidth: .infinity, maxHeight: 300, alignment: .topLeading)
-                dialArea
-                    .frame(maxHeight: 300, alignment: .top)
-            }
-            .frame(height: 370, alignment: .top)
-            .clipped()
+            // ルーレット（トレー風・常時全開）
+            dialArea
+                .frame(height: QuickSortCellView.dialAreaHeight, alignment: .top)
+                .clipped()
 
             // カード + 操作ガイド
             cardView
@@ -96,17 +92,7 @@ struct QuickSortCellView: View {
         if originalTags != newTags {
             memo.updatedAt = Date()
             onTagChanged(memo.id)
-            suggestEngine.learn(title: memo.title, body: memo.content, tagIDs: memo.tags.map { $0.id }, context: modelContext)
         }
-    }
-
-    private func applySuggestion(_ suggestion: TagSuggestEngine.Suggestion) {
-        if suggestion.kind == .newTag { return }
-        isInternalTagChange = true
-        selectedParentTagID = suggestion.parentID
-        selectedChildTagID = suggestion.childID
-        isInternalTagChange = false
-        applyTagFromDial()
     }
 
     // MARK: - カードビュー
@@ -295,74 +281,6 @@ struct QuickSortCellView: View {
                             .fill(tagColor(for: pt.colorIndex))
                             .shadow(color: .black.opacity(0.12), radius: 3, y: 2)
                     )
-            }
-        }
-    }
-
-    // MARK: - サジェストパネル
-
-    private var suggestPanel: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            if !suggestions.isEmpty {
-                let dictSugs = suggestions.filter { $0.kind == .dictMatch }
-                let newSugs = suggestions.filter { $0.kind == .newTag }
-                let histSugs = suggestions.filter { $0.kind == .history }
-
-                VStack(alignment: .leading, spacing: 4) {
-                    HStack {
-                        Text("タグの提案")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.secondary)
-                        Spacer()
-                    }
-                    .padding(.horizontal, 8)
-                    .padding(.top, 6)
-
-                    if !dictSugs.isEmpty { suggestSection(title: "おすすめ", icon: "tag.fill", items: dictSugs) }
-                    if !newSugs.isEmpty { suggestSection(title: "新規タグ", icon: "plus.circle.fill", items: newSugs) }
-                    if !histSugs.isEmpty { suggestSection(title: "履歴", icon: "clock.fill", items: histSugs) }
-                }
-                .padding(.bottom, 6)
-                .background(Color(uiColor: .secondarySystemBackground).opacity(0.9))
-                .cornerRadius(12)
-                .shadow(color: .black.opacity(0.08), radius: 4, y: 2)
-            }
-        }
-        .padding(.leading, 12)
-        .padding(.trailing, 4)
-    }
-
-    @ViewBuilder
-    private func suggestSection(title: String, icon: String, items: [TagSuggestEngine.Suggestion]) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
-            HStack(spacing: 4) {
-                Image(systemName: icon).font(.system(size: 9)).foregroundStyle(.secondary)
-                Text(title).font(.system(size: 10, weight: .medium)).foregroundStyle(.secondary)
-            }
-            .padding(.horizontal, 8)
-
-            ForEach(items) { suggestion in
-                Button { applySuggestion(suggestion) } label: {
-                    HStack(spacing: 4) {
-                        if suggestion.kind == .newTag {
-                            Image(systemName: "plus.circle.fill").font(.system(size: 12)).foregroundStyle(.green)
-                        } else if let pt = tags.first(where: { $0.id == suggestion.parentID }) {
-                            Circle().fill(tagColor(for: pt.colorIndex)).frame(width: 8, height: 8)
-                        }
-                        Text(suggestion.parentName).font(.system(size: 13, weight: .semibold)).foregroundStyle(.primary)
-                        if let cn = suggestion.childName {
-                            Image(systemName: "chevron.right").font(.system(size: 8)).foregroundStyle(.tertiary)
-                            Text(cn).font(.system(size: 12)).foregroundStyle(.secondary)
-                        }
-                        Spacer()
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.vertical, 6)
-                    .background(suggestion.kind == .newTag ? Color.green.opacity(0.08) : Color(uiColor: .systemBackground).opacity(0.95))
-                    .cornerRadius(8)
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, 4)
             }
         }
     }

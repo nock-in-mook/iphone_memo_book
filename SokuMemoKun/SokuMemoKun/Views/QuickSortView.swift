@@ -11,8 +11,8 @@ struct QuickSortView: View {
 
     var onDismiss: () -> Void
 
-    // フェーズ管理: フィルタ選択 → セット確認 → 準備中 → カルーセル
-    enum Phase { case filter, setConfirm, loading, carousel }
+    // フェーズ管理: フィルタ選択 → セット確認 → カルーセル
+    enum Phase { case filter, setConfirm, carousel }
     @State private var phase: Phase = .filter
 
     // セット管理
@@ -22,8 +22,6 @@ struct QuickSortView: View {
     @State private var currentSetIndex = 0
     private var totalSets: Int { max(1, (allFilteredMemos.count + setSize - 1) / setSize) }
     private var isLastSet: Bool { currentSetIndex >= totalSets - 1 }
-
-    @State private var suggestEngine = TagSuggestEngine()
 
     // カルーセル
     @State private var scrolledMemoID: UUID?
@@ -44,18 +42,12 @@ struct QuickSortView: View {
     @State private var newTagIsChild = false
     @State private var newTagParentID: UUID?  // 新規子タグ作成時の親タグID
 
-    // サジェストキャッシュ
-    @State private var suggestCache: [Int: [TagSuggestEngine.Suggestion]] = [:]
-
     // 変更ログ
     @State private var taggedMemoIDs: Set<UUID> = []
     @State private var titledMemoIDs: Set<UUID> = []
     @State private var editedMemoIDs: Set<UUID> = []
     @State private var deleteQueue: [Memo] = []
     @State private var skippedIndices: Set<Int> = []
-
-    // 準備中
-    @State private var loadingProgress = 0
 
     // 終了確認
     @State private var showExitConfirm = false
@@ -95,8 +87,8 @@ struct QuickSortView: View {
                                 phase = .setConfirm
                             } else {
                                 targetMemos = memos
-                                phase = .loading
-                                prepareAll()
+                                scrolledMemoID = memos.first?.id
+                                phase = .carousel
                             }
                         },
                         onCancel: { onDismiss() }
@@ -104,21 +96,6 @@ struct QuickSortView: View {
 
                 case .setConfirm:
                     setConfirmView
-
-                case .loading:
-                    VStack(spacing: 16) {
-                        Image(systemName: "bolt.fill")
-                            .font(.system(size: 40))
-                            .foregroundStyle(.orange)
-                        Text("準備中...")
-                            .font(.system(size: 18, weight: .bold, design: .rounded))
-                        Text("\(loadingProgress) / \(targetMemos.count)")
-                            .font(.system(size: 14, design: .rounded))
-                            .foregroundStyle(.secondary)
-                        ProgressView(value: Double(loadingProgress), total: Double(max(1, targetMemos.count)))
-                            .tint(.orange)
-                            .frame(width: 200)
-                    }
 
                 case .carousel:
                     if !activeMemos.isEmpty {
@@ -222,10 +199,11 @@ struct QuickSortView: View {
 
     @ViewBuilder
     private func mainContent(geo: GeometryProxy) -> some View {
+        let dialAreaHeight = QuickSortCellView.dialAreaHeight
         let cardWidth = geo.size.width * 0.78
         let headerHeight: CGFloat = 76
         let cellHeight = geo.size.height - headerHeight
-        let cardHeight = max(cellHeight - 370, 200)
+        let cardHeight = max(cellHeight - dialAreaHeight, 200)
 
         VStack(spacing: 0) {
             // カウンター（一番上）
@@ -254,7 +232,7 @@ struct QuickSortView: View {
                 .padding(.horizontal, 16)
                 .padding(.top, 2)
 
-            // カルーセル（セル内包: カード+サジェスト+ルーレットが1セル）
+            // カルーセル（セル内包: カード+ルーレットが1セル）
             CarouselView(
                 items: activeMemos,
                 cardWidth: geo.size.width,
@@ -262,17 +240,14 @@ struct QuickSortView: View {
                 currentMemoID: $scrolledMemoID,
                 isScrolling: $isCarouselScrolling,
                 isScrollDisabled: isCardEditing,
+                dialHeight: dialAreaHeight,
                 cardContent: { memo in
-                    let idx = targetMemos.firstIndex(where: { $0.id == memo.id }) ?? 0
-                    let suggestions = suggestCache[idx] ?? []
                     let activeIdx = activeMemos.firstIndex(where: { $0.id == memo.id }) ?? 0
                     return AnyView(
                         QuickSortCellView(
                             memo: memo,
-                            suggestions: suggestions,
                             cardWidth: cardWidth,
                             cardHeight: cardHeight,
-                            suggestEngine: suggestEngine,
                             showLeftArrow: activeIdx > 0,
                             showRightArrow: activeIdx < activeMemos.count - 1,
                             isActive: memo.id == scrolledMemoID,
@@ -452,7 +427,7 @@ struct QuickSortView: View {
         }
     }
 
-    // 現在のセットのメモを切り出して準備開始
+    // 現在のセットのメモを切り出して開始
     private func startCurrentSet() {
         let start = currentSetIndex * setSize
         let end = min(start + setSize, allFilteredMemos.count)
@@ -462,11 +437,9 @@ struct QuickSortView: View {
         taggedMemoIDs = []
         titledMemoIDs = []
         editedMemoIDs = []
-        suggestCache = [:]
-        scrolledMemoID = nil
+        scrolledMemoID = targetMemos.first?.id
 
-        phase = .loading
-        prepareAll()
+        phase = .carousel
     }
 
     private func enterEditMode(for memo: Memo) {
@@ -642,37 +615,4 @@ struct QuickSortView: View {
         }
     }
 
-    // MARK: - サジェスト一括計算
-
-    private func prepareAll() {
-        loadingProgress = 0
-
-        Task {
-            var cache: [Int: [TagSuggestEngine.Suggestion]] = [:]
-            let allTags = tags
-            let ctx = modelContext
-
-            for (i, memo) in targetMemos.enumerated() {
-                let result = suggestEngine.suggest(
-                    title: memo.title, body: memo.content,
-                    tags: allTags, context: ctx, limit: 3
-                )
-                cache[i] = result
-
-                await MainActor.run {
-                    loadingProgress = i + 1
-                }
-            }
-
-            await MainActor.run {
-                suggestCache = cache
-                loadingProgress = targetMemos.count
-
-                if let first = activeMemos.first {
-                    scrolledMemoID = first.id
-                }
-                phase = .carousel
-            }
-        }
-    }
 }

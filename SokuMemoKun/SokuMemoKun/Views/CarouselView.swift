@@ -9,6 +9,7 @@ struct CarouselView: UIViewControllerRepresentable {
     @Binding var currentMemoID: UUID?
     @Binding var isScrolling: Bool  // スクロール中かどうかを外部に通知
     let isScrollDisabled: Bool
+    let dialHeight: CGFloat  // ルーレット領域の高さ（この領域の横スワイプをブロック）
     // カード描画用のクロージャ（AnyViewで型消去）
     let cardContent: (Memo) -> AnyView
 
@@ -21,9 +22,10 @@ struct CarouselView: UIViewControllerRepresentable {
         let vc = UIViewController()
         vc.view.backgroundColor = .clear
 
-        // コレクションビュー作成
+        // コレクションビュー作成（ルーレット領域のスワイプブロック付き）
         let layout = makeLayout()
-        let cv = UICollectionView(frame: .zero, collectionViewLayout: layout)
+        let cv = CarouselCollectionView(frame: .zero, collectionViewLayout: layout)
+        cv.dialHeight = dialHeight
         cv.backgroundColor = .clear
         cv.showsHorizontalScrollIndicator = false
         cv.decelerationRate = .fast
@@ -77,6 +79,11 @@ struct CarouselView: UIViewControllerRepresentable {
 
         // スクロール有効/無効
         cv.isScrollEnabled = !isScrollDisabled
+
+        // ルーレット領域の高さを更新
+        if let ccv = cv as? CarouselCollectionView {
+            ccv.dialHeight = dialHeight
+        }
 
         // アイテム更新
         let currentIDs = items.map { $0.id }
@@ -181,6 +188,23 @@ struct CarouselView: UIViewControllerRepresentable {
                 }
             }
         }
+    }
+}
+
+// ルーレット領域の横スワイプをブロックするカスタムCollectionView
+class CarouselCollectionView: UICollectionView {
+    var dialHeight: CGFloat = 0
+
+    override func gestureRecognizerShouldBegin(_ gestureRecognizer: UIGestureRecognizer) -> Bool {
+        // パンジェスチャー（横スクロール）のみ制御
+        if gestureRecognizer == self.panGestureRecognizer {
+            let location = gestureRecognizer.location(in: self)
+            // ルーレット領域（セル上部）のタッチなら横スクロールをブロック
+            if location.y < dialHeight {
+                return false
+            }
+        }
+        return super.gestureRecognizerShouldBegin(gestureRecognizer)
     }
 }
 
