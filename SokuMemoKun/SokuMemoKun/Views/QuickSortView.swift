@@ -403,27 +403,26 @@ struct QuickSortView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
             .padding(.top, 80)
 
-            // キーボード収納ボタン（右下）
-            VStack {
+            // キーボード収納ボタン（編集カードの右下、カードの外）
+            HStack {
                 Spacer()
-                HStack {
-                    Spacer()
-                    Button {
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    } label: {
-                        Image(systemName: "keyboard.chevron.compact.down")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.white.opacity(0.7))
-                            .padding(10)
-                            .background(
-                                Circle()
-                                    .fill(Color.black.opacity(0.5))
-                            )
-                    }
-                    .padding(.trailing, 16)
-                    .padding(.bottom, 16)
+                Button {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                } label: {
+                    Image(systemName: "keyboard.chevron.compact.down")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.white.opacity(0.7))
+                        .padding(10)
+                        .background(
+                            Circle()
+                                .fill(Color.black.opacity(0.5))
+                        )
                 }
+                .padding(.trailing, 20)
             }
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .trailing)
+            // カード下端のあたりに配置
+            .padding(.top, 80 + min(geo.size.height * 0.45, 400) + 8)
         }
         .ignoresSafeArea(.keyboard)
         .transition(.opacity)
