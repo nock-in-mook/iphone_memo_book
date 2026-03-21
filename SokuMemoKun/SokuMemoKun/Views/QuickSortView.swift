@@ -317,11 +317,20 @@ struct QuickSortView: View {
         ZStack(alignment: .topLeading) {
             let tabH: CGFloat = 34
             let tabW: CGFloat = width * 0.68
+            let cardShape = CardWithTabShape(tabRatio: 0.68, tabHeight: tabH)
 
-            // カード本体（タブ分だけ上にスペース）
+            // カード全体（タブ＋本体を1つのShapeで描画）
             VStack(alignment: .leading, spacing: 0) {
-                // タブ分のスペーサー
-                Color.clear.frame(height: tabH - 2)
+                // タイトルタブ領域
+                Text(title.isEmpty ? "タイトルなし" : title)
+                    .font(.system(size: 16, weight: .bold, design: .rounded))
+                    .foregroundColor(title.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
+                    .lineLimit(1)
+                    .padding(.horizontal, 12)
+                    .frame(height: tabH - 2, alignment: .leading)
+                    .frame(width: tabW, alignment: .leading)
+                    .background(Color(uiColor: .secondarySystemBackground).opacity(
+                        parentTag != nil ? 0.8 : 0.6))
 
                 // 本文
                 Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
@@ -358,45 +367,25 @@ struct QuickSortView: View {
                 )
             }
             .background(Color(uiColor: .systemBackground))
-            .clipShape(UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 14, bottomTrailingRadius: 14, topTrailingRadius: 14))
+            .clipShape(cardShape)
             .overlay(
-                UnevenRoundedRectangle(topLeadingRadius: 0, bottomLeadingRadius: 14, bottomTrailingRadius: 14, topTrailingRadius: 14)
-                    .stroke(parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1), lineWidth: 1.5)
+                cardShape
+                    .stroke(parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1), lineWidth: 2.5)
             )
             .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
 
-            // タイトルタブ（左上、7割幅、カードの上に飛び出す）
-            HStack(spacing: 0) {
-                Text(title.isEmpty ? "タイトルなし" : title)
-                    .font(.system(size: 16, weight: .bold, design: .rounded))
-                    .foregroundColor(title.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                    .lineLimit(1)
-                    .padding(.horizontal, 12)
-                    .frame(height: tabH)
-                    .frame(width: tabW, alignment: .leading)
-                    .background(
-                        CardTitleTabShape()
-                            .fill(parentTag != nil
-                                ? Color(uiColor: .secondarySystemBackground).opacity(0.8)
-                                : Color(uiColor: .secondarySystemBackground).opacity(0.6))
-                    )
-                    .overlay(
-                        CardTitleTabShape()
-                            .stroke(parentTag != nil ? borderColor.opacity(0.4) : Color.secondary.opacity(0.1), lineWidth: 1.5)
-                    )
-
-                // 鉛筆ボタン（タブの右横、カードの外エリア）
-                Button {
-                    if scrolledMemoID != memo.id { scrolledMemoID = memo.id }
-                    enterEditMode()
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
-                .padding(.leading, 6)
+            // 鉛筆ボタン（タブの右横、カードの外エリア）
+            Button {
+                if scrolledMemoID != memo.id { scrolledMemoID = memo.id }
+                enterEditMode()
+            } label: {
+                Image(systemName: "square.and.pencil")
+                    .font(.system(size: 22, weight: .semibold))
+                    .foregroundStyle(.orange)
             }
+            .buttonStyle(.plain)
+            .frame(height: tabH - 2)
+            .offset(x: tabW + 6, y: 0)
         }
         .frame(width: width, height: height)
         .offset(y: isDeleting ? deleteOffset : 0)
@@ -470,22 +459,18 @@ struct QuickSortView: View {
                 // 編集カード本体
                 VStack(alignment: .leading, spacing: 0) {
                     // タイトル入力
-                    HStack {
-                        Text("タイトル")
-                            .font(.system(size: 10, weight: .medium))
-                            .foregroundStyle(.secondary.opacity(0.5))
-                        Spacer()
-                    }
-                    .padding(.horizontal, 14)
-                    .padding(.top, 10)
-
                     TextField("タイトルを入力", text: $editingTitle)
                         .font(.system(size: 16, weight: .bold, design: .rounded))
                         .focused($titleFieldFocused)
                         .padding(.horizontal, 14)
-                        .padding(.vertical, 6)
+                        .padding(.top, 10)
+                        .padding(.bottom, 6)
 
-                    Divider().padding(.horizontal, 14)
+                    // 仕切り線
+                    Rectangle()
+                        .fill(Color.secondary.opacity(0.3))
+                        .frame(height: 1)
+                        .padding(.horizontal, 10)
 
                     // 本文入力
                     TextEditor(text: $editingContent)
@@ -1184,58 +1169,3 @@ struct QuickSortView: View {
     }
 }
 
-// MARK: - タブ付きカード一体成型Shape
-
-struct CardWithTabShape: Shape {
-    var tabWidth: CGFloat
-    var tabHeight: CGFloat
-    var bodyRadius: CGFloat
-
-    func path(in rect: CGRect) -> Path {
-        let tabR: CGFloat = 7       // タブ上部角丸
-        let tabInset: CGFloat = 5   // タブの台形傾き
-        let jointR: CGFloat = 8     // タブと本体の接続部の逆カーブ
-
-        // タブの座標
-        let tabTopLeft = CGPoint(x: tabInset, y: 0)
-        let tabTopRight = CGPoint(x: tabWidth - tabInset, y: 0)
-        let tabBottomRight = CGPoint(x: tabWidth, y: tabHeight)
-        // 本体の上辺はy=tabHeight
-        let bodyTop = tabHeight
-        let bodyRight = rect.maxX
-
-        var p = Path()
-
-        // 左下から開始
-        p.move(to: CGPoint(x: 0, y: rect.maxY - bodyRadius))
-        // 左下角丸
-        p.addArc(tangent1End: CGPoint(x: 0, y: rect.maxY),
-                 tangent2End: CGPoint(x: bodyRadius, y: rect.maxY), radius: bodyRadius)
-        // 下辺
-        p.addLine(to: CGPoint(x: bodyRight - bodyRadius, y: rect.maxY))
-        // 右下角丸
-        p.addArc(tangent1End: CGPoint(x: bodyRight, y: rect.maxY),
-                 tangent2End: CGPoint(x: bodyRight, y: rect.maxY - bodyRadius), radius: bodyRadius)
-        // 右辺
-        p.addLine(to: CGPoint(x: bodyRight, y: bodyTop + bodyRadius))
-        // 右上角丸
-        p.addArc(tangent1End: CGPoint(x: bodyRight, y: bodyTop),
-                 tangent2End: CGPoint(x: bodyRight - bodyRadius, y: bodyTop), radius: bodyRadius)
-        // 上辺（タブ右端まで）
-        p.addLine(to: CGPoint(x: tabWidth + jointR, y: bodyTop))
-        // タブ右の逆カーブ（本体上辺→タブ右下）
-        p.addArc(tangent1End: tabBottomRight,
-                 tangent2End: tabTopRight, radius: jointR)
-        // タブ右上角丸
-        p.addArc(tangent1End: tabTopRight,
-                 tangent2End: tabTopLeft, radius: tabR)
-        // タブ左上角丸
-        p.addArc(tangent1End: tabTopLeft,
-                 tangent2End: CGPoint(x: 0, y: tabHeight), radius: tabR)
-        // タブ左辺→本体左辺へ（そのまま下に）
-        p.addLine(to: CGPoint(x: 0, y: rect.maxY - bodyRadius))
-
-        p.closeSubpath()
-        return p
-    }
-}
