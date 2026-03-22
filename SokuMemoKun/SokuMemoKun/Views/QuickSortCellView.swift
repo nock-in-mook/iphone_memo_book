@@ -70,19 +70,9 @@ struct QuickSortCellView: View {
 
                 Spacer(minLength: 10)
 
-                // ── エディットバー（タイトル / 本文 / タグ）──
-                editBar
-
-                // ── 仕切り線 ──
-                Rectangle()
-                    .fill(Color.secondary.opacity(0.2))
-                    .frame(height: 1)
-                    .padding(.horizontal, 30)
-
-                // ── コントロールパネル ──
-                controlPanel
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 6)
+                // ── コントローラーエリア（弧の仕切り線 + ボタン + 操作パネル）──
+                controllerArea
+                    .padding(.bottom, 4)
             }
         }
         .onAppear {
@@ -406,55 +396,76 @@ struct QuickSortCellView: View {
         }
     }
 
-    // MARK: - エディットバー（タイトル / 本文 / タグ）
+    // MARK: - コントローラーエリア（弧 + 3ボタン + 操作パネル）
 
-    private var editBar: some View {
-        HStack(spacing: 0) {
-            // タイトル編集
-            Button {
-                isTitleFocused = true
-            } label: {
-                Text("タイトル編集")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
-                    .background(Color.green.opacity(0.25))
-            }
-            .buttonStyle(.plain)
+    private var controllerArea: some View {
+        VStack(spacing: 0) {
+            // 弧の仕切り線（端から端まで、太く濃く）
+            ArcDivider()
+                .stroke(Color.secondary.opacity(0.5), lineWidth: 2.5)
+                .frame(height: 48)
 
-            // 本文編集
-            Button {
-                commitTitle()
-                isTitleFocused = false
-                onEditBody()
-            } label: {
-                Text("本文編集")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
-                    .background(Color(white: 0.95))
-            }
-            .buttonStyle(.plain)
-
-            // タグ編集
-            Button {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    showDialArea.toggle()
+            // 3ボタン（弧に沿って配置・傾き・弧型カプセル）
+            HStack(spacing: 10) {
+                // タイトル編集
+                Button {
+                    isTitleFocused = true
+                } label: {
+                    Text("タイトル編集")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 14)
+                        .padding(.vertical, 7)
+                        .background(ArcCapsule().fill(Color.green.opacity(0.2)))
+                        .overlay(ArcCapsule().stroke(Color.green.opacity(0.4), lineWidth: 1))
                 }
-            } label: {
-                Text("タグ編集")
-                    .font(.system(size: 13, weight: .bold))
-                    .foregroundStyle(.primary)
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 36)
-                    .background(showDialArea ? Color.blue.opacity(0.35) : Color.blue.opacity(0.2))
+                .buttonStyle(.plain)
+                .rotationEffect(.degrees(-4))
+                .offset(y: 8)
+
+                // 本文編集
+                Button {
+                    commitTitle()
+                    isTitleFocused = false
+                    onEditBody()
+                } label: {
+                    Text("本文編集")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 7)
+                        .background(ArcCapsule().fill(Color(white: 0.93)))
+                        .overlay(ArcCapsule().stroke(Color.secondary.opacity(0.3), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .offset(y: 0)
+
+                // タグ編集
+                Button {
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showDialArea.toggle()
+                    }
+                } label: {
+                    Text("タグ編集")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 7)
+                        .background(ArcCapsule().fill(showDialArea ? Color.blue.opacity(0.3) : Color.blue.opacity(0.15)))
+                        .overlay(ArcCapsule().stroke(Color.blue.opacity(0.4), lineWidth: 1))
+                }
+                .buttonStyle(.plain)
+                .rotationEffect(.degrees(4))
+                .offset(y: 8)
             }
-            .buttonStyle(.plain)
+            .padding(.horizontal, 16)
+            .padding(.top, -6)
+
+            // 操作パネル（前へ / ゴミ箱 / 次へ）
+            controlPanel
+                .padding(.horizontal, 24)
+                .padding(.top, 12)
         }
-        .padding(.horizontal, 16)
-        .padding(.bottom, 8)
     }
 
     // MARK: - コントロールパネル（◁前へ / ゴミ箱 / ▷次へ）
@@ -588,5 +599,45 @@ struct QuickSortCellView: View {
             .padding(.trailing, 8)
             .offset(y: -8)
         }
+    }
+}
+
+// 控えめな弧の仕切り線
+struct ArcDivider: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.maxY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX, y: rect.maxY),
+            control: CGPoint(x: rect.midX, y: rect.minY)
+        )
+        return path
+    }
+}
+
+// 弧を描くカプセル型（上下辺が外側に緩やかに膨らむ）
+struct ArcCapsule: Shape {
+    func path(in rect: CGRect) -> Path {
+        let r = rect.height / 2
+        // 仕切り線と同じ円弧に沿う（bulge ∝ width²）
+        let bulge: CGFloat = rect.width * rect.width / 6400
+        var path = Path()
+        // 左端の丸み（外側に膨らむ）
+        path.move(to: CGPoint(x: r, y: rect.maxY))
+        path.addArc(center: CGPoint(x: r, y: rect.midY), radius: r, startAngle: .degrees(90), endAngle: .degrees(270), clockwise: false)
+        // 上辺（外側に膨らむ弧）
+        path.addQuadCurve(
+            to: CGPoint(x: rect.maxX - r, y: rect.minY),
+            control: CGPoint(x: rect.midX, y: rect.minY - bulge)
+        )
+        // 右端の丸み（外側に膨らむ）
+        path.addArc(center: CGPoint(x: rect.maxX - r, y: rect.midY), radius: r, startAngle: .degrees(270), endAngle: .degrees(90), clockwise: false)
+        // 下辺（上辺と平行に、同じ方向に膨らむ弧）
+        path.addQuadCurve(
+            to: CGPoint(x: r, y: rect.maxY),
+            control: CGPoint(x: rect.midX, y: rect.maxY - bulge)
+        )
+        path.closeSubpath()
+        return path
     }
 }

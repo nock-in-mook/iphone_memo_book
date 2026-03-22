@@ -74,11 +74,25 @@ struct QuickSortFilterView: View {
                             .font(.system(size: 20, weight: .bold, design: .rounded))
 
                         // 説明文
-                        Text("メモを連続表示して一気に整理できます\nタイトル編集・タグ付け・本文編集・削除など")
-                            .font(.system(size: 13))
-                            .foregroundStyle(.secondary)
-                            .multilineTextAlignment(.center)
-                            .lineSpacing(3)
+                        VStack(spacing: 2) {
+                            Text("お好みの条件で抽出したメモを連続で表示し、一気に")
+                                .foregroundStyle(.secondary)
+                                .multilineTextAlignment(.center)
+                            VStack(alignment: .leading, spacing: 2) {
+                                checkItem("タイトル編集")
+                                checkItem("タグ付け")
+                                checkItem("本文編集")
+                                checkItem("ロック（削除防止）")
+                                checkItem("削除")
+                            }
+                            Text("ができるモードです。")
+                                .foregroundStyle(.secondary)
+                        }
+                        .font(.system(size: 13))
+
+                        Divider()
+                            .padding(.horizontal, 40)
+                            .padding(.top, 4)
 
                         // フィルタ案内
                         Text("対象のメモを選んでください")
@@ -117,14 +131,17 @@ struct QuickSortFilterView: View {
                         )
                         Divider().padding(.leading, 54)
 
-                        // 特定のタグ（タグ未選択時は件数非表示）
+                        // 特定のタグ（展開だけでチェックは入らない。タグ選択時にチェック）
                         filterRow(
                             icon: "tag.fill", iconColor: .green,
                             title: "特定のタグのメモ",
                             count: filterByTag && !selectedTagIDs.isEmpty
                                 ? allMemos.filter { memo in !Set(memo.tags.map { $0.id }).isDisjoint(with: selectedTagIDs) }.count
                                 : nil,
-                            isOn: $filterByTag
+                            isOn: Binding(
+                                get: { filterByTag && !selectedTagIDs.isEmpty },
+                                set: { _ in filterByTag.toggle() }
+                            )
                         )
 
                         // タグ選択リスト（filterByTagがONの時だけ展開）
@@ -239,6 +256,16 @@ struct QuickSortFilterView: View {
     }
 
     @ViewBuilder
+    private func checkItem(_ text: String) -> some View {
+        HStack(spacing: 6) {
+            Image(systemName: "checkmark.square.fill")
+                .foregroundStyle(.white, .green)
+            Text(text)
+                .bold()
+                .foregroundStyle(.primary)
+        }
+    }
+
     private func filterRow(icon: String, iconColor: Color, title: String, count: Int?, isOn: Binding<Bool>) -> some View {
         Button {
             isOn.wrappedValue.toggle()
@@ -259,6 +286,10 @@ struct QuickSortFilterView: View {
                     Text("\(count)件")
                         .font(.system(size: 13))
                         .foregroundStyle(.secondary)
+                } else if icon == "tag.fill" && !filterByTag {
+                    Image(systemName: "chevron.down")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.secondary.opacity(0.5))
                 }
 
                 Image(systemName: isOn.wrappedValue ? "checkmark.circle.fill" : "circle")
