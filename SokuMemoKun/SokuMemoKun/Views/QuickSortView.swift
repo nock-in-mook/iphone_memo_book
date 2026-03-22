@@ -27,6 +27,7 @@ struct QuickSortView: View {
     // カルーセル
     @State private var scrolledMemoID: UUID?
     @State private var isCarouselScrolling = false
+    @State private var cellEditMode: CellEditMode = .none
 
     @State private var isKeyboardVisible = false
 
@@ -154,6 +155,9 @@ struct QuickSortView: View {
             }
         }
         .ignoresSafeArea(.keyboard)
+        .onChange(of: scrolledMemoID) { _, _ in
+            cellEditMode = .none
+        }
         .overlay(alignment: .bottomTrailing) {
             if isKeyboardVisible {
                 Button {
@@ -284,13 +288,11 @@ struct QuickSortView: View {
                 isScrollDisabled: true,
                 dialHeight: QuickSortCellView.dialAreaHeight,
                 cardContent: { memo in
-                    let activeIdx = activeMemos.firstIndex(where: { $0.id == memo.id }) ?? 0
                     return AnyView(
                         QuickSortCellView(
                             memo: memo,
-                            showLeftArrow: activeIdx > 0,
-                            showRightArrow: activeIdx < activeMemos.count - 1,
                             isActive: memo.id == scrolledMemoID,
+                            editMode: $cellEditMode,
                             onTagChanged: { id in taggedMemoIDs.insert(id) },
                             onTitleChanged: { id in titledMemoIDs.insert(id) },
                             onDelete: { deleteMemo($0) },
@@ -298,30 +300,96 @@ struct QuickSortView: View {
                                 newTagIsChild = isChild
                                 newTagParentID = parentID
                                 showNewTagSheet = true
-                            },
-                            onGoPrev: {
-                                if activeIdx > 0 {
-                                    scrolledMemoID = activeMemos[activeIdx - 1].id
-                                }
-                            },
-                            onGoNext: {
-                                if activeIdx < activeMemos.count - 1 {
-                                    scrolledMemoID = activeMemos[activeIdx + 1].id
-                                }
-                            },
-                            onFinish: {
-                                withAnimation(.easeOut(duration: 0.25)) { showFinishConfirm = true }
                             }
                         )
                     )
                 }
             )
 
-            // 操作パネル（固定・スクロールしない）
+            // コントローラーエリア（弧 + 3編集ボタン）固定
+            controllerButtons
+
+            // 操作パネル（前へ / ゴミ箱 / 次へ）固定
             bottomControlPanel
                 .padding(.horizontal, 24)
-                .padding(.top, 8)
                 .padding(.bottom, 4)
+        }
+    }
+
+    // MARK: - コントローラーエリア（弧 + 3編集ボタン）
+
+    private var controllerButtons: some View {
+        VStack(spacing: 0) {
+            // 弧の仕切り線
+            ArcDivider()
+                .stroke(Color.secondary.opacity(0.5), lineWidth: 2.5)
+                .frame(height: 70)
+
+            // 3ボタン（弧に沿って配置）
+            ZStack {
+                // 本文編集（中央固定）
+                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
+                    cellEditMode = (cellEditMode == .content) ? .none : .content
+                } label: {
+                    Text("本文編集")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 18)
+                        .padding(.top, 6).padding(.bottom, 8)
+                        .background(
+                            ArcCapsule().fill(
+                                LinearGradient(colors: [Color(white: 0.98), Color(white: 0.88)],
+                                               startPoint: .top, endPoint: .bottom)
+                            )
+                        )
+                }
+                .offset(y: -17)
+
+                // タイトル編集（左）
+                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
+                    cellEditMode = (cellEditMode == .title) ? .none : .title
+                } label: {
+                    Text("タイトル編集")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .frame(width: 90)
+                        .padding(.top, 6).padding(.bottom, 8)
+                        .background(
+                            ZStack {
+                                ArcCapsule().fill(Color(white: 0.95))
+                                ArcCapsule().fill(
+                                    LinearGradient(colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.5)],
+                                                   startPoint: .top, endPoint: .bottom)
+                                )
+                            }
+                        )
+                }
+                .rotationEffect(.degrees(-13))
+                .offset(x: -128, y: -2)
+
+                // タグ編集（右）
+                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
+                    cellEditMode = (cellEditMode == .tag) ? .none : .tag
+                } label: {
+                    Text("タグ編集")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .frame(width: 90)
+                        .padding(.top, 6).padding(.bottom, 8)
+                        .background(
+                            ZStack {
+                                ArcCapsule().fill(Color(white: 0.95))
+                                ArcCapsule().fill(
+                                    LinearGradient(colors: [Color.cyan.opacity(0.18), Color.cyan.opacity(0.35)],
+                                                   startPoint: .top, endPoint: .bottom)
+                                )
+                            }
+                        )
+                }
+                .rotationEffect(.degrees(13))
+                .offset(x: 128, y: -2)
+            }
+            .padding(.top, -22)
         }
     }
 
@@ -528,6 +596,7 @@ struct QuickSortView: View {
         editedMemoIDs = []
         scrolledMemoID = nil
         currentSetIndex = 0
+        cellEditMode = .none
         showResult = false
         showExitConfirm = false
         showFinishConfirm = false

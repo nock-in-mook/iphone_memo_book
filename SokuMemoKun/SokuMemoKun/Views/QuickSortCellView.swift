@@ -1,13 +1,17 @@
 import SwiftUI
 import SwiftData
 
-// セル内包方式: メモカード（上）→ ルーレット（中）→ コントロールパネル（下）
-// スワイプ操作は一切なし、全てタップで完結
+// 編集モード（親子間で共有）
+enum CellEditMode: Equatable {
+    case none, title, content, tag
+}
+
+// セル内包方式: メモカード（上）→ ルーレット（中）
+// コントローラーエリアは親ビュー側に固定配置
 struct QuickSortCellView: View {
     let memo: Memo
-    let showLeftArrow: Bool
-    let showRightArrow: Bool
     var isActive: Bool = false
+    @Binding var editMode: CellEditMode
 
     // ルーレット領域の高さ
     static let dialAreaHeight: CGFloat = 250
@@ -17,9 +21,6 @@ struct QuickSortCellView: View {
     var onTitleChanged: (UUID) -> Void = { _ in }
     var onDelete: (Memo) -> Void = { _ in }
     var onNewTagSheet: (_ isChild: Bool, _ parentTagID: UUID?) -> Void = { _, _ in }
-    var onGoPrev: () -> Void = {}
-    var onGoNext: () -> Void = {}
-    var onFinish: () -> Void = {}
 
     @Query(sort: \Tag.name) private var tags: [Tag]
     @Environment(\.modelContext) private var modelContext
@@ -80,11 +81,6 @@ struct QuickSortCellView: View {
                     }
 
                     Spacer(minLength: 0)
-
-                    // ── コントローラーエリア（弧の仕切り線 + ボタン + 操作パネル）──
-                    controllerArea
-                        .padding(.bottom, 4)
-                        .layoutPriority(1)  // ボタンは最優先で場所キープ
             }
             // 全体の背景タップで編集解除
             .background(
@@ -121,14 +117,24 @@ struct QuickSortCellView: View {
             applyTagFromDial()
         }
         .onChange(of: isTitleFocused) { _, focused in
-            if !focused { commitTitle() }
+            if !focused {
+                commitTitle()
+                if editMode == .title { editMode = .none }
+            }
         }
         .onChange(of: isContentFocused) { _, focused in
-            if !focused { commitContent(); isContentEditing = false }
+            if !focused {
+                commitContent(); isContentEditing = false
+                if editMode == .content { editMode = .none }
+            }
         }
         .onChange(of: isActive) { _, active in
             if active { triggerFlash() }
             else { flashTag = false; flashTitle = false }
+        }
+        // 外部からの編集モード変更に応答
+        .onChange(of: editMode) { _, newMode in
+            applyEditMode(newMode)
         }
         .overlay {
             if showDeleteConfirm {
@@ -270,6 +276,40 @@ struct QuickSortCellView: View {
         if showDialArea {
             withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false }
         }
+        editMode = .none
+    }
+
+    // 外部からの編集モード切替
+    private func applyEditMode(_ mode: CellEditMode) {
+        switch mode {
+        case .none:
+            titleTabPopped = false
+            isTitleFocused = false
+            if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
+            if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
+            commitTitle()
+        case .title:
+            if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
+            if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
+            isTitleFocused = true
+            titleTabPopped = true
+            flashTitle = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { flashTitle = false }
+        case .content:
+            commitTitle()
+            titleTabPopped = false
+            isTitleFocused = false
+            if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
+            editingContent = memo.content
+            isContentEditing = true
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { isContentFocused = true }
+        case .tag:
+            commitTitle()
+            titleTabPopped = false
+            isTitleFocused = false
+            if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
+            withAnimation(.easeInOut(duration: 0.25)) { showDialArea = true }
+        }
     }
 
     // MARK: - ピカピカアニメーション
@@ -388,11 +428,7 @@ struct QuickSortCellView: View {
                     .contentShape(Rectangle())
                     .onTapGesture {
                         // タグフッタータップでルーレットトグル
-                        commitTitle()
-                        titleTabPopped = false
-                        isTitleFocused = false
-                        if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
-                        withAnimation(.easeInOut(duration: 0.25)) { showDialArea.toggle() }
+                        editMode = (editMode == .tag) ? .none : .tag
                     }
                     .overlay(alignment: .top) {
                         Rectangle()
@@ -457,205 +493,6 @@ struct QuickSortCellView: View {
                     RoundedRectangle(cornerRadius: 7)
                         .fill(tagColor(for: pt.colorIndex))
                 )
-        }
-    }
-
-    // MARK: - コントローラーエリア（弧 + 3ボタン + 操作パネル）
-
-    private var controllerArea: some View {
-        VStack(spacing: 0) {
-            // 弧の仕切り線
-            ArcDivider()
-                .stroke(Color.secondary.opacity(0.5), lineWidth: 2.5)
-                .frame(height: 70)
-
-            // 3ボタン（弧に沿って配置・P2ベース押せるボタン）
-            ZStack {
-                // 本文編集（中央固定）
-                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
-                    if isContentEditing {
-                        // 編集中 → 抜ける
-                        commitContent()
-                        isContentEditing = false
-                        isContentFocused = false
-                    } else {
-                        // 他を閉じて起動
-                        commitTitle()
-                        titleTabPopped = false
-                        isTitleFocused = false
-                        if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
-                        editingContent = memo.content
-                        isContentEditing = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                            isContentFocused = true
-                        }
-                    }
-                } label: {
-                    Text("本文編集")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 18)
-                        .padding(.top, 6).padding(.bottom, 8)
-                        .background(
-                            ArcCapsule().fill(
-                                LinearGradient(colors: [Color(white: 0.98), Color(white: 0.88)],
-                                               startPoint: .top, endPoint: .bottom)
-                            )
-                        )
-                }
-                .offset(y: -17)
-
-                // タイトル編集（左）
-                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
-                    if isTitleFocused {
-                        // 編集中 → 抜ける
-                        titleTabPopped = false
-                        isTitleFocused = false
-                    } else {
-                        // 他を閉じて起動
-                        if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
-                        isTitleFocused = true
-                        // タブ拡大＋フラッシュ演出
-                        titleTabPopped = true
-                        flashTitle = true
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
-                            flashTitle = false
-                        }
-                    }
-                } label: {
-                    Text("タイトル編集")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        
-                        .frame(width: 90)
-                        .padding(.top, 6).padding(.bottom, 8)
-                        .background(
-                            ZStack {
-                                ArcCapsule().fill(Color(white: 0.95))
-                                ArcCapsule().fill(
-                                    LinearGradient(colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.5)],
-                                                   startPoint: .top, endPoint: .bottom)
-                                )
-                            }
-                        )
-                }
-                .rotationEffect(.degrees(-13))
-                .offset(x: -128, y: -2)
-
-                // タグ編集（右）
-                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
-                    if showDialArea {
-                        // 表示中 → 閉じる
-                        withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false }
-                    } else {
-                        // 他を閉じて起動
-                        commitTitle()
-                        titleTabPopped = false
-                        isTitleFocused = false
-                        if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
-                        withAnimation(.easeInOut(duration: 0.25)) { showDialArea = true }
-                    }
-                } label: {
-                    Text("タグ編集")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        
-                        .frame(width: 90)
-                        .padding(.top, 6).padding(.bottom, 8)
-                        .background(
-                            ZStack {
-                                ArcCapsule().fill(Color(white: 0.95))
-                                ArcCapsule().fill(
-                                    LinearGradient(colors: [Color.cyan.opacity(0.18), Color.cyan.opacity(0.35)],
-                                                   startPoint: .top, endPoint: .bottom)
-                                )
-                            }
-                        )
-                }
-                .rotationEffect(.degrees(13))
-                .offset(x: 128, y: -2)
-            }
-            .padding(.top, -22)
-        }
-    }
-
-    // MARK: - コントロールパネル（◁前へ / ゴミ箱 / ▷次へ）
-
-    private var controlPanel: some View {
-        HStack(spacing: 0) {
-            // ◁ タップで前へ
-            Button {
-                commitTitle()
-                isTitleFocused = false
-                onGoPrev()
-            } label: {
-                HStack(spacing: 6) {
-                    Triangle()
-                        .fill(Color.blue.opacity(0.7))
-                        .frame(width: 14, height: 20)
-                        .rotationEffect(.degrees(-90))
-                    Text("前へ")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.blue)
-                }
-            }
-            .disabled(!showLeftArrow)
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            // ゴミ箱（でかめ・タップで確認後に削除）
-            Button {
-                withAnimation(.easeOut(duration: 0.2)) { showDeleteConfirm = true }
-            } label: {
-                VStack(spacing: 2) {
-                    Image(systemName: "trash")
-                        .font(.system(size: 26, weight: .medium))
-                    Text("削除")
-                        .font(.system(size: 11, weight: .medium))
-                }
-                .foregroundStyle(.red.opacity(0.6))
-            }
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            // ▷ タップで次へ / 最後のページは「完了」
-            if showRightArrow {
-                Button {
-                    commitTitle()
-                    isTitleFocused = false
-                    onGoNext()
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("次へ")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.blue)
-                        Triangle()
-                            .fill(Color.blue.opacity(0.7))
-                            .frame(width: 14, height: 20)
-                            .rotationEffect(.degrees(90))
-                    }
-                }
-                .buttonStyle(.plain)
-            } else {
-                Button {
-                    commitTitle()
-                    isTitleFocused = false
-                    onFinish()
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("完了")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(Color.orange))
-                }
-            }
         }
     }
 
