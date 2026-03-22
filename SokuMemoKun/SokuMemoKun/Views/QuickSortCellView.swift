@@ -46,6 +46,8 @@ struct QuickSortCellView: View {
     @State private var contentTapOffset: Int?
     /// 本文タップ経由で編集開始したか（カード自動拡大を抑制）
     @State private var editFromTap = false
+    /// 編集中に拡大ボタンを押した → 編集終了後にisExpanded=trueにする
+    @State private var expandAfterEdit = false
 
     // ピカピカアニメーション
     @State private var flashTag = false
@@ -156,6 +158,11 @@ struct QuickSortCellView: View {
             if !focused {
                 commitContent(); isContentEditing = false; editFromTap = false
                 if editMode == .content { editMode = .none }
+                // 編集中に拡大ボタンを押していたら、閲覧復帰時に拡大表示
+                if expandAfterEdit {
+                    expandAfterEdit = false
+                    isExpanded = true
+                }
             }
         }
         .onChange(of: isActive) { _, active in
@@ -440,6 +447,7 @@ struct QuickSortCellView: View {
                             // タップ経由編集時: 拡大ボタン（editHサイズへ）
                             if editFromTap {
                                 Button {
+                                    expandAfterEdit = true  // キーボード閉じたらexpandedHにする
                                     withAnimation(.easeInOut(duration: 0.25)) { editFromTap = false }
                                 } label: {
                                     Image(systemName: "arrow.up.left.and.arrow.down.right")
