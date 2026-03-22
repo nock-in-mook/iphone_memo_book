@@ -46,8 +46,6 @@ struct QuickSortCellView: View {
     @State private var contentTapOffset: Int?
     /// 本文タップ経由で編集開始したか（カード自動拡大を抑制）
     @State private var editFromTap = false
-    /// 編集中に拡大ボタンを押した → 編集終了後にisExpanded=trueにする
-    @State private var expandAfterEdit = false
 
     // ピカピカアニメーション
     @State private var flashTag = false
@@ -75,11 +73,11 @@ struct QuickSortCellView: View {
             let normalH = geo.size.height * 0.35
             let editH = geo.size.height * 0.55
             let expandedH = geo.size.height * 0.80
-            // ルーレット中は通常サイズ、編集中はeditH（タップ経由はnormalH維持）、拡大中はexpandedH
+            // isExpanded最優先、ルーレット中は通常サイズ、タップ編集はnormalH維持
             let baseCardH = showDialArea ? normalH
+                           : isExpanded ? expandedH
                            : isContentEditing ? (editFromTap ? normalH : editH)
                            : isTitleFocused ? editH
-                           : isExpanded ? expandedH
                            : normalH
             let maxCardH = keyboardHeight > 0 ? geo.size.height - keyboardHeight - 20 : geo.size.height * 0.80
             let cardH = min(baseCardH, maxCardH)
@@ -96,7 +94,6 @@ struct QuickSortCellView: View {
                         .animation(.easeInOut(duration: 0.25), value: isTitleFocused)
                         .animation(.easeInOut(duration: 0.25), value: showDialArea)
                         .animation(.easeInOut(duration: 0.25), value: keyboardHeight)
-                        .animation(.easeInOut(duration: 0.25), value: editFromTap)
 
                     Spacer(minLength: 10)
 
@@ -158,11 +155,6 @@ struct QuickSortCellView: View {
             if !focused {
                 commitContent(); isContentEditing = false; editFromTap = false
                 if editMode == .content { editMode = .none }
-                // 編集中に拡大ボタンを押していたら、閲覧復帰時に拡大表示
-                if expandAfterEdit {
-                    expandAfterEdit = false
-                    isExpanded = true
-                }
             }
         }
         .onChange(of: isActive) { _, active in
@@ -444,13 +436,25 @@ struct QuickSortCellView: View {
                             .padding(.vertical, 4)
                             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
 
-                            // タップ経由編集時: 拡大ボタン（editHサイズへ）
-                            if editFromTap {
+                            // 拡大/縮小ボタン（閲覧・編集共通）
+                            if !isExpanded {
                                 Button {
-                                    expandAfterEdit = true  // キーボード閉じたらexpandedHにする
-                                    withAnimation(.easeInOut(duration: 0.25)) { editFromTap = false }
+                                    withAnimation(.easeInOut(duration: 0.25)) { isExpanded = true }
                                 } label: {
                                     Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 30, height: 30)
+                                        .background(Circle().fill(Color.blue.opacity(0.7)))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(8)
+                                .transition(.scale.combined(with: .opacity))
+                            } else {
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.25)) { isExpanded = false }
+                                } label: {
+                                    Image(systemName: "arrow.down.right.and.arrow.up.left")
                                         .font(.system(size: 13, weight: .medium))
                                         .foregroundStyle(.white)
                                         .frame(width: 30, height: 30)
