@@ -99,6 +99,15 @@ struct SettingsView: View {
                     }
                 }
 
+                // ボタンデザインラボ
+                Section("ボタンラボ") {
+                    NavigationLink {
+                        ButtonLabView()
+                    } label: {
+                        Label("爆速モード ボタンデザイン", systemImage: "button.programmable")
+                    }
+                }
+
                 // 影ラボ
                 Section("影ラボ") {
                     NavigationLink { TextureLab1() } label: { Text("1: タブシェイプ影") }

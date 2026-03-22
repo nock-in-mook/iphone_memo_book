@@ -406,7 +406,7 @@ struct QuickSortCellView: View {
                 .frame(height: 48)
 
             // 3ボタン（弧に沿って配置・傾き・弧型カプセル）
-            HStack(spacing: 10) {
+            HStack(spacing: 24) {
                 // タイトル編集
                 Button {
                     isTitleFocused = true
@@ -421,7 +421,7 @@ struct QuickSortCellView: View {
                 }
                 .buttonStyle(.plain)
                 .rotationEffect(.degrees(-4))
-                .offset(y: 8)
+                .offset(y: 2)
 
                 // 本文編集
                 Button {
@@ -438,7 +438,7 @@ struct QuickSortCellView: View {
                         .overlay(ArcCapsule().stroke(Color.secondary.opacity(0.3), lineWidth: 1))
                 }
                 .buttonStyle(.plain)
-                .offset(y: 0)
+                .offset(y: -8)
 
                 // タグ編集
                 Button {
@@ -456,10 +456,10 @@ struct QuickSortCellView: View {
                 }
                 .buttonStyle(.plain)
                 .rotationEffect(.degrees(4))
-                .offset(y: 8)
+                .offset(y: 2)
             }
             .padding(.horizontal, 16)
-            .padding(.top, -6)
+            .padding(.top, -14)
 
             // 操作パネル（前へ / ゴミ箱 / 次へ）
             controlPanel
