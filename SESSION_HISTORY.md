@@ -1138,3 +1138,14 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - 長文テストメモ生成（1000〜20000文字×20枚）
 - APP_RELEASE_GUIDE両OS版に「キーボード×ダイアログ干渉チェック」追記
 - 実機ビルド用証明書セットアップ（.p12インポート）
+
+---
+## 即メモ_045 (2026-03-23)
+
+### カスタムキーボード高さ対応・UI微調整
+- サードパーティ製キーボード使用時にカーソル行がキーボードに隠れる問題を修正
+- 原因: UICollectionView(CarouselView)経由のkeyboardHeight伝播がUIHostingConfigurationで断絶
+- 解決: QuickSortCellView内で直接keyboardWillChangeFrameNotificationを購読
+- 編集ボタン3つを10pt上に移動
+- ロックボタンの視認性改善（不透明度・背景・枠線を濃く）
+- 長文テストメモの実機パフォーマンス検証→2万文字でも問題なし
