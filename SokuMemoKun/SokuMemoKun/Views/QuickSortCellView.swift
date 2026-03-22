@@ -358,10 +358,21 @@ struct QuickSortCellView: View {
                         .frame(height: tabH - 2, alignment: .leading)
                         .frame(width: tabW, alignment: .leading)
                         .background(
-                            flashTitle
-                                ? Color.orange.opacity(0.45)
+                            (flashTitle || editMode == .title)
+                                ? Color.orange.opacity(flashTitle ? 0.45 : 0.35)
                                 : Color.orange.opacity(0.18)
                         )
+                        .overlay(
+                            // 編集時: 白いインナーシャドウ（縁取り風）
+                            editMode == .title
+                                ? RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.white.opacity(0.95), lineWidth: 4)
+                                    .blur(radius: 3)
+                                    .padding(1)
+                                    .mask(RoundedRectangle(cornerRadius: 4))
+                                : nil
+                        )
+                        .animation(.easeInOut(duration: 0.2), value: editMode)
 
                     // 本文（インライン編集）
                     if isContentEditing {
@@ -409,8 +420,8 @@ struct QuickSortCellView: View {
                     .padding(.vertical, 8)
                     .background(
                         flashTag
-                            ? Color.cyan.opacity(0.35)
-                            : Color.cyan.opacity(0.12)
+                            ? Color.cyan.opacity(0.2)
+                            : Color.cyan.opacity(0.06)
                     )
                     .contentShape(Rectangle())
                     .onTapGesture {

@@ -273,10 +273,6 @@ struct QuickSortView: View {
                 .padding(.top, 4)
             }
 
-            // ページ送り（上）
-            navBar
-                .padding(.horizontal, 24)
-                .padding(.top, 16)
 
             // カルーセル（フリック無効・タップのみでページ移動）
             CarouselView(
@@ -601,70 +597,6 @@ struct QuickSortView: View {
         showExitConfirm = false
         showFinishConfirm = false
         phase = .filter
-    }
-
-    // MARK: - ページ送り（上部・下部操作パネルと同デザイン）
-
-    private var navBar: some View {
-        let canGoPrev = currentIndexInActive > 0
-        let canGoNext = currentIndexInActive < activeMemos.count - 1
-        let isLastPage = currentIndexInActive == activeMemos.count - 1
-
-        return HStack(spacing: 0) {
-            // ◁ 前へ（下と同じ: 常に青、disabledで自動グレー）
-            Button {
-                if canGoPrev {
-                    scrolledMemoID = activeMemos[currentIndexInActive - 1].id
-                }
-            } label: {
-                HStack(spacing: 6) {
-                    Triangle()
-                        .fill(Color.blue.opacity(0.7))
-                        .frame(width: 14, height: 20)
-                        .rotationEffect(.degrees(-90))
-                    Text("前へ")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(.blue)
-                }
-            }
-            .disabled(!canGoPrev)
-            .buttonStyle(.plain)
-
-            Spacer()
-
-            // ▷ 次へ / 最後のページは「完了」オレンジボタン
-            if isLastPage {
-                Button {
-                    withAnimation(.easeOut(duration: 0.25)) { showFinishConfirm = true }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("完了")
-                            .font(.system(size: 15, weight: .bold, design: .rounded))
-                        Image(systemName: "chevron.right")
-                            .font(.system(size: 12, weight: .bold))
-                    }
-                    .foregroundStyle(.white)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .background(Capsule().fill(Color.orange))
-                }
-            } else {
-                Button {
-                    scrolledMemoID = activeMemos[currentIndexInActive + 1].id
-                } label: {
-                    HStack(spacing: 6) {
-                        Text("次へ")
-                            .font(.system(size: 14, weight: .semibold))
-                            .foregroundStyle(.blue)
-                        Triangle()
-                            .fill(Color.blue.opacity(0.7))
-                            .frame(width: 14, height: 20)
-                            .rotationEffect(.degrees(90))
-                    }
-                }
-                .buttonStyle(.plain)
-            }
-        }
     }
 
     // MARK: - 終了確認ダイアログ
