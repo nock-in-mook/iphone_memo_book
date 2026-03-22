@@ -67,11 +67,11 @@ struct QuickSortFilterView: View {
                 VStack(spacing: 0) {
                     // ヘッダー
                     VStack(spacing: 8) {
+                        Text("爆速メモ整理モード")
+                            .font(.system(size: 20, weight: .bold, design: .rounded))
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 36))
                             .foregroundStyle(.orange)
-                        Text("爆速メモ整理モード")
-                            .font(.system(size: 20, weight: .bold, design: .rounded))
 
                         // 説明文
                         VStack(spacing: 2) {

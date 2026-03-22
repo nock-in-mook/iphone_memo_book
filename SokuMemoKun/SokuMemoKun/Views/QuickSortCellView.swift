@@ -35,6 +35,11 @@ struct QuickSortCellView: View {
     @State private var editingTitle: String = ""
     @FocusState private var isTitleFocused: Bool
 
+    // 本文インライン編集
+    @State private var editingContent: String = ""
+    @State private var isContentEditing = false
+    @FocusState private var isContentFocused: Bool
+
     // ピカピカアニメーション
     @State private var flashTag = false
     @State private var flashTitle = false
@@ -48,15 +53,18 @@ struct QuickSortCellView: View {
     var body: some View {
         GeometryReader { geo in
             let cardW = geo.size.width * 0.80
-            let cardH = geo.size.height * 0.35  // カード上下幅を控えめに
+            let cardH = isContentEditing ? geo.size.height * 0.55 : geo.size.height * 0.35
 
             VStack(spacing: 0) {
                     Spacer(minLength: 12)
+                        .contentShape(Rectangle())
+                        .onTapGesture { dismissEditing() }
 
                     // ── メモカード（タイトル+本文+タグフッター）──
                     memoCard
                         .frame(width: cardW, height: cardH)
                         .frame(maxWidth: .infinity)
+                        .animation(.easeInOut(duration: 0.25), value: isContentEditing)
 
                     Spacer(minLength: 10)
 
@@ -78,11 +86,17 @@ struct QuickSortCellView: View {
         .onAppear {
             initFromMemo()
             editingTitle = memo.title
+            editingContent = memo.content
         }
         .onChange(of: memo.tags.map(\.id)) { _, _ in initFromMemo() }
         .onChange(of: memo.id) { _, _ in
+            // 編集中なら前のメモの変更を保存してから切替
+            commitTitle()
+            if isContentEditing { commitContent() }
             initFromMemo()
             editingTitle = memo.title
+            editingContent = memo.content
+            isContentEditing = false
             flashTag = false
             flashTitle = false
         }
@@ -97,6 +111,9 @@ struct QuickSortCellView: View {
         }
         .onChange(of: isTitleFocused) { _, focused in
             if !focused { commitTitle() }
+        }
+        .onChange(of: isContentFocused) { _, focused in
+            if !focused { commitContent(); isContentEditing = false }
         }
         .onChange(of: isActive) { _, active in
             if active { triggerFlash() }
@@ -220,6 +237,26 @@ struct QuickSortCellView: View {
         }
     }
 
+    // MARK: - 本文確定
+
+    private func commitContent() {
+        if editingContent != memo.content {
+            memo.content = editingContent
+            memo.updatedAt = Date()
+        }
+    }
+
+    // 枠外タップで全フォーカス解除
+    private func dismissEditing() {
+        isTitleFocused = false
+        isContentFocused = false
+        commitTitle()
+        if isContentEditing {
+            commitContent()
+            isContentEditing = false
+        }
+    }
+
     // MARK: - ピカピカアニメーション
 
     private func triggerFlash() {
@@ -281,19 +318,33 @@ struct QuickSortCellView: View {
                                 )
                         )
 
-                    // 本文（タップで編集画面へ）
-                    Text(memo.content.isEmpty ? "（本文なし）" : String(memo.content.prefix(200)))
-                        .font(.system(size: 15))
-                        .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                        .lineLimit(nil)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                        .padding(12)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            commitTitle()
-                            isTitleFocused = false
-                            onEditBody()
-                        }
+                    // 本文（インライン編集）
+                    if isContentEditing {
+                        TextEditor(text: $editingContent)
+                            .font(.system(size: 15))
+                            .focused($isContentFocused)
+                            .scrollContentBackground(.hidden)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                    } else {
+                        Text(memo.content.isEmpty ? "（本文なし）" : String(memo.content.prefix(200)))
+                            .font(.system(size: 15))
+                            .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
+                            .lineLimit(nil)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                            .padding(12)
+                            .contentShape(Rectangle())
+                            .onTapGesture {
+                                commitTitle()
+                                isTitleFocused = false
+                                editingContent = memo.content
+                                isContentEditing = true
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    isContentFocused = true
+                                }
+                            }
+                    }
 
                     // タグフッター
                     HStack(spacing: 6) {
@@ -409,9 +460,21 @@ struct QuickSortCellView: View {
             ZStack {
                 // 本文編集（中央固定）
                 TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
-                    commitTitle()
-                    isTitleFocused = false
-                    onEditBody()
+                    if isContentEditing {
+                        // 編集中 → 抜ける
+                        commitContent()
+                        isContentEditing = false
+                        isContentFocused = false
+                    } else {
+                        // 他を閉じて起動
+                        commitTitle()
+                        isTitleFocused = false
+                        editingContent = memo.content
+                        isContentEditing = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                            isContentFocused = true
+                        }
+                    }
                 } label: {
                     Text("本文編集")
                         .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -429,7 +492,14 @@ struct QuickSortCellView: View {
 
                 // タイトル編集（左）
                 TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
-                    isTitleFocused = true
+                    if isTitleFocused {
+                        // 編集中 → 抜ける
+                        isTitleFocused = false
+                    } else {
+                        // 他を閉じて起動
+                        if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
+                        isTitleFocused = true
+                    }
                 } label: {
                     Text("タイトル編集")
                         .font(.system(size: 12, weight: .bold, design: .rounded))
@@ -452,8 +522,15 @@ struct QuickSortCellView: View {
 
                 // タグ編集（右）
                 TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
-                    withAnimation(.easeInOut(duration: 0.25)) {
-                        showDialArea.toggle()
+                    if showDialArea {
+                        // 表示中 → 閉じる
+                        withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false }
+                    } else {
+                        // 他を閉じて起動
+                        commitTitle()
+                        isTitleFocused = false
+                        if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
+                        withAnimation(.easeInOut(duration: 0.25)) { showDialArea = true }
                     }
                 } label: {
                     Text("タグ編集")
