@@ -52,6 +52,9 @@ struct QuickSortCellView: View {
     // ルーレット表示（タグ編集ボタンで切替）
     @State private var showDialArea = false
 
+    // ロックアイコンフラッシュ
+    @State private var lockIconFlash = false
+
 
     var body: some View {
         GeometryReader { geo in
@@ -452,14 +455,26 @@ struct QuickSortCellView: View {
                 )
                 .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
 
-                // ロックアイコン（タブ右の空きスペース）
+                // ロックアイコン（カード右上端）
                 if memo.isLocked {
-                    HStack(spacing: 4) {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 12, weight: .semibold))
-                            .foregroundStyle(.orange.opacity(0.7))
-                    }
-                    .offset(x: tabW + 8, y: 8)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 13, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .padding(6)
+                        .background(
+                            Circle()
+                                .fill(Color.orange.opacity(lockIconFlash ? 0.25 : 0.1))
+                        )
+                        .scaleEffect(lockIconFlash ? 1.3 : 1.0)
+                        .offset(x: geo.size.width - 28, y: 6)
+                        .transition(.scale.combined(with: .opacity))
+                        .onAppear {
+                            // 出現時フラッシュ
+                            withAnimation(.easeOut(duration: 0.15)) { lockIconFlash = true }
+                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                withAnimation(.easeOut(duration: 0.3)) { lockIconFlash = false }
+                            }
+                        }
                 }
             }
         }

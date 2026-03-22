@@ -53,9 +53,8 @@ struct QuickSortView: View {
     @State private var showResult = false
     @State private var showDeleteReview = false
 
-    // トースト通知
-    @State private var toastMessage: String = ""
-    @State private var showToast = false
+    // ロック確認
+    @State private var showLockConfirm = false
 
     // アクティブなメモ（削除キューを除外した配列）
     private var activeMemos: [Memo] {
@@ -134,6 +133,10 @@ struct QuickSortView: View {
                     panelDeleteConfirmDialog
                 }
 
+                if showLockConfirm {
+                    lockConfirmDialog
+                }
+
                 if showResult {
                     QuickSortResultView(
                         taggedCount: taggedMemoIDs.count,
@@ -158,23 +161,6 @@ struct QuickSortView: View {
                     )
                 }
 
-                // トースト通知
-                if showToast {
-                    VStack {
-                        Spacer()
-                        Text(toastMessage)
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
-                            .foregroundStyle(.white)
-                            .padding(.horizontal, 20)
-                            .padding(.vertical, 12)
-                            .background(
-                                Capsule().fill(Color.black.opacity(0.75))
-                            )
-                            .padding(.bottom, 120)
-                    }
-                    .transition(.opacity.combined(with: .move(edge: .bottom)))
-                    .allowsHitTesting(false)
-                }
             }
         }
         .ignoresSafeArea(.keyboard)
@@ -443,52 +429,42 @@ struct QuickSortView: View {
 
             Spacer()
 
-            // ゴミ箱 + ロックボタン
-            VStack(spacing: 8) {
-                // ロックボタン（ゴミ箱の右上）
-                HStack(spacing: 0) {
-                    Spacer()
-                    Button {
-                        if let memo = currentMemo {
-                            memo.isLocked.toggle()
-                            try? modelContext.save()
-                            toastMessage = memo.isLocked ? "メモがロックされました（削除防止）" : "ロックが解除されました"
-                            withAnimation(.easeOut(duration: 0.2)) { showToast = true }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 1.8) {
-                                withAnimation(.easeOut(duration: 0.3)) { showToast = false }
-                            }
-                        }
-                    } label: {
-                        Image(systemName: currentMemo?.isLocked == true ? "lock.fill" : "lock.open")
-                            .font(.system(size: 14, weight: .medium))
-                            .foregroundStyle(currentMemo?.isLocked == true ? .orange : .secondary.opacity(0.5))
-                    }
-                    .buttonStyle(.plain)
+            // ゴミ箱
+            Button {
+                if currentMemo?.isLocked == true {
+                    // ロック中はロック確認ダイアログの方を出す
+                    withAnimation(.easeOut(duration: 0.2)) { showLockConfirm = true }
+                    return
                 }
-
-                // ゴミ箱
-                Button {
-                    if currentMemo?.isLocked == true {
-                        toastMessage = "このメモはロックされています"
-                        withAnimation(.easeOut(duration: 0.2)) { showToast = true }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                            withAnimation(.easeOut(duration: 0.3)) { showToast = false }
-                        }
-                        return
-                    }
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    withAnimation(.easeOut(duration: 0.2)) { showDeleteConfirmFromPanel = true }
-                } label: {
-                    VStack(spacing: 2) {
-                        Image(systemName: "trash")
-                            .font(.system(size: 26, weight: .medium))
-                        Text("削除")
-                            .font(.system(size: 11, weight: .medium))
-                    }
-                    .foregroundStyle(currentMemo?.isLocked == true ? Color.secondary.opacity(0.3) : Color.red.opacity(0.6))
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                withAnimation(.easeOut(duration: 0.2)) { showDeleteConfirmFromPanel = true }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 26, weight: .medium))
+                    Text("削除")
+                        .font(.system(size: 11, weight: .medium))
                 }
-                .buttonStyle(.plain)
+                .foregroundStyle(currentMemo?.isLocked == true ? Color.secondary.opacity(0.3) : Color.red.opacity(0.6))
             }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // ロックボタン（削除とタグ編集の中間）
+            Button {
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                withAnimation(.easeOut(duration: 0.2)) { showLockConfirm = true }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: currentMemo?.isLocked == true ? "lock.fill" : "lock.open")
+                        .font(.system(size: 22, weight: .medium))
+                    Text(currentMemo?.isLocked == true ? "ロック解除" : "ロック")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(currentMemo?.isLocked == true ? Color.orange : Color.secondary.opacity(0.5))
+            }
+            .buttonStyle(.plain)
 
             Spacer()
 
@@ -776,6 +752,73 @@ struct QuickSortView: View {
 
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) { showFinishConfirm = false }
+                } label: {
+                    Text("キャンセル")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+            }
+            .background(Color(uiColor: .systemBackground))
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
+            .padding(.horizontal, 40)
+        }
+        .transition(.opacity)
+    }
+
+    // MARK: - ロック確認ダイアログ
+
+    private var lockConfirmDialog: some View {
+        let isLocked = currentMemo?.isLocked == true
+        return ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.2)) { showLockConfirm = false }
+                }
+
+            VStack(spacing: 0) {
+                VStack(spacing: 8) {
+                    Image(systemName: isLocked ? "lock.open.fill" : "lock.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.orange)
+
+                    Text(isLocked ? "削除ロックを解除" : "メモをロック")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+
+                    Text(isLocked ? "削除ロックを解除します。\nよろしいですか？" : "メモをロック（削除防止）します。\nよろしいですか？")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+                .padding(.horizontal, 20)
+
+                Divider()
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showLockConfirm = false }
+                    if let memo = currentMemo {
+                        memo.isLocked.toggle()
+                        try? modelContext.save()
+                    }
+                } label: {
+                    Text(isLocked ? "解除する" : "ロックする")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showLockConfirm = false }
                 } label: {
                     Text("キャンセル")
                         .font(.system(size: 16, weight: .medium))
