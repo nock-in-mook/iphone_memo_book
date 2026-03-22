@@ -44,6 +44,8 @@ struct QuickSortCellView: View {
     @State private var isContentFocused = false
     /// タップ位置のカーソルオフセット（nil=末尾）
     @State private var contentTapOffset: Int?
+    /// 本文タップ経由で編集開始したか（カード自動拡大を抑制）
+    @State private var editFromTap = false
 
     // ピカピカアニメーション
     @State private var flashTag = false
@@ -71,9 +73,9 @@ struct QuickSortCellView: View {
             let normalH = geo.size.height * 0.35
             let editH = geo.size.height * 0.55
             let expandedH = geo.size.height * 0.80
-            // ルーレット中は通常サイズ、編集中はeditH、タイトル編集中はeditH、拡大中はexpandedH
+            // ルーレット中は通常サイズ、編集中はeditH（タップ経由はnormalH維持）、拡大中はexpandedH
             let baseCardH = showDialArea ? normalH
-                           : isContentEditing ? editH
+                           : isContentEditing ? (editFromTap ? normalH : editH)
                            : isTitleFocused ? editH
                            : isExpanded ? expandedH
                            : normalH
@@ -151,7 +153,7 @@ struct QuickSortCellView: View {
         }
         .onChange(of: isContentFocused) { _, focused in
             if !focused {
-                commitContent(); isContentEditing = false
+                commitContent(); isContentEditing = false; editFromTap = false
                 if editMode == .content { editMode = .none }
             }
         }
@@ -339,6 +341,7 @@ struct QuickSortCellView: View {
             if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
             editingContent = memo.content
             contentTapOffset = nil  // ボタン経由 → 末尾カーソル
+            editFromTap = false     // ボタン経由 → カード拡大OK
             isContentEditing = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { isContentFocused = true }
         case .tag:
@@ -449,6 +452,7 @@ struct QuickSortCellView: View {
                                         editingContent = memo.content
                                         // 空テキスト時はオフセット不要
                                         contentTapOffset = memo.content.isEmpty ? nil : offset
+                                        editFromTap = true  // カード自動拡大を抑制
                                         isContentEditing = true
                                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                             isContentFocused = true
