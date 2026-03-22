@@ -1,6 +1,6 @@
 import SwiftUI
 
-// 押せるボタン用のButtonStyle
+// 押せるボタン用のButtonStyle（長押し対応）
 struct PressableButtonStyle: ButtonStyle {
     let shadowHeight: CGFloat
     let shadowColor: Color
@@ -21,6 +21,61 @@ struct PressableButtonStyle: ButtonStyle {
                 y: configuration.isPressed ? 0 : shadowHeight
             )
             .animation(.easeInOut(duration: 0.08), value: configuration.isPressed)
+    }
+}
+
+// タップでもカチッと動くボタン（沈む→待つ→戻る）
+struct TapPressableView<Label: View>: View {
+    let shadowHeight: CGFloat
+    let shadowColor: Color
+    let radius: CGFloat
+    let action: () -> Void
+    let label: () -> Label
+
+    @State private var isPressed = false
+
+    init(
+        shadowHeight: CGFloat = 5,
+        shadowColor: Color = .black.opacity(0.25),
+        radius: CGFloat = 1,
+        action: @escaping () -> Void,
+        @ViewBuilder label: @escaping () -> Label
+    ) {
+        self.shadowHeight = shadowHeight
+        self.shadowColor = shadowColor
+        self.radius = radius
+        self.action = action
+        self.label = label
+    }
+
+    var body: some View {
+        label()
+            .offset(y: isPressed ? shadowHeight : 0)
+            .shadow(
+                color: isPressed ? .clear : shadowColor,
+                radius: radius,
+                y: isPressed ? 0 : shadowHeight
+            )
+            .onTapGesture {
+                // カチッと沈む
+                withAnimation(.easeIn(duration: 0.035)) { isPressed = true }
+                // 少し待ってから戻る
+                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
+                    withAnimation(.easeOut(duration: 0.05)) { isPressed = false }
+                    action()
+                }
+            }
+            // 長押し対応
+            .simultaneousGesture(
+                LongPressGesture(minimumDuration: 0.15)
+                    .onChanged { _ in
+                        withAnimation(.easeIn(duration: 0.06)) { isPressed = true }
+                    }
+                    .onEnded { _ in
+                        withAnimation(.easeOut(duration: 0.08)) { isPressed = false }
+                        action()
+                    }
+            )
     }
 }
 

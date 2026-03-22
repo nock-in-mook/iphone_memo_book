@@ -405,10 +405,10 @@ struct QuickSortCellView: View {
                 .stroke(Color.secondary.opacity(0.5), lineWidth: 2.5)
                 .frame(height: 48)
 
-            // 3ボタン（弧に沿って配置・傾き・弧型カプセル）
+            // 3ボタン（弧に沿って配置・P2ベース押せるボタン）
             HStack(spacing: 24) {
                 // タイトル編集
-                Button {
+                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.35)) {
                     isTitleFocused = true
                 } label: {
                     Text("タイトル編集")
@@ -416,15 +416,21 @@ struct QuickSortCellView: View {
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 14)
                         .padding(.vertical, 7)
-                        .background(ArcCapsule().fill(Color.green.opacity(0.2)))
-                        .overlay(ArcCapsule().stroke(Color.green.opacity(0.4), lineWidth: 1))
+                        .background(
+                            ZStack {
+                                ArcCapsule().fill(Color(white: 0.95))
+                                ArcCapsule().fill(
+                                    LinearGradient(colors: [Color.green.opacity(0.2), Color.green.opacity(0.35)],
+                                                   startPoint: .top, endPoint: .bottom)
+                                )
+                            }
+                        )
                 }
-                .buttonStyle(.plain)
                 .rotationEffect(.degrees(-4))
                 .offset(y: 2)
 
                 // 本文編集
-                Button {
+                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.35)) {
                     commitTitle()
                     isTitleFocused = false
                     onEditBody()
@@ -434,14 +440,17 @@ struct QuickSortCellView: View {
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 7)
-                        .background(ArcCapsule().fill(Color(white: 0.93)))
-                        .overlay(ArcCapsule().stroke(Color.secondary.opacity(0.3), lineWidth: 1))
+                        .background(
+                            ArcCapsule().fill(
+                                LinearGradient(colors: [Color(white: 0.98), Color(white: 0.88)],
+                                               startPoint: .top, endPoint: .bottom)
+                            )
+                        )
                 }
-                .buttonStyle(.plain)
                 .offset(y: -8)
 
                 // タグ編集
-                Button {
+                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.35)) {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         showDialArea.toggle()
                     }
@@ -451,10 +460,16 @@ struct QuickSortCellView: View {
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 18)
                         .padding(.vertical, 7)
-                        .background(ArcCapsule().fill(showDialArea ? Color.blue.opacity(0.3) : Color.blue.opacity(0.15)))
-                        .overlay(ArcCapsule().stroke(Color.blue.opacity(0.4), lineWidth: 1))
+                        .background(
+                            ZStack {
+                                ArcCapsule().fill(Color(white: 0.95))
+                                ArcCapsule().fill(
+                                    LinearGradient(colors: [Color.blue.opacity(0.18), Color.blue.opacity(0.33)],
+                                                   startPoint: .top, endPoint: .bottom)
+                                )
+                            }
+                        )
                 }
-                .buttonStyle(.plain)
                 .rotationEffect(.degrees(4))
                 .offset(y: 2)
             }
