@@ -7,86 +7,86 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		7FF1C40E480B40878DCE9C7E /* ButtonLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49097C56B98F49AA81B462BC /* ButtonLabView.swift */; };
+		8311BCCD72654DF8941F0720 /* TextStyleLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F5264F9E5B450596546867 /* TextStyleLabView.swift */; };
 		A00245AE9633A906577EE733 /* TextureLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6A194A4EB966F4152317D179 /* TextureLabView.swift */; };
+		B10000000000000000001A /* SokuMemoKunApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000001A /* SokuMemoKunApp.swift */; };
+		B10000000000000000001B /* Memo.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000001B /* Memo.swift */; };
+		B10000000000000000001C /* Tag.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000001C /* Tag.swift */; };
+		B10000000000000000001D /* MainView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000001D /* MainView.swift */; };
+		B10000000000000000001E /* MemoInputView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000001E /* MemoInputView.swift */; };
+		B10000000000000000001F /* MemoListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A10000000000000000001F /* MemoListView.swift */; };
+		B1000000000000000000AA /* MemoRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000AA /* MemoRowView.swift */; };
+		B1000000000000000000AB /* TagFilterPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000AB /* TagFilterPickerView.swift */; };
+		B1000000000000000000AC /* TagTitleSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000AC /* TagTitleSheetView.swift */; };
+		B1000000000000000000AD /* MemoInputViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000AD /* MemoInputViewModel.swift */; };
+		B1000000000000000000AE /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000AE /* Assets.xcassets */; };
+		B1000000000000000000B1 /* TrapezoidTabShape.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B1 /* TrapezoidTabShape.swift */; };
+		B1000000000000000000B2 /* TabbedMemoListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B2 /* TabbedMemoListView.swift */; };
+		B1000000000000000000B3 /* TagDialView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B3 /* TagDialView.swift */; };
+		B1000000000000000000B4 /* NewTagSheetView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B4 /* NewTagSheetView.swift */; };
+		B1000000000000000000B5 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B5 /* SettingsView.swift */; };
+		B1000000000000000000B6 /* TagEditView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B6 /* TagEditView.swift */; };
+		B1000000000000000000B7 /* FullEditorView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B7 /* FullEditorView.swift */; };
+		B1000000000000000000B8 /* MarkdownToolbar.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B8 /* MarkdownToolbar.swift */; };
+		B1000000000000000000B9 /* MarkdownTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1000000000000000000B9 /* MarkdownTextEditor.swift */; };
 		C0L0RLAB000000000002 /* ColorLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0L0RLAB000000000001 /* ColorLabView.swift */; };
-		'B10000000000000000001A' = {isa = PBXBuildFile; fileRef = A10000000000000000001A; };
-		'B10000000000000000001B' = {isa = PBXBuildFile; fileRef = A10000000000000000001B; };
-		'B10000000000000000001C' = {isa = PBXBuildFile; fileRef = A10000000000000000001C; };
-		'B10000000000000000001D' = {isa = PBXBuildFile; fileRef = A10000000000000000001D; };
-		'B10000000000000000001E' = {isa = PBXBuildFile; fileRef = A10000000000000000001E; };
-		'B10000000000000000001F' = {isa = PBXBuildFile; fileRef = A10000000000000000001F; };
-		'B1000000000000000000AA' = {isa = PBXBuildFile; fileRef = A1000000000000000000AA; };
-		'B1000000000000000000AB' = {isa = PBXBuildFile; fileRef = A1000000000000000000AB; };
-		'B1000000000000000000AC' = {isa = PBXBuildFile; fileRef = A1000000000000000000AC; };
-		'B1000000000000000000AD' = {isa = PBXBuildFile; fileRef = A1000000000000000000AD; };
-		'B1000000000000000000AE' = {isa = PBXBuildFile; fileRef = A1000000000000000000AE; };
-		'B1000000000000000000B1' = {isa = PBXBuildFile; fileRef = A1000000000000000000B1; };
-		CAROUSEL00000000000002 = {isa = PBXBuildFile; fileRef = CAROUSEL00000000000001; };
-		CELLVIEW00000000000002 = {isa = PBXBuildFile; fileRef = CELLVIEW00000000000001; };
-		'B1000000000000000000B2' = {isa = PBXBuildFile; fileRef = A1000000000000000000B2; };
-		'B1000000000000000000B3' = {isa = PBXBuildFile; fileRef = A1000000000000000000B3; };
-		'B1000000000000000000B4' = {isa = PBXBuildFile; fileRef = A1000000000000000000B4; };
-		'B1000000000000000000B5' = {isa = PBXBuildFile; fileRef = A1000000000000000000B5; };
-		'B1000000000000000000B6' = {isa = PBXBuildFile; fileRef = A1000000000000000000B6; };
-		'B1000000000000000000B7' = {isa = PBXBuildFile; fileRef = A1000000000000000000B7; };
-		'B1000000000000000000B8' = {isa = PBXBuildFile; fileRef = A1000000000000000000B8; };
-		'B1000000000000000000B9' = {isa = PBXBuildFile; fileRef = A1000000000000000000B9; };
+		CAROUSEL00000000000002 /* CarouselView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CAROUSEL00000000000001 /* CarouselView.swift */; };
+		CELLVIEW00000000000002 /* QuickSortCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CELLVIEW00000000000001 /* QuickSortCellView.swift */; };
 		E20F22AC7EBE4432A424C594 /* MemoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863DCF5D059F41899ADDD158 /* MemoDetailView.swift */; };
+		LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = LNTXT00000000000000001 /* LineNumberTextEditor.swift */; };
+		QSORT0000000000000002 /* QuickSortView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000001 /* QuickSortView.swift */; };
+		QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000003 /* QuickSortFilterView.swift */; };
+		QSORT0000000000000006 /* QuickSortResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000005 /* QuickSortResultView.swift */; };
 		TAGSUG0000000000000002 /* TagFrequency.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000001 /* TagFrequency.swift */; };
 		TAGSUG0000000000000004 /* TagCooccurrence.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000003 /* TagCooccurrence.swift */; };
 		TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000005 /* TagSuggestDismissal.swift */; };
 		TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000007 /* TagSuggestEngine.swift */; };
 		TAGSUG000000000000000A /* TagSuggestDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000009 /* TagSuggestDictionary.json */; };
-		LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = LNTXT00000000000000001 /* LineNumberTextEditor.swift */; };
-		QSORT0000000000000002 /* QuickSortView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000001 /* QuickSortView.swift */; };
-		QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000003 /* QuickSortFilterView.swift */; };
-		QSORT0000000000000006 /* QuickSortResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000005 /* QuickSortResultView.swift */; };
-		7FF1C40E480B40878DCE9C7E /* ButtonLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49097C56B98F49AA81B462BC /* ButtonLabView.swift */; };
-		8311BCCD72654DF8941F0720 /* TextStyleLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F5264F9E5B450596546867 /* TextStyleLabView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		25F5264F9E5B450596546867 /* TextStyleLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextStyleLabView.swift; path = SokuMemoKun/Views/TextStyleLabView.swift; sourceTree = SOURCE_ROOT; };
+		49097C56B98F49AA81B462BC /* ButtonLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ButtonLabView.swift; path = SokuMemoKun/Views/ButtonLabView.swift; sourceTree = SOURCE_ROOT; };
 		6A194A4EB966F4152317D179 /* TextureLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextureLabView.swift; path = SokuMemoKun/Views/TextureLabView.swift; sourceTree = SOURCE_ROOT; };
-		C0L0RLAB000000000001 /* ColorLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorLabView.swift; path = SokuMemoKun/Views/ColorLabView.swift; sourceTree = SOURCE_ROOT; };
 		863DCF5D059F41899ADDD158 /* MemoDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoDetailView.swift; sourceTree = "<group>"; };
-		'A10000000000000000001A' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SokuMemoKunApp.swift; sourceTree = "<group>"; };
-		'A10000000000000000001B' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Memo.swift; sourceTree = "<group>"; };
-		'A10000000000000000001C' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
+		A10000000000000000001A /* SokuMemoKunApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SokuMemoKunApp.swift; sourceTree = "<group>"; };
+		A10000000000000000001B /* Memo.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Memo.swift; sourceTree = "<group>"; };
+		A10000000000000000001C /* Tag.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Tag.swift; sourceTree = "<group>"; };
+		A10000000000000000001D /* MainView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
+		A10000000000000000001E /* MemoInputView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoInputView.swift; sourceTree = "<group>"; };
+		A10000000000000000001F /* MemoListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoListView.swift; sourceTree = "<group>"; };
+		A1000000000000000000AA /* MemoRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoRowView.swift; sourceTree = "<group>"; };
+		A1000000000000000000AB /* TagFilterPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagFilterPickerView.swift; sourceTree = "<group>"; };
+		A1000000000000000000AC /* TagTitleSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagTitleSheetView.swift; sourceTree = "<group>"; };
+		A1000000000000000000AD /* MemoInputViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoInputViewModel.swift; sourceTree = "<group>"; };
+		A1000000000000000000AE /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		A1000000000000000000AF /* SokuMemoKun.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SokuMemoKun.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		A1000000000000000000B1 /* TrapezoidTabShape.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrapezoidTabShape.swift; sourceTree = "<group>"; };
+		A1000000000000000000B2 /* TabbedMemoListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabbedMemoListView.swift; sourceTree = "<group>"; };
+		A1000000000000000000B3 /* TagDialView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagDialView.swift; sourceTree = "<group>"; };
+		A1000000000000000000B4 /* NewTagSheetView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewTagSheetView.swift; sourceTree = "<group>"; };
+		A1000000000000000000B5 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1000000000000000000B6 /* TagEditView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagEditView.swift; sourceTree = "<group>"; };
+		A1000000000000000000B7 /* FullEditorView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullEditorView.swift; sourceTree = "<group>"; };
+		A1000000000000000000B8 /* MarkdownToolbar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownToolbar.swift; sourceTree = "<group>"; };
+		A1000000000000000000B9 /* MarkdownTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTextEditor.swift; sourceTree = "<group>"; };
+		C0L0RLAB000000000001 /* ColorLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ColorLabView.swift; path = SokuMemoKun/Views/ColorLabView.swift; sourceTree = SOURCE_ROOT; };
+		CAROUSEL00000000000001 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
+		CELLVIEW00000000000001 /* QuickSortCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortCellView.swift; sourceTree = "<group>"; };
+		LNTXT00000000000000001 /* LineNumberTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineNumberTextEditor.swift; sourceTree = "<group>"; };
+		QSORT0000000000000001 /* QuickSortView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortView.swift; sourceTree = "<group>"; };
+		QSORT0000000000000003 /* QuickSortFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortFilterView.swift; sourceTree = "<group>"; };
+		QSORT0000000000000005 /* QuickSortResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortResultView.swift; sourceTree = "<group>"; };
 		TAGSUG0000000000000001 /* TagFrequency.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagFrequency.swift; sourceTree = "<group>"; };
 		TAGSUG0000000000000003 /* TagCooccurrence.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagCooccurrence.swift; sourceTree = "<group>"; };
 		TAGSUG0000000000000005 /* TagSuggestDismissal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagSuggestDismissal.swift; sourceTree = "<group>"; };
 		TAGSUG0000000000000007 /* TagSuggestEngine.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TagSuggestEngine.swift; path = SokuMemoKun/Services/TagSuggestEngine.swift; sourceTree = SOURCE_ROOT; };
 		TAGSUG0000000000000009 /* TagSuggestDictionary.json */ = {isa = PBXFileReference; lastKnownFileType = text.json; path = TagSuggestDictionary.json; sourceTree = "<group>"; };
-		'A10000000000000000001D' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainView.swift; sourceTree = "<group>"; };
-		'A10000000000000000001E' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoInputView.swift; sourceTree = "<group>"; };
-		'A10000000000000000001F' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoListView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000AA' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoRowView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000AB' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagFilterPickerView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000AC' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagTitleSheetView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000AD' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoInputViewModel.swift; sourceTree = "<group>"; };
-		'A1000000000000000000AE' = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		'A1000000000000000000AF' = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SokuMemoKun.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		'A1000000000000000000B1' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TrapezoidTabShape.swift; sourceTree = "<group>"; };
-		CAROUSEL00000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
-		CELLVIEW00000000000001 = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortCellView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B2' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TabbedMemoListView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B3' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagDialView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B4' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NewTagSheetView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B5' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B6' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagEditView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B7' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FullEditorView.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B8' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownToolbar.swift; sourceTree = "<group>"; };
-		'A1000000000000000000B9' = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MarkdownTextEditor.swift; sourceTree = "<group>"; };
-		LNTXT00000000000000001 /* LineNumberTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineNumberTextEditor.swift; sourceTree = "<group>"; };
-		QSORT0000000000000001 /* QuickSortView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortView.swift; sourceTree = "<group>"; };
-		QSORT0000000000000003 /* QuickSortFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortFilterView.swift; sourceTree = "<group>"; };
-		QSORT0000000000000005 /* QuickSortResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortResultView.swift; sourceTree = "<group>"; };
-		49097C56B98F49AA81B462BC /* ButtonLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ButtonLabView.swift; path = SokuMemoKun/Views/ButtonLabView.swift; sourceTree = SOURCE_ROOT; };
-		25F5264F9E5B450596546867 /* TextStyleLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextStyleLabView.swift; path = SokuMemoKun/Views/TextStyleLabView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
-		'E1000000000000000000A2' = {
+		E1000000000000000000A2 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
@@ -96,11 +96,11 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
-		'C1000000000000000000A1' = {
+		C1000000000000000000A1 = {
 			isa = PBXGroup;
 			children = (
-				C1000000000000000000A2,
-				C1000000000000000000A6,
+				C1000000000000000000A2 /* SokuMemoKun */,
+				C1000000000000000000A6 /* Products */,
 				6A194A4EB966F4152317D179 /* TextureLabView.swift */,
 				C0L0RLAB000000000001 /* ColorLabView.swift */,
 				49097C56B98F49AA81B462BC /* ButtonLabView.swift */,
@@ -108,25 +108,25 @@
 			);
 			sourceTree = "<group>";
 		};
-		'C1000000000000000000A2' = {
+		C1000000000000000000A2 /* SokuMemoKun */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000001A,
-				A1000000000000000000AE,
-				C1000000000000000000A3,
-				C1000000000000000000A4,
-				C1000000000000000000A5,
-				TAGSUG00000000000000G1,
+				A10000000000000000001A /* SokuMemoKunApp.swift */,
+				A1000000000000000000AE /* Assets.xcassets */,
+				C1000000000000000000A3 /* Models */,
+				C1000000000000000000A4 /* Views */,
+				C1000000000000000000A5 /* ViewModels */,
+				TAGSUG00000000000000G1 /* Services */,
 				TAGSUG0000000000000009 /* TagSuggestDictionary.json */,
 			);
 			path = SokuMemoKun;
 			sourceTree = "<group>";
 		};
-		'C1000000000000000000A3' = {
+		C1000000000000000000A3 /* Models */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000001B,
-				A10000000000000000001C,
+				A10000000000000000001B /* Memo.swift */,
+				A10000000000000000001C /* Tag.swift */,
 				TAGSUG0000000000000001 /* TagFrequency.swift */,
 				TAGSUG0000000000000003 /* TagCooccurrence.swift */,
 				TAGSUG0000000000000005 /* TagSuggestDismissal.swift */,
@@ -134,26 +134,26 @@
 			path = Models;
 			sourceTree = "<group>";
 		};
-		'C1000000000000000000A4' = {
+		C1000000000000000000A4 /* Views */ = {
 			isa = PBXGroup;
 			children = (
-				A10000000000000000001D,
-				A10000000000000000001E,
-				A10000000000000000001F,
-				A1000000000000000000AA,
-				A1000000000000000000AB,
-				A1000000000000000000AC,
-				A1000000000000000000B1,
-				CAROUSEL00000000000001,
-				CELLVIEW00000000000001,
-				A1000000000000000000B2,
-				A1000000000000000000B3,
-				A1000000000000000000B4,
-				A1000000000000000000B5,
-				A1000000000000000000B6,
-				A1000000000000000000B7,
-				A1000000000000000000B8,
-				A1000000000000000000B9,
+				A10000000000000000001D /* MainView.swift */,
+				A10000000000000000001E /* MemoInputView.swift */,
+				A10000000000000000001F /* MemoListView.swift */,
+				A1000000000000000000AA /* MemoRowView.swift */,
+				A1000000000000000000AB /* TagFilterPickerView.swift */,
+				A1000000000000000000AC /* TagTitleSheetView.swift */,
+				A1000000000000000000B1 /* TrapezoidTabShape.swift */,
+				CAROUSEL00000000000001 /* CarouselView.swift */,
+				CELLVIEW00000000000001 /* QuickSortCellView.swift */,
+				A1000000000000000000B2 /* TabbedMemoListView.swift */,
+				A1000000000000000000B3 /* TagDialView.swift */,
+				A1000000000000000000B4 /* NewTagSheetView.swift */,
+				A1000000000000000000B5 /* SettingsView.swift */,
+				A1000000000000000000B6 /* TagEditView.swift */,
+				A1000000000000000000B7 /* FullEditorView.swift */,
+				A1000000000000000000B8 /* MarkdownToolbar.swift */,
+				A1000000000000000000B9 /* MarkdownTextEditor.swift */,
 				863DCF5D059F41899ADDD158 /* MemoDetailView.swift */,
 				LNTXT00000000000000001 /* LineNumberTextEditor.swift */,
 				QSORT0000000000000001 /* QuickSortView.swift */,
@@ -163,23 +163,23 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
-		'C1000000000000000000A5' = {
+		C1000000000000000000A5 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000AD,
+				A1000000000000000000AD /* MemoInputViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
-		'C1000000000000000000A6' = {
+		C1000000000000000000A6 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				A1000000000000000000AF,
+				A1000000000000000000AF /* SokuMemoKun.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
 		};
-		TAGSUG00000000000000G1 = {
+		TAGSUG00000000000000G1 /* Services */ = {
 			isa = PBXGroup;
 			children = (
 				TAGSUG0000000000000007 /* TagSuggestEngine.swift */,
@@ -190,13 +190,13 @@
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
-		'D1000000000000000000A1' = {
+		D1000000000000000000A1 /* SokuMemoKun */ = {
 			isa = PBXNativeTarget;
-			buildConfigurationList = D1000000000000000000A5;
+			buildConfigurationList = D1000000000000000000A5 /* Build configuration list for PBXNativeTarget "SokuMemoKun" */;
 			buildPhases = (
-				E1000000000000000000A1,
-				E1000000000000000000A2,
-				E1000000000000000000A3,
+				E1000000000000000000A1 /* Sources */,
+				E1000000000000000000A2 /* Frameworks */,
+				E1000000000000000000A3 /* Resources */,
 			);
 			buildRules = (
 			);
@@ -204,25 +204,25 @@
 			);
 			name = SokuMemoKun;
 			productName = SokuMemoKun;
-			productReference = A1000000000000000000AF;
+			productReference = A1000000000000000000AF /* SokuMemoKun.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
 
 /* Begin PBXProject section */
-		'F1000000000000000000A1' = {
+		F1000000000000000000A1 /* Project object */ = {
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = 1;
 				LastSwiftUpdateCheck = 1540;
-				LastUpgradeCheck = 1540;
+				LastUpgradeCheck = 2630;
 				TargetAttributes = {
 					D1000000000000000000A1 = {
 						CreatedOnToolsVersion = 15.4;
 					};
 				};
 			};
-			buildConfigurationList = D1000000000000000000A2;
+			buildConfigurationList = D1000000000000000000A2 /* Build configuration list for PBXProject "SokuMemoKun" */;
 			compatibilityVersion = "Xcode 14.0";
 			developmentRegion = ja;
 			hasScannedForEncodings = 0;
@@ -232,21 +232,21 @@
 				ja,
 			);
 			mainGroup = C1000000000000000000A1;
-			productRefGroup = C1000000000000000000A6;
+			productRefGroup = C1000000000000000000A6 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
 			targets = (
-				D1000000000000000000A1,
+				D1000000000000000000A1 /* SokuMemoKun */,
 			);
 		};
 /* End PBXProject section */
 
 /* Begin PBXResourcesBuildPhase section */
-		'E1000000000000000000A3' = {
+		E1000000000000000000A3 /* Resources */ = {
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B1000000000000000000AE,
+				B1000000000000000000AE /* Assets.xcassets in Resources */,
 				TAGSUG000000000000000A /* TagSuggestDictionary.json in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -254,31 +254,31 @@
 /* End PBXResourcesBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
-		'E1000000000000000000A1' = {
+		E1000000000000000000A1 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				B10000000000000000001A,
-				B10000000000000000001B,
-				B10000000000000000001C,
-				B10000000000000000001D,
-				B10000000000000000001E,
-				B10000000000000000001F,
-				B1000000000000000000AA,
-				B1000000000000000000AB,
-				B1000000000000000000AC,
-				B1000000000000000000AD,
-				B1000000000000000000B1,
-				CAROUSEL00000000000002,
-				CELLVIEW00000000000002,
-				B1000000000000000000B2,
-				B1000000000000000000B3,
-				B1000000000000000000B4,
-				B1000000000000000000B5,
-				B1000000000000000000B6,
-				B1000000000000000000B7,
-				B1000000000000000000B8,
-				B1000000000000000000B9,
+				B10000000000000000001A /* SokuMemoKunApp.swift in Sources */,
+				B10000000000000000001B /* Memo.swift in Sources */,
+				B10000000000000000001C /* Tag.swift in Sources */,
+				B10000000000000000001D /* MainView.swift in Sources */,
+				B10000000000000000001E /* MemoInputView.swift in Sources */,
+				B10000000000000000001F /* MemoListView.swift in Sources */,
+				B1000000000000000000AA /* MemoRowView.swift in Sources */,
+				B1000000000000000000AB /* TagFilterPickerView.swift in Sources */,
+				B1000000000000000000AC /* TagTitleSheetView.swift in Sources */,
+				B1000000000000000000AD /* MemoInputViewModel.swift in Sources */,
+				B1000000000000000000B1 /* TrapezoidTabShape.swift in Sources */,
+				CAROUSEL00000000000002 /* CarouselView.swift in Sources */,
+				CELLVIEW00000000000002 /* QuickSortCellView.swift in Sources */,
+				B1000000000000000000B2 /* TabbedMemoListView.swift in Sources */,
+				B1000000000000000000B3 /* TagDialView.swift in Sources */,
+				B1000000000000000000B4 /* NewTagSheetView.swift in Sources */,
+				B1000000000000000000B5 /* SettingsView.swift in Sources */,
+				B1000000000000000000B6 /* TagEditView.swift in Sources */,
+				B1000000000000000000B7 /* FullEditorView.swift in Sources */,
+				B1000000000000000000B8 /* MarkdownToolbar.swift in Sources */,
+				B1000000000000000000B9 /* MarkdownTextEditor.swift in Sources */,
 				E20F22AC7EBE4432A424C594 /* MemoDetailView.swift in Sources */,
 				A00245AE9633A906577EE733 /* TextureLabView.swift in Sources */,
 				C0L0RLAB000000000002 /* ColorLabView.swift in Sources */,
@@ -298,11 +298,12 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin XCBuildConfiguration section */
-		'D1000000000000000000A3' = {
+		D1000000000000000000A3 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -333,6 +334,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
+				DEVELOPMENT_TEAM = CF34X3P59Y;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_TESTABILITY = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -356,16 +358,18 @@
 				MTL_FAST_MATH = YES;
 				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
 				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
 			};
 			name = Debug;
 		};
-		'D1000000000000000000A4' = {
+		D1000000000000000000A4 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = YES;
+				CLANG_ANALYZER_LOCALIZABILITY_NONLOCALIZED = YES;
 				CLANG_ANALYZER_NONNULL = YES;
 				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
@@ -396,6 +400,7 @@
 				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				DEVELOPMENT_TEAM = CF34X3P59Y;
 				ENABLE_NS_ASSERTIONS = NO;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
 				ENABLE_USER_SCRIPT_SANDBOXING = YES;
@@ -412,16 +417,18 @@
 				MTL_ENABLE_DEBUG_INFO = NO;
 				MTL_FAST_MATH = YES;
 				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
 				SWIFT_COMPILATION_MODE = wholemodule;
 				VALIDATE_PRODUCT = YES;
 			};
 			name = Release;
 		};
-		'D1000000000000000000A6' = {
+		D1000000000000000000A6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CF34X3P59Y;
@@ -440,17 +447,19 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sokumemokun.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
-		'D1000000000000000000A7' = {
+		D1000000000000000000A7 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_IDENTITY = "Apple Development";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_TEAM = CF34X3P59Y;
@@ -469,6 +478,7 @@
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sokumemokun.app;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -478,25 +488,25 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
-		'D1000000000000000000A2' = {
+		D1000000000000000000A2 /* Build configuration list for PBXProject "SokuMemoKun" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D1000000000000000000A3,
-				D1000000000000000000A4,
+				D1000000000000000000A3 /* Debug */,
+				D1000000000000000000A4 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
-		'D1000000000000000000A5' = {
+		D1000000000000000000A5 /* Build configuration list for PBXNativeTarget "SokuMemoKun" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
-				D1000000000000000000A6,
-				D1000000000000000000A7,
+				D1000000000000000000A6 /* Debug */,
+				D1000000000000000000A7 /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
 	};
-	rootObject = F1000000000000000000A1;
+	rootObject = F1000000000000000000A1 /* Project object */;
 }

@@ -30,6 +30,7 @@ struct QuickSortView: View {
     @State private var cellEditMode: CellEditMode = .none
 
     @State private var isKeyboardVisible = false
+    @State private var keyboardHeight: CGFloat = 0
 
     // タグ追加シート
     @State private var showNewTagSheet = false
@@ -180,11 +181,15 @@ struct QuickSortView: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: isKeyboardVisible)
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { notification in
             isKeyboardVisible = true
+            if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                keyboardHeight = frame.height
+            }
         }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
             isKeyboardVisible = false
+            keyboardHeight = 0
         }
         .sheet(isPresented: $showDeleteReview) { deleteReviewSheet }
         .sheet(isPresented: $showNewTagSheet) {
@@ -289,6 +294,7 @@ struct QuickSortView: View {
                             memo: memo,
                             isActive: memo.id == scrolledMemoID,
                             editMode: $cellEditMode,
+                            keyboardHeight: keyboardHeight,
                             onTagChanged: { id in taggedMemoIDs.insert(id) },
                             onTitleChanged: { id in titledMemoIDs.insert(id) },
                             onDelete: { deleteMemo($0) },
@@ -324,7 +330,7 @@ struct QuickSortView: View {
 
             // 3ボタン（弧に沿って配置）
             ZStack {
-                // 本文編集（中央固定）
+                // 本文編集（中央固定）— すりガラス風
                 TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
                     cellEditMode = (cellEditMode == .content) ? .none : .content
                 } label: {
@@ -334,16 +340,16 @@ struct QuickSortView: View {
                         .padding(.horizontal, 18)
                         .padding(.top, 6).padding(.bottom, 8)
                         .background(
-                            ArcCapsule().fill(
-                                LinearGradient(colors: [Color(white: 0.98), Color(white: 0.88)],
-                                               startPoint: .top, endPoint: .bottom)
-                            )
+                            ZStack {
+                                ArcCapsule().fill(.ultraThinMaterial)
+                                ArcCapsule().fill(Color(white: 0.85).opacity(0.1))
+                            }
                         )
                 }
                 .offset(y: -17)
 
-                // タイトル編集（左）
-                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
+                // タイトル編集（左）— すりガラス風
+                TapPressableView(shadowHeight: 5, shadowColor: .orange.opacity(0.3)) {
                     cellEditMode = (cellEditMode == .title) ? .none : .title
                 } label: {
                     Text("タイトル編集")
@@ -353,19 +359,16 @@ struct QuickSortView: View {
                         .padding(.top, 6).padding(.bottom, 8)
                         .background(
                             ZStack {
-                                ArcCapsule().fill(Color(white: 0.95))
-                                ArcCapsule().fill(
-                                    LinearGradient(colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.5)],
-                                                   startPoint: .top, endPoint: .bottom)
-                                )
+                                ArcCapsule().fill(.ultraThinMaterial)
+                                ArcCapsule().fill(Color.orange.opacity(0.1))
                             }
                         )
                 }
                 .rotationEffect(.degrees(-13))
                 .offset(x: -128, y: -2)
 
-                // タグ編集（右）
-                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
+                // タグ編集（右）— すりガラス風
+                TapPressableView(shadowHeight: 5, shadowColor: .cyan.opacity(0.3)) {
                     cellEditMode = (cellEditMode == .tag) ? .none : .tag
                 } label: {
                     Text("タグ編集")
@@ -375,11 +378,8 @@ struct QuickSortView: View {
                         .padding(.top, 6).padding(.bottom, 8)
                         .background(
                             ZStack {
-                                ArcCapsule().fill(Color(white: 0.95))
-                                ArcCapsule().fill(
-                                    LinearGradient(colors: [Color.cyan.opacity(0.18), Color.cyan.opacity(0.35)],
-                                                   startPoint: .top, endPoint: .bottom)
-                                )
+                                ArcCapsule().fill(.ultraThinMaterial)
+                                ArcCapsule().fill(Color.cyan.opacity(0.1))
                             }
                         )
                 }

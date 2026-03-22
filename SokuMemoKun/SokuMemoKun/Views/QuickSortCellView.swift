@@ -12,6 +12,7 @@ struct QuickSortCellView: View {
     let memo: Memo
     var isActive: Bool = false
     @Binding var editMode: CellEditMode
+    var keyboardHeight: CGFloat = 0
 
     // ルーレット領域の高さ
     static let dialAreaHeight: CGFloat = 250
@@ -56,7 +57,10 @@ struct QuickSortCellView: View {
         GeometryReader { geo in
             let cardW = geo.size.width * 0.80
             // ルーレット表示中は本文拡大しない（共存禁止）
-            let cardH = (isContentEditing && !showDialArea) ? geo.size.height * 0.55 : geo.size.height * 0.35
+            // キーボード表示中はカードがキーボードに被らないよう制限
+            let baseCardH = (isContentEditing && !showDialArea) ? geo.size.height * 0.55 : geo.size.height * 0.35
+            let maxCardH = keyboardHeight > 0 ? geo.size.height - keyboardHeight - 20 : geo.size.height * 0.55
+            let cardH = min(baseCardH, maxCardH)
 
             VStack(spacing: 0) {
                     Spacer(minLength: 12)
@@ -67,6 +71,7 @@ struct QuickSortCellView: View {
                         .frame(maxWidth: .infinity)
                         .animation(.easeInOut(duration: 0.25), value: isContentEditing)
                         .animation(.easeInOut(duration: 0.25), value: showDialArea)
+                        .animation(.easeInOut(duration: 0.25), value: keyboardHeight)
 
                     Spacer(minLength: 10)
 
