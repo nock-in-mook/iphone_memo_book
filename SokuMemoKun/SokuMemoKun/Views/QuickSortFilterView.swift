@@ -4,7 +4,7 @@ import os
 
 private let logger = Logger(subsystem: "com.sokumemokun.app", category: "QuickSort")
 
-// 爆速振り分けモード: 事前フィルタ選択シート
+// 爆速メモ整理モード: 事前フィルタ選択シート
 struct QuickSortFilterView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
@@ -70,11 +70,20 @@ struct QuickSortFilterView: View {
                         Image(systemName: "bolt.fill")
                             .font(.system(size: 36))
                             .foregroundStyle(.orange)
-                        Text("爆速振り分けモード")
+                        Text("爆速メモ整理モード")
                             .font(.system(size: 20, weight: .bold, design: .rounded))
-                        Text("対象のメモを選んでください")
-                            .font(.system(size: 14))
+
+                        // 説明文
+                        Text("メモを連続表示して一気に整理できます\nタイトル編集・タグ付け・本文編集・削除など")
+                            .font(.system(size: 13))
                             .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                            .lineSpacing(3)
+
+                        // フィルタ案内
+                        Text("対象のメモを選んでください")
+                            .font(.system(size: 14, weight: .medium))
+                            .padding(.top, 4)
                         Text("複数選択可")
                             .font(.system(size: 12, weight: .medium))
                             .foregroundStyle(.blue)

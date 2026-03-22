@@ -4,16 +4,17 @@ import os
 
 private let logger = Logger(subsystem: "com.sokumemokun.app", category: "QuickSort")
 
-// 爆速振り分けモード: セル内包方式（カード+ルーレットを1セルに統合）
+// 爆速メモ整理モード: セル内包方式（カード+ルーレットを1セルに統合）
 struct QuickSortView: View {
     @Environment(\.modelContext) private var modelContext
     @Query(sort: \Tag.name) private var tags: [Tag]
 
     var onDismiss: () -> Void
 
-    // フェーズ管理: フィルタ選択 → セット確認 → カルーセル
-    enum Phase { case filter, setConfirm, carousel }
+    // フェーズ管理: フィルタ選択 → ローディング → セット確認 → カルーセル
+    enum Phase { case filter, loading, setConfirm, carousel }
     @State private var phase: Phase = .filter
+    @State private var loadingProgress: CGFloat = 0
 
     // セット管理
     private let setSize = 50
@@ -84,16 +85,23 @@ struct QuickSortView: View {
                         onStart: { memos in
                             allFilteredMemos = memos
                             currentSetIndex = 0
-                            if memos.count > setSize {
-                                phase = .setConfirm
-                            } else {
-                                targetMemos = memos
-                                scrolledMemoID = memos.first?.id
-                                phase = .carousel
+                            loadingProgress = 0
+                            phase = .loading
+                            startLoadingAnimation {
+                                if memos.count > setSize {
+                                    phase = .setConfirm
+                                } else {
+                                    targetMemos = memos
+                                    scrolledMemoID = memos.first?.id
+                                    phase = .carousel
+                                }
                             }
                         },
                         onCancel: { onDismiss() }
                     )
+
+                case .loading:
+                    loadingView
 
                 case .setConfirm:
                     setConfirmView
@@ -590,7 +598,7 @@ struct QuickSortView: View {
                         .font(.system(size: 32))
                         .foregroundStyle(.orange)
 
-                    Text("爆速振り分けモードを終了")
+                    Text("爆速メモ整理モードを終了")
                         .font(.system(size: 17, weight: .bold, design: .rounded))
 
                     Text("変更は保存されません。\nよろしいですか？")
@@ -687,6 +695,73 @@ struct QuickSortView: View {
         }
         if activeMemos.isEmpty {
             withAnimation(.easeOut(duration: 0.25)) { showResult = true }
+        }
+    }
+
+    // MARK: - ダミーローディング画面
+
+    private var loadingView: some View {
+        VStack(spacing: 20) {
+            Spacer()
+
+            Image(systemName: "doc.on.doc.fill")
+                .font(.system(size: 50))
+                .foregroundStyle(.green)
+                .rotationEffect(.degrees(-30))
+
+            Text("\(allFilteredMemos.count)件のメモを準備中…")
+                .font(.system(size: 17, weight: .bold, design: .rounded))
+
+            // プログレスバー
+            VStack(spacing: 8) {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(Color.secondary.opacity(0.15))
+                            .frame(height: 12)
+                        RoundedRectangle(cornerRadius: 6)
+                            .fill(
+                                LinearGradient(
+                                    colors: [.orange, .yellow],
+                                    startPoint: .leading,
+                                    endPoint: .trailing
+                                )
+                            )
+                            .frame(width: geo.size.width * loadingProgress, height: 12)
+                    }
+                }
+                .frame(height: 12)
+
+                Text("\(Int(loadingProgress * 100))%")
+                    .font(.system(size: 13, weight: .medium, design: .monospaced))
+                    .foregroundStyle(.secondary)
+            }
+            .padding(.horizontal, 60)
+
+            Spacer()
+        }
+        .transition(.opacity)
+    }
+
+    // ダミーローディングアニメーション（10件以下: 1.5秒、11件以上: 3秒）
+    private func startLoadingAnimation(completion: @escaping () -> Void) {
+        let duration = allFilteredMemos.count <= 10 ? 1.5 : 3.0
+        let steps = 20
+        let interval = duration / Double(steps)
+        for i in 1...steps {
+            DispatchQueue.main.asyncAfter(deadline: .now() + interval * Double(i)) {
+                withAnimation(.easeOut(duration: 0.05)) {
+                    let t = Double(i) / Double(steps)
+                    loadingProgress = CGFloat(1 - pow(1 - t, 2.5))
+                }
+                if i == steps {
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.2) {
+                        withAnimation(.easeInOut(duration: 0.3)) {
+                            completion()
+                        }
+                    }
+                }
+            }
         }
     }
 

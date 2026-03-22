@@ -1,6 +1,6 @@
 import SwiftUI
 
-// 爆速振り分けモード: 戦績表示（全画面リッチ）
+// 爆速メモ整理モード: 戦績表示（全画面リッチ）
 struct QuickSortResultView: View {
     let taggedCount: Int
     let titledCount: Int

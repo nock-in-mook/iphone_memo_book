@@ -30,7 +30,7 @@ struct MainView: View {
     @State private var pendingSaveTagID: UUID? = nil
     // フォルダタブ並び替えモード中フラグ
     @State private var isTabReorderMode = false
-    // 爆速振り分けモード
+    // 爆速メモ整理モード
     @State private var showQuickSort = false
     // サジェスト新規タグ作成ダイアログ
     @State private var showNewTagConfirm = false
@@ -88,7 +88,7 @@ struct MainView: View {
                             // 並び替えモード中は非表示（全体を上に詰める）
                             if !isInputExpanded && !isTabReorderMode {
                                 HStack(spacing: 0) {
-                                    // 爆速振り分けボタン
+                                    // 爆速メモ整理ボタン
                                     Button {
                                         showQuickSort = true
                                     } label: {

@@ -79,13 +79,10 @@ struct QuickSortCellView: View {
                     .frame(height: 1)
                     .padding(.horizontal, 30)
 
-                Spacer(minLength: 8)
-
                 // ── コントロールパネル ──
                 controlPanel
                     .padding(.horizontal, 24)
-
-                Spacer(minLength: 12)
+                    .padding(.vertical, 6)
             }
         }
         .onAppear {
@@ -413,58 +410,46 @@ struct QuickSortCellView: View {
 
     private var editBar: some View {
         HStack(spacing: 0) {
-            // タイトル
+            // タイトル編集
             Button {
                 isTitleFocused = true
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("タイトル")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 36)
-                .background(Color.green.opacity(0.7))
+                Text("タイトル編集")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(Color.green.opacity(0.25))
             }
             .buttonStyle(.plain)
 
-            // 本文
+            // 本文編集
             Button {
                 commitTitle()
                 isTitleFocused = false
                 onEditBody()
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("本文")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(.secondary)
-                .frame(maxWidth: .infinity)
-                .frame(height: 36)
-                .background(Color(uiColor: .systemBackground))
+                Text("本文編集")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(Color(white: 0.95))
             }
             .buttonStyle(.plain)
 
-            // タグ
+            // タグ編集
             Button {
                 withAnimation(.easeInOut(duration: 0.25)) {
                     showDialArea.toggle()
                 }
             } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "pencil")
-                        .font(.system(size: 13, weight: .semibold))
-                    Text("タグ")
-                        .font(.system(size: 13, weight: .semibold))
-                }
-                .foregroundStyle(.white)
-                .frame(maxWidth: .infinity)
-                .frame(height: 36)
-                .background(showDialArea ? Color.blue.opacity(0.85) : Color.blue.opacity(0.6))
+                Text("タグ編集")
+                    .font(.system(size: 13, weight: .bold))
+                    .foregroundStyle(.primary)
+                    .frame(maxWidth: .infinity)
+                    .frame(height: 36)
+                    .background(showDialArea ? Color.blue.opacity(0.35) : Color.blue.opacity(0.2))
             }
             .buttonStyle(.plain)
         }
