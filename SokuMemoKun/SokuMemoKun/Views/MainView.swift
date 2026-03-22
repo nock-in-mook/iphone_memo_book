@@ -32,6 +32,8 @@ struct MainView: View {
     @State private var isTabReorderMode = false
     // 爆速メモ整理モード
     @State private var showQuickSort = false
+    // ToDoリストモード
+    @State private var showTodoList = false
     // サジェスト新規タグ作成ダイアログ
     @State private var showNewTagConfirm = false
     @State private var pendingNewTagName = ""
@@ -95,6 +97,17 @@ struct MainView: View {
                                         Image(systemName: "bolt.fill")
                                             .font(.system(size: 13, weight: .semibold))
                                             .foregroundStyle(.orange.opacity(0.7))
+                                            .frame(width: 44, height: 30)
+                                    }
+                                    .buttonStyle(.plain)
+
+                                    // ToDoリストボタン
+                                    Button {
+                                        showTodoList = true
+                                    } label: {
+                                        Image(systemName: "checklist")
+                                            .font(.system(size: 13, weight: .semibold))
+                                            .foregroundStyle(.blue.opacity(0.7))
                                             .frame(width: 44, height: 30)
                                     }
                                     .buttonStyle(.plain)
@@ -283,6 +296,9 @@ struct MainView: View {
             .animation(.easeInOut(duration: 0.3), value: showSavedToast)
             .fullScreenCover(isPresented: $showQuickSort) {
                 QuickSortView(onDismiss: { showQuickSort = false })
+            }
+            .fullScreenCover(isPresented: $showTodoList) {
+                TodoListView(onDismiss: { showTodoList = false })
             }
             .sheet(isPresented: $showSettings, onDismiss: {
                 // 設定画面を閉じた時にマスタースイッチの状態を反映

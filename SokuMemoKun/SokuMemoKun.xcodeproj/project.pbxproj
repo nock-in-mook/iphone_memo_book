@@ -44,6 +44,8 @@
 		TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000007 /* TagSuggestEngine.swift */; };
 		TAGSUG000000000000000A /* TagSuggestDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000009 /* TagSuggestDictionary.json */; };
 		TAPTXT0000000000000002 /* TappableReadOnlyText.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAPTXT0000000000000001 /* TappableReadOnlyText.swift */; };
+		TODO00000000000000002 /* TodoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODO00000000000000001 /* TodoItem.swift */; };
+		TODO00000000000000004 /* TodoListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODO00000000000000003 /* TodoListView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -77,6 +79,8 @@
 		CELLVIEW00000000000001 /* QuickSortCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortCellView.swift; sourceTree = "<group>"; };
 		LNTXT00000000000000001 /* LineNumberTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineNumberTextEditor.swift; sourceTree = "<group>"; };
 		TAPTXT0000000000000001 /* TappableReadOnlyText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappableReadOnlyText.swift; sourceTree = "<group>"; };
+		TODO00000000000000001 /* TodoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoItem.swift; sourceTree = "<group>"; };
+		TODO00000000000000003 /* TodoListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListView.swift; sourceTree = "<group>"; };
 		QSORT0000000000000001 /* QuickSortView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortView.swift; sourceTree = "<group>"; };
 		QSORT0000000000000003 /* QuickSortFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortFilterView.swift; sourceTree = "<group>"; };
 		QSORT0000000000000005 /* QuickSortResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortResultView.swift; sourceTree = "<group>"; };
@@ -132,6 +136,7 @@
 				TAGSUG0000000000000001 /* TagFrequency.swift */,
 				TAGSUG0000000000000003 /* TagCooccurrence.swift */,
 				TAGSUG0000000000000005 /* TagSuggestDismissal.swift */,
+				TODO00000000000000001 /* TodoItem.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -162,6 +167,7 @@
 				QSORT0000000000000001 /* QuickSortView.swift */,
 				QSORT0000000000000003 /* QuickSortFilterView.swift */,
 				QSORT0000000000000005 /* QuickSortResultView.swift */,
+				TODO00000000000000003 /* TodoListView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -296,6 +302,8 @@
 				QSORT0000000000000002 /* QuickSortView.swift in Sources */,
 				QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */,
 				QSORT0000000000000006 /* QuickSortResultView.swift in Sources */,
+				TODO00000000000000002 /* TodoItem.swift in Sources */,
+				TODO00000000000000004 /* TodoListView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

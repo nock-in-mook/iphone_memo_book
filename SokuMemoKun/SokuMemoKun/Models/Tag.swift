@@ -8,6 +8,7 @@ final class Tag {
     var colorIndex: Int = 1
     var gridSize: Int = 2  // 0=小(2×4), 1=中(3×6), 2=大(4×8)
     var memos: [Memo] = []
+    var todoItems: [TodoItem] = []  // ToDoとの多対多リレーション
     var parentTagID: UUID?  // nil = トップレベルタグ（親タグ）
     var sortOrder: Int = 0  // タブの並び順（小さいほど左）
 
