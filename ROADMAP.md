@@ -325,6 +325,10 @@ Views/
 - [ ] Pro限定機能の優先順位付け
 
 ## リリース前タスク
+- [ ] **アプリ名「Memolette」の商標・重複チェック**
+  - App Store Connectでの名前予約時に重複確認
+  - J-PlatPat（日本商標検索）で商標登録状況を確認
+  - USPTO（米国商標庁）でも念のため確認
 - [ ] **絶対値レイアウトの相対値化**（画面サイズ依存のハードコード排除）
   - MemoInputView: trailing padding 185/135/160/200/83pt → GeometryReader比率に
   - TagDialView: wheelRadius 350, parentThickness 110等 → 画面幅ベースに

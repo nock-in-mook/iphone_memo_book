@@ -1149,3 +1149,13 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - 編集ボタン3つを10pt上に移動
 - ロックボタンの視認性改善（不透明度・背景・枠線を濃く）
 - 長文テストメモの実機パフォーマンス検証→2万文字でも問題なし
+
+---
+## Memolette_046_タップ位置カーソル編集 (2026-03-23)
+- 閲覧モードタップ→カーソル位置で編集開始（全画面対応）
+- TappableReadOnlyText新規作成、LineNumberTextEditorにinitialCursorOffset追加
+- 閲覧↔編集テキスト位置ズレ修正（UITextViewインセット統一）
+- 枠外タップで編集モード解除（MemoInputView/MemoDetailView）
+- 整理モード拡大ボタン統一（isExpanded一本化、editFromTapで自動拡大抑制）
+- ROADMAP命名変更: グラフリンク→メモリンク
+- リリース前タスクに「Memolette」商標チェック追加
