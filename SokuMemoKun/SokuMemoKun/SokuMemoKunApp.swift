@@ -10,6 +10,8 @@ struct SokuMemoKunApp: App {
         self.sharedContainer = container
         // データリセット＆サンプル投入（一度だけ実行）
         Self.resetAndInsertSamples(container: container)
+        // 長文テストメモ生成（一度だけ実行）
+        Self.insertLongTextTestMemos(container: container)
     }
 
     var body: some Scene {
@@ -865,5 +867,46 @@ struct SokuMemoKunApp: App {
             chapter += 1
         }
         return result
+    }
+
+    // MARK: - 長文テストメモ生成
+
+    private static func insertLongTextTestMemos(container: ModelContainer) {
+        let key = "longTextTestV2"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        let context = ModelContext(container)
+
+        // 「長文テスト」タグを作成
+        let testTag = Tag(name: "長文テスト", colorIndex: 3)
+        context.insert(testTag)
+
+        // 1000文字〜20000文字のメモを千文字刻みで生成
+        let baseText = """
+        これは長文テスト用のダミーテキストです。即メモ君の爆速メモ整理モードで、大量のテキストを含むメモがどのように表示されるかを検証するために使用します。\
+        パフォーマンスのボトルネックを特定し、ユーザー体験を改善するための重要なテストデータです。\
+        メモアプリにおいて、長文のメモは避けて通れない課題です。日記、議事録、レポート、小説の下書きなど、数千文字から数万文字に及ぶテキストを扱うケースは珍しくありません。\
+        このようなメモを高速に表示し、スムーズにスクロールできることは、アプリの品質を左右する重要な要素です。\
+        SwiftUIのTextビューは、短いテキストに対しては非常に効率的ですが、長大なテキストを表示する際にはレンダリングコストが増大します。\
+        特にlineLimit(nil)を指定した場合、テキスト全体のレイアウト計算が必要となり、文字数に比例して処理時間が増加します。
+        """
+
+        for count in stride(from: 20000, through: 1000, by: -1000) {
+            var content = ""
+            while content.count < count {
+                content += baseText
+            }
+            content = String(content.prefix(count))
+
+            let memo = Memo(
+                content: content,
+                title: "【テスト】\(count)文字メモ",
+                tags: [testTag]
+            )
+            context.insert(memo)
+        }
+
+        try? context.save()
+        UserDefaults.standard.set(true, forKey: key)
     }
 }
