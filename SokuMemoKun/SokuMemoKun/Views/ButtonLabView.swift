@@ -56,24 +56,20 @@ struct TapPressableView<Label: View>: View {
                 radius: radius,
                 y: isPressed ? 0 : shadowHeight
             )
-            .onTapGesture {
-                // カチッと沈む
-                withAnimation(.easeIn(duration: 0.035)) { isPressed = true }
-                // 少し待ってから戻る
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.06) {
-                    withAnimation(.easeOut(duration: 0.05)) { isPressed = false }
-                    action()
-                }
-            }
-            // 長押し対応
-            .simultaneousGesture(
-                LongPressGesture(minimumDuration: 0.15)
+            .contentShape(Rectangle())
+            .gesture(
+                DragGesture(minimumDistance: 0)
                     .onChanged { _ in
-                        withAnimation(.easeIn(duration: 0.06)) { isPressed = true }
+                        if !isPressed {
+                            withAnimation(.easeIn(duration: 0.035)) { isPressed = true }
+                        }
                     }
-                    .onEnded { _ in
-                        withAnimation(.easeOut(duration: 0.08)) { isPressed = false }
-                        action()
+                    .onEnded { value in
+                        withAnimation(.easeOut(duration: 0.05)) { isPressed = false }
+                        // 指が大きくずれていなければタップとみなす
+                        if abs(value.translation.width) < 50 && abs(value.translation.height) < 50 {
+                            action()
+                        }
                     }
             )
     }
