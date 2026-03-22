@@ -28,16 +28,7 @@ struct QuickSortView: View {
     @State private var scrolledMemoID: UUID?
     @State private var isCarouselScrolling = false
 
-    // 編集オーバーレイ用
-    @State private var editingTitle = ""
-    @State private var editingContent = ""
     @State private var isKeyboardVisible = false
-    @State private var isCardEditing = false
-    @State private var editingTitleSnapshot = ""
-    @State private var editingContentSnapshot = ""
-    @State private var showDiscardAlert = false
-    @FocusState private var titleFieldFocused: Bool
-    @FocusState private var contentFieldFocused: Bool
 
     // タグ追加シート
     @State private var showNewTagSheet = false
@@ -53,6 +44,8 @@ struct QuickSortView: View {
 
     // 終了確認
     @State private var showExitConfirm = false
+    @State private var showFinishConfirm = false
+    @State private var showDeleteConfirmFromPanel = false
 
     // 戦績
     @State private var showResult = false
@@ -122,13 +115,17 @@ struct QuickSortView: View {
                 }
 
                 // カード編集モード
-                if phase == .carousel && isCardEditing {
-                    cardEditOverlay(geo: geo)
-                }
-
                 // 終了確認ダイアログ
                 if showExitConfirm {
                     exitConfirmDialog
+                }
+
+                if showFinishConfirm {
+                    finishConfirmDialog
+                }
+
+                if showDeleteConfirmFromPanel {
+                    panelDeleteConfirmDialog
                 }
 
                 if showResult {
@@ -147,9 +144,10 @@ struct QuickSortView: View {
                             startCurrentSet()
                         },
                         onClose: {
-                            for m in deleteQueue { modelContext.delete(m) }
-                            try? modelContext.save()
-                            onDismiss()
+                            returnToFilter()
+                        },
+                        onGoBack: {
+                            withAnimation(.easeOut(duration: 0.25)) { showResult = false }
                         }
                     )
                 }
@@ -212,31 +210,69 @@ struct QuickSortView: View {
         let cellHeight = geo.size.height - headerHeight
 
         VStack(spacing: 0) {
-            // カウンター（一番上）
+            // 最上段: ✕、枚数、整理をおわる
             if !activeMemos.isEmpty {
                 let current = currentIndexInActive + 1
                 let total = activeMemos.count
                 let isLastPage = current == total
-                HStack(alignment: .firstTextBaseline, spacing: 0) {
-                    Text("\(current)")
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .foregroundStyle(isLastPage
-                            ? AnyShapeStyle(.linearGradient(colors: [.red, .orange, .yellow, .green, .blue, .purple], startPoint: .leading, endPoint: .trailing))
-                            : AnyShapeStyle(.blue))
-                    Text("/\(total)")
-                        .font(.system(size: 32, weight: .black, design: .rounded))
-                        .foregroundStyle(.primary)
-                    Text("枚")
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .foregroundStyle(.secondary)
+                ZStack {
+                    // 中央: 枚数
+                    HStack(alignment: .firstTextBaseline, spacing: 0) {
+                        Text("\(current)")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundStyle(isLastPage
+                                ? AnyShapeStyle(.linearGradient(colors: [.red, .orange, .yellow, .green, .blue, .purple], startPoint: .leading, endPoint: .trailing))
+                                : AnyShapeStyle(.blue))
+                        Text("/\(total)")
+                            .font(.system(size: 32, weight: .black, design: .rounded))
+                            .foregroundStyle(.primary)
+                        Text("枚")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.secondary)
+                    }
+
+                    // 左端: ✕ 丸囲み
+                    HStack {
+                        Button {
+                            withAnimation(.easeOut(duration: 0.2)) { showExitConfirm = true }
+                        } label: {
+                            Image(systemName: "xmark")
+                                .font(.system(size: 14, weight: .bold))
+                                .foregroundStyle(.secondary)
+                                .frame(width: 32, height: 32)
+                                .background(
+                                    Circle()
+                                        .fill(Color(uiColor: .tertiarySystemBackground))
+                                        .shadow(color: .black.opacity(0.12), radius: 2, y: 1)
+                                )
+                                .overlay(Circle().stroke(Color.secondary.opacity(0.2), lineWidth: 1))
+                        }
+                        Spacer()
+                    }
+
+                    // 右端: 整理をおわる
+                    HStack {
+                        Spacer()
+                        Button {
+                            withAnimation(.easeOut(duration: 0.25)) { showFinishConfirm = true }
+                        } label: {
+                            Text("整理をおわる")
+                                .font(.system(size: 13, weight: .bold, design: .rounded))
+                                .foregroundStyle(.orange)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(Capsule().strokeBorder(Color.orange, lineWidth: 1.5))
+                        }
+                    }
                 }
+                .padding(.horizontal, 16)
                 .padding(.top, 4)
             }
 
-            // ナビバー
+            // ページ送り（上）
             navBar
-                .padding(.horizontal, 16)
-                .padding(.top, 2)
+                .padding(.horizontal, 24)
+                .padding(.top, 16)
 
             // カルーセル（フリック無効・タップのみでページ移動）
             CarouselView(
@@ -257,10 +293,6 @@ struct QuickSortView: View {
                             isActive: memo.id == scrolledMemoID,
                             onTagChanged: { id in taggedMemoIDs.insert(id) },
                             onTitleChanged: { id in titledMemoIDs.insert(id) },
-                            onEditBody: {
-                                scrolledMemoID = memo.id
-                                enterEditMode(for: memo, focusContent: true)
-                            },
                             onDelete: { deleteMemo($0) },
                             onNewTagSheet: { isChild, parentID in
                                 newTagIsChild = isChild
@@ -276,149 +308,103 @@ struct QuickSortView: View {
                                 if activeIdx < activeMemos.count - 1 {
                                     scrolledMemoID = activeMemos[activeIdx + 1].id
                                 }
+                            },
+                            onFinish: {
+                                withAnimation(.easeOut(duration: 0.25)) { showFinishConfirm = true }
                             }
                         )
                     )
                 }
             )
+
+            // 操作パネル（固定・スクロールしない）
+            bottomControlPanel
+                .padding(.horizontal, 24)
+                .padding(.top, 8)
+                .padding(.bottom, 4)
         }
     }
 
-    // MARK: - カード編集オーバーレイ（背景グレーアウト + カードが浮き上がる）
+    // MARK: - 操作パネル（前へ / ゴミ箱 / 次へ or 完了）
 
-    @ViewBuilder
-    private func cardEditOverlay(geo: GeometryProxy) -> some View {
-        ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+    private var bottomControlPanel: some View {
+        let canGoPrev = currentIndexInActive > 0
+        let canGoNext = currentIndexInActive < activeMemos.count - 1
+        let isLastPage = currentIndexInActive == activeMemos.count - 1
+
+        return HStack(spacing: 0) {
+            // ◁ 前へ
+            Button {
+                if canGoPrev {
+                    scrolledMemoID = activeMemos[currentIndexInActive - 1].id
                 }
-
-            VStack(spacing: 0) {
-                HStack {
-                    Button {
-                        if editingTitle != editingTitleSnapshot || editingContent != editingContentSnapshot {
-                            withAnimation(.easeOut(duration: 0.2)) { showDiscardAlert = true }
-                        } else {
-                            exitEditMode(discard: true)
-                        }
-                    } label: {
-                        Text("キャンセル")
-                            .font(.system(size: 17, weight: .medium))
-                            .foregroundStyle(.white.opacity(0.9))
-                    }
-                    Spacer()
-                    Button {
-                        exitEditMode(discard: false)
-                    } label: {
-                        Text("確定")
-                            .font(.system(size: 17, weight: .bold))
-                            .foregroundStyle(.orange)
-                    }
-                }
-                .padding(.horizontal, 20)
-                .padding(.vertical, 10)
-
-                VStack(alignment: .leading, spacing: 0) {
-                    TextField("タイトルを入力", text: $editingTitle)
-                        .font(.system(size: 16, weight: .bold, design: .rounded))
-                        .focused($titleFieldFocused)
-                        .padding(.horizontal, 14)
-                        .padding(.top, 10)
-                        .padding(.bottom, 6)
-
-                    Rectangle()
-                        .fill(Color.secondary.opacity(0.3))
-                        .frame(height: 1)
-                        .padding(.horizontal, 10)
-
-                    TextEditor(text: $editingContent)
-                        .font(.system(size: 15))
-                        .focused($contentFieldFocused)
-                        .scrollContentBackground(.hidden)
-                        .padding(.horizontal, 10)
-                        .padding(.top, 4)
-                        .frame(maxHeight: .infinity)
-                }
-                .background(Color(uiColor: .systemBackground))
-                .cornerRadius(16)
-                .shadow(color: .black.opacity(0.3), radius: 20, y: 10)
-                .padding(.horizontal, 12)
-            }
-            .frame(maxHeight: min(geo.size.height * 0.45, 400))
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-            .padding(.top, 80)
-        }
-        .ignoresSafeArea(.keyboard)
-        .transition(.opacity)
-        .overlay {
-            if showDiscardAlert {
-                discardConfirmDialog
-            }
-        }
-    }
-
-    // MARK: - 編集破棄確認ダイアログ（リッチ）
-
-    private var discardConfirmDialog: some View {
-        ZStack {
-            Color.black.opacity(0.4)
-                .ignoresSafeArea()
-                .onTapGesture {
-                    withAnimation(.easeOut(duration: 0.2)) { showDiscardAlert = false }
-                }
-
-            VStack(spacing: 0) {
-                VStack(spacing: 8) {
-                    Image(systemName: "pencil.slash")
-                        .font(.system(size: 32))
-                        .foregroundStyle(.orange)
-
-                    Text("編集を破棄しますか？")
-                        .font(.system(size: 17, weight: .bold, design: .rounded))
-
-                    Text("変更は保存されません。")
-                        .font(.system(size: 14))
-                        .foregroundStyle(.secondary)
-                }
-                .padding(.top, 24)
-                .padding(.bottom, 16)
-                .padding(.horizontal, 20)
-
-                Divider()
-
-                Button {
-                    withAnimation(.easeOut(duration: 0.2)) { showDiscardAlert = false }
-                    exitEditMode(discard: true)
-                } label: {
-                    Text("破棄する")
-                        .font(.system(size: 16, weight: .bold))
-                        .foregroundStyle(.red)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
-                }
-                .buttonStyle(.plain)
-
-                Divider()
-
-                Button {
-                    withAnimation(.easeOut(duration: 0.2)) { showDiscardAlert = false }
-                } label: {
-                    Text("編集に戻る")
-                        .font(.system(size: 16, weight: .medium))
+            } label: {
+                HStack(spacing: 6) {
+                    Triangle()
+                        .fill(Color.blue.opacity(0.7))
+                        .frame(width: 14, height: 20)
+                        .rotationEffect(.degrees(-90))
+                    Text("前へ")
+                        .font(.system(size: 14, weight: .semibold))
                         .foregroundStyle(.blue)
-                        .frame(maxWidth: .infinity)
-                        .padding(.vertical, 14)
+                }
+            }
+            .disabled(!canGoPrev)
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // ゴミ箱
+            Button {
+                withAnimation(.easeOut(duration: 0.2)) { showDeleteConfirmFromPanel = true }
+            } label: {
+                VStack(spacing: 2) {
+                    Image(systemName: "trash")
+                        .font(.system(size: 26, weight: .medium))
+                    Text("削除")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.red.opacity(0.6))
+            }
+            .buttonStyle(.plain)
+
+            Spacer()
+
+            // ▷ 次へ / 完了
+            if isLastPage {
+                Button {
+                    withAnimation(.easeOut(duration: 0.25)) { showFinishConfirm = true }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("完了")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.orange))
+                }
+            } else {
+                Button {
+                    if canGoNext {
+                        scrolledMemoID = activeMemos[currentIndexInActive + 1].id
+                    }
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("次へ")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.blue)
+                        Triangle()
+                            .fill(Color.blue.opacity(0.7))
+                            .frame(width: 14, height: 20)
+                            .rotationEffect(.degrees(90))
+                    }
                 }
                 .buttonStyle(.plain)
             }
-            .background(Color(uiColor: .systemBackground))
-            .cornerRadius(16)
-            .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
-            .padding(.horizontal, 40)
         }
-        .transition(.opacity)
     }
 
     // MARK: - セット確認画面
@@ -494,9 +480,9 @@ struct QuickSortView: View {
             .padding(.bottom, 8)
 
             Button {
-                onDismiss()
+                resetToFilter()
             } label: {
-                Text("閉じる")
+                Text("フィルターに戻る")
                     .font(.system(size: 15))
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
@@ -521,63 +507,93 @@ struct QuickSortView: View {
         phase = .carousel
     }
 
-    private func enterEditMode(for memo: Memo, focusContent: Bool = false) {
-        editingTitle = memo.title
-        editingContent = memo.content
-        editingTitleSnapshot = memo.title
-        editingContentSnapshot = memo.content
-        withAnimation(.spring(response: 0.3)) { isCardEditing = true }
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-            if focusContent {
-                contentFieldFocused = true
-            } else {
-                titleFieldFocused = true
-            }
-        }
+    // フィルター画面に戻す（変更を保存して）
+    private func returnToFilter() {
+        for m in deleteQueue { modelContext.delete(m) }
+        try? modelContext.save()
+        resetToFilter()
     }
 
-    private func exitEditMode(discard: Bool) {
-        if !discard {
-            // 確定: メモに反映
-            if let memo = currentMemo {
-                let newTitle = editingTitle.trimmingCharacters(in: .whitespacesAndNewlines)
-                if newTitle != memo.title {
-                    memo.title = newTitle
-                    memo.updatedAt = Date()
-                    if !newTitle.isEmpty { titledMemoIDs.insert(memo.id) }
-                }
-                if editingContent != memo.content {
-                    memo.content = editingContent
-                    memo.updatedAt = Date()
-                    editedMemoIDs.insert(memo.id)
-                }
-            }
-        }
-        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-        withAnimation(.spring(response: 0.3)) { isCardEditing = false }
+    // フィルター画面に戻す（変更を保存せず）
+    private func returnToFilterWithoutSave() {
+        resetToFilter()
     }
 
-    // MARK: - ナビバー
+    private func resetToFilter() {
+        allFilteredMemos = []
+        targetMemos = []
+        deleteQueue = []
+        taggedMemoIDs = []
+        titledMemoIDs = []
+        editedMemoIDs = []
+        scrolledMemoID = nil
+        currentSetIndex = 0
+        showResult = false
+        showExitConfirm = false
+        showFinishConfirm = false
+        phase = .filter
+    }
+
+    // MARK: - ページ送り（上部・下部操作パネルと同デザイン）
 
     private var navBar: some View {
-        HStack {
+        let canGoPrev = currentIndexInActive > 0
+        let canGoNext = currentIndexInActive < activeMemos.count - 1
+        let isLastPage = currentIndexInActive == activeMemos.count - 1
+
+        return HStack(spacing: 0) {
+            // ◁ 前へ（下と同じ: 常に青、disabledで自動グレー）
             Button {
-                withAnimation(.easeOut(duration: 0.2)) { showExitConfirm = true }
+                if canGoPrev {
+                    scrolledMemoID = activeMemos[currentIndexInActive - 1].id
+                }
             } label: {
-                Image(systemName: "xmark")
-                    .font(.system(size: 16, weight: .semibold))
-                    .foregroundStyle(.secondary)
+                HStack(spacing: 6) {
+                    Triangle()
+                        .fill(Color.blue.opacity(0.7))
+                        .frame(width: 14, height: 20)
+                        .rotationEffect(.degrees(-90))
+                    Text("前へ")
+                        .font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(.blue)
+                }
             }
+            .disabled(!canGoPrev)
+            .buttonStyle(.plain)
+
             Spacer()
-            Button {
-                withAnimation(.easeOut(duration: 0.25)) { showResult = true }
-            } label: {
-                Text("完了")
-                    .font(.system(size: 15, weight: .bold, design: .rounded))
+
+            // ▷ 次へ / 最後のページは「完了」オレンジボタン
+            if isLastPage {
+                Button {
+                    withAnimation(.easeOut(duration: 0.25)) { showFinishConfirm = true }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("完了")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                    }
                     .foregroundStyle(.white)
                     .padding(.horizontal, 16)
                     .padding(.vertical, 8)
                     .background(Capsule().fill(Color.orange))
+                }
+            } else {
+                Button {
+                    scrolledMemoID = activeMemos[currentIndexInActive + 1].id
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("次へ")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.blue)
+                        Triangle()
+                            .fill(Color.blue.opacity(0.7))
+                            .frame(width: 14, height: 20)
+                            .rotationEffect(.degrees(90))
+                    }
+                }
+                .buttonStyle(.plain)
             }
         }
     }
@@ -606,7 +622,7 @@ struct QuickSortView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.center)
 
-                    Text("保存するには、完了ボタンを押すか\n完走してください。")
+                    Text("保存するには「整理をおわる」か\n完走してください。")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary.opacity(0.7))
                         .multilineTextAlignment(.center)
@@ -620,9 +636,9 @@ struct QuickSortView: View {
 
                 Button {
                     withAnimation(.easeOut(duration: 0.2)) { showExitConfirm = false }
-                    onDismiss()
+                    returnToFilterWithoutSave()
                 } label: {
-                    Text("終了する")
+                    Text("フィルターに戻る")
                         .font(.system(size: 16, weight: .bold))
                         .foregroundStyle(.red)
                         .frame(maxWidth: .infinity)
@@ -636,6 +652,139 @@ struct QuickSortView: View {
                     withAnimation(.easeOut(duration: 0.2)) { showExitConfirm = false }
                 } label: {
                     Text("戻る")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+            }
+            .background(Color(uiColor: .systemBackground))
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
+            .padding(.horizontal, 40)
+        }
+        .transition(.opacity)
+    }
+
+    // MARK: - 整理おわりダイアログ
+
+    private var finishConfirmDialog: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.2)) { showFinishConfirm = false }
+                }
+
+            VStack(spacing: 0) {
+                VStack(spacing: 8) {
+                    Image(systemName: "checkmark.seal.fill")
+                        .font(.system(size: 36))
+                        .foregroundStyle(
+                            LinearGradient(colors: [.orange, .yellow],
+                                           startPoint: .topLeading, endPoint: .bottomTrailing)
+                        )
+
+                    Text("整理をおわる")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+
+                    Text("ここまでの変更を保存して、\n結果画面を表示します。")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+                        .multilineTextAlignment(.center)
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+                .padding(.horizontal, 20)
+
+                Divider()
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showFinishConfirm = false }
+                    withAnimation(.easeOut(duration: 0.25)) { showResult = true }
+                } label: {
+                    Text("結果を表示")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.orange)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showFinishConfirm = false }
+                } label: {
+                    Text("キャンセル")
+                        .font(.system(size: 16, weight: .medium))
+                        .foregroundStyle(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+            }
+            .background(Color(uiColor: .systemBackground))
+            .cornerRadius(16)
+            .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
+            .padding(.horizontal, 40)
+        }
+        .transition(.opacity)
+    }
+
+    // MARK: - 操作パネルからの削除確認ダイアログ
+
+    private var panelDeleteConfirmDialog: some View {
+        ZStack {
+            Color.black.opacity(0.4)
+                .ignoresSafeArea()
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.2)) { showDeleteConfirmFromPanel = false }
+                }
+
+            VStack(spacing: 0) {
+                VStack(spacing: 8) {
+                    Image(systemName: "trash.fill")
+                        .font(.system(size: 32))
+                        .foregroundStyle(.red.opacity(0.8))
+
+                    Text("メモを削除します")
+                        .font(.system(size: 17, weight: .bold, design: .rounded))
+
+                    Text("よろしいですか？")
+                        .font(.system(size: 14))
+                        .foregroundStyle(.secondary)
+
+                    Text("「完了」画面で復元できます。")
+                        .font(.system(size: 12))
+                        .foregroundStyle(.secondary.opacity(0.7))
+                        .padding(.top, 2)
+                }
+                .padding(.top, 24)
+                .padding(.bottom, 16)
+                .padding(.horizontal, 20)
+
+                Divider()
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showDeleteConfirmFromPanel = false }
+                    if let memo = currentMemo { deleteMemo(memo) }
+                } label: {
+                    Text("削除する")
+                        .font(.system(size: 16, weight: .bold))
+                        .foregroundStyle(.red)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 14)
+                }
+                .buttonStyle(.plain)
+
+                Divider()
+
+                Button {
+                    withAnimation(.easeOut(duration: 0.2)) { showDeleteConfirmFromPanel = false }
+                } label: {
+                    Text("キャンセル")
                         .font(.system(size: 16, weight: .medium))
                         .foregroundStyle(.blue)
                         .frame(maxWidth: .infinity)

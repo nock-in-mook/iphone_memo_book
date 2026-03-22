@@ -15,11 +15,11 @@ struct QuickSortCellView: View {
     // コールバック（親ビューへの通知）
     var onTagChanged: (UUID) -> Void = { _ in }
     var onTitleChanged: (UUID) -> Void = { _ in }
-    var onEditBody: () -> Void = {}
     var onDelete: (Memo) -> Void = { _ in }
     var onNewTagSheet: (_ isChild: Bool, _ parentTagID: UUID?) -> Void = { _, _ in }
     var onGoPrev: () -> Void = {}
     var onGoNext: () -> Void = {}
+    var onFinish: () -> Void = {}
 
     @Query(sort: \Tag.name) private var tags: [Tag]
     @Environment(\.modelContext) private var modelContext
@@ -50,21 +50,24 @@ struct QuickSortCellView: View {
     // ルーレット表示（タグ編集ボタンで切替）
     @State private var showDialArea = false
 
+    // タイトルタブ拡大アニメーション
+    @State private var titleTabPopped = false
+
     var body: some View {
         GeometryReader { geo in
             let cardW = geo.size.width * 0.80
-            let cardH = isContentEditing ? geo.size.height * 0.55 : geo.size.height * 0.35
+            // ルーレット表示中は本文拡大しない（共存禁止）
+            let cardH = (isContentEditing && !showDialArea) ? geo.size.height * 0.55 : geo.size.height * 0.35
 
             VStack(spacing: 0) {
                     Spacer(minLength: 12)
-                        .contentShape(Rectangle())
-                        .onTapGesture { dismissEditing() }
 
                     // ── メモカード（タイトル+本文+タグフッター）──
                     memoCard
                         .frame(width: cardW, height: cardH)
                         .frame(maxWidth: .infinity)
                         .animation(.easeInOut(duration: 0.25), value: isContentEditing)
+                        .animation(.easeInOut(duration: 0.25), value: showDialArea)
 
                     Spacer(minLength: 10)
 
@@ -76,12 +79,19 @@ struct QuickSortCellView: View {
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
 
-                    Spacer(minLength: 10)
+                    Spacer(minLength: 0)
 
                     // ── コントローラーエリア（弧の仕切り線 + ボタン + 操作パネル）──
                     controllerArea
                         .padding(.bottom, 4)
+                        .layoutPriority(1)  // ボタンは最優先で場所キープ
             }
+            // 全体の背景タップで編集解除
+            .background(
+                Color.clear
+                    .contentShape(Rectangle())
+                    .onTapGesture { dismissEditing() }
+            )
         }
         .onAppear {
             initFromMemo()
@@ -97,6 +107,7 @@ struct QuickSortCellView: View {
             editingTitle = memo.title
             editingContent = memo.content
             isContentEditing = false
+            titleTabPopped = false
             flashTag = false
             flashTitle = false
         }
@@ -248,12 +259,16 @@ struct QuickSortCellView: View {
 
     // 枠外タップで全フォーカス解除
     private func dismissEditing() {
+        titleTabPopped = false
         isTitleFocused = false
         isContentFocused = false
         commitTitle()
         if isContentEditing {
             commitContent()
             isContentEditing = false
+        }
+        if showDialArea {
+            withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false }
         }
     }
 
@@ -312,11 +327,14 @@ struct QuickSortCellView: View {
                         .frame(width: tabW, alignment: .leading)
                         .background(
                             flashTitle
-                                ? Color.orange.opacity(0.2)
-                                : Color(uiColor: .secondarySystemBackground).opacity(
-                                    parentTag != nil ? 0.8 : 0.6
-                                )
+                                ? Color.orange.opacity(0.45)
+                                : Color.orange.opacity(0.18)
                         )
+                        .scaleEffect(
+                            titleTabPopped ? CGSize(width: 1.3, height: 1.2) : CGSize(width: 1.0, height: 1.0),
+                            anchor: .leading
+                        )
+                        .animation(.easeInOut(duration: 0.2), value: titleTabPopped)
 
                     // 本文（インライン編集）
                     if isContentEditing {
@@ -364,9 +382,18 @@ struct QuickSortCellView: View {
                     .padding(.vertical, 8)
                     .background(
                         flashTag
-                            ? Color.orange.opacity(0.15)
-                            : Color(uiColor: .secondarySystemBackground).opacity(0.4)
+                            ? Color.cyan.opacity(0.35)
+                            : Color.cyan.opacity(0.12)
                     )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        // タグフッタータップでルーレットトグル
+                        commitTitle()
+                        titleTabPopped = false
+                        isTitleFocused = false
+                        if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
+                        withAnimation(.easeInOut(duration: 0.25)) { showDialArea.toggle() }
+                    }
                     .overlay(alignment: .top) {
                         Rectangle()
                             .frame(height: parentTag != nil ? 2 : 0)
@@ -382,20 +409,6 @@ struct QuickSortCellView: View {
                     )
                 )
                 .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
-
-                // 鉛筆ボタン（タブの右横、カードの外エリア）
-                Button {
-                    commitTitle()
-                    isTitleFocused = false
-                    onEditBody()
-                } label: {
-                    Image(systemName: "square.and.pencil")
-                        .font(.system(size: 22, weight: .semibold))
-                        .foregroundStyle(.orange)
-                }
-                .buttonStyle(.plain)
-                .frame(height: tabH - 2)
-                .offset(x: tabW + 6, y: 0)
             }
         }
     }
@@ -468,7 +481,9 @@ struct QuickSortCellView: View {
                     } else {
                         // 他を閉じて起動
                         commitTitle()
+                        titleTabPopped = false
                         isTitleFocused = false
+                        if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
                         editingContent = memo.content
                         isContentEditing = true
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
@@ -494,11 +509,18 @@ struct QuickSortCellView: View {
                 TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.2)) {
                     if isTitleFocused {
                         // 編集中 → 抜ける
+                        titleTabPopped = false
                         isTitleFocused = false
                     } else {
                         // 他を閉じて起動
                         if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
                         isTitleFocused = true
+                        // タブ拡大＋フラッシュ演出
+                        titleTabPopped = true
+                        flashTitle = true
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+                            flashTitle = false
+                        }
                     }
                 } label: {
                     Text("タイトル編集")
@@ -528,6 +550,7 @@ struct QuickSortCellView: View {
                     } else {
                         // 他を閉じて起動
                         commitTitle()
+                        titleTabPopped = false
                         isTitleFocused = false
                         if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
                         withAnimation(.easeInOut(duration: 0.25)) { showDialArea = true }
@@ -553,11 +576,6 @@ struct QuickSortCellView: View {
                 .offset(x: 128, y: -2)
             }
             .padding(.top, -22)
-
-            // 操作パネル（前へ / ゴミ箱 / 次へ）
-            controlPanel
-                .padding(.horizontal, 24)
-                .padding(.top, 12)
         }
     }
 
@@ -602,24 +620,42 @@ struct QuickSortCellView: View {
 
             Spacer()
 
-            // ▷ タップで次へ
-            Button {
-                commitTitle()
-                isTitleFocused = false
-                onGoNext()
-            } label: {
-                HStack(spacing: 6) {
-                    Text("次へ")
-                        .font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(showRightArrow ? .blue : .secondary.opacity(0.3))
-                    Triangle()
-                        .fill(showRightArrow ? Color.blue.opacity(0.7) : Color.secondary.opacity(0.15))
-                        .frame(width: 14, height: 20)
-                        .rotationEffect(.degrees(90))
+            // ▷ タップで次へ / 最後のページは「完了」
+            if showRightArrow {
+                Button {
+                    commitTitle()
+                    isTitleFocused = false
+                    onGoNext()
+                } label: {
+                    HStack(spacing: 6) {
+                        Text("次へ")
+                            .font(.system(size: 14, weight: .semibold))
+                            .foregroundStyle(.blue)
+                        Triangle()
+                            .fill(Color.blue.opacity(0.7))
+                            .frame(width: 14, height: 20)
+                            .rotationEffect(.degrees(90))
+                    }
+                }
+                .buttonStyle(.plain)
+            } else {
+                Button {
+                    commitTitle()
+                    isTitleFocused = false
+                    onFinish()
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("完了")
+                            .font(.system(size: 15, weight: .bold, design: .rounded))
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .bold))
+                    }
+                    .foregroundStyle(.white)
+                    .padding(.horizontal, 16)
+                    .padding(.vertical, 8)
+                    .background(Capsule().fill(Color.orange))
                 }
             }
-            .disabled(!showRightArrow)
-            .buttonStyle(.plain)
         }
     }
 

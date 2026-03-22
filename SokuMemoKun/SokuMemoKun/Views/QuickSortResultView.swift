@@ -10,6 +10,7 @@ struct QuickSortResultView: View {
     var onReviewDeleted: () -> Void
     var onNextSet: (() -> Void)? = nil  // 次のセットがある場合
     var onClose: () -> Void
+    var onGoBack: () -> Void = {}  // 整理画面にもどる
 
     private var totalActions: Int {
         taggedCount + titledCount + editedCount + deletedCount
@@ -134,6 +135,22 @@ struct QuickSortResultView: View {
                         }
                         .buttonStyle(.plain)
                     }
+
+                    // 整理画面にもどる（共通）
+                    Button {
+                        onGoBack()
+                    } label: {
+                        HStack(spacing: 6) {
+                            Image(systemName: "arrow.uturn.backward")
+                                .font(.system(size: 13, weight: .semibold))
+                            Text("整理画面にもどる")
+                                .font(.system(size: 14, weight: .medium))
+                        }
+                        .foregroundStyle(.blue)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 10)
+                    }
+                    .buttonStyle(.plain)
                 }
                 .padding(.horizontal, 24)
                 .padding(.bottom, 40)
