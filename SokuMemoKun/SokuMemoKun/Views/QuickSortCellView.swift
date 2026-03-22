@@ -41,7 +41,9 @@ struct QuickSortCellView: View {
     // 本文インライン編集
     @State private var editingContent: String = ""
     @State private var isContentEditing = false
-    @FocusState private var isContentFocused: Bool
+    @State private var isContentFocused = false
+    /// タップ位置のカーソルオフセット（nil=末尾）
+    @State private var contentTapOffset: Int?
 
     // ピカピカアニメーション
     @State private var flashTag = false
@@ -336,6 +338,7 @@ struct QuickSortCellView: View {
             isTitleFocused = false
             if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
             editingContent = memo.content
+            contentTapOffset = nil  // ボタン経由 → 末尾カーソル
             isContentEditing = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) { isContentFocused = true }
         case .tag:
@@ -418,22 +421,39 @@ struct QuickSortCellView: View {
 
                     // 本文（インライン編集）
                     if isContentEditing {
-                        TextEditor(text: $editingContent)
-                            .font(.system(size: 15))
-                            .focused($isContentFocused)
-                            .scrollContentBackground(.hidden)
-                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
-                            .padding(.horizontal, 8)
-                            .padding(.vertical, 4)
+                        LineNumberTextEditor(
+                            text: $editingContent,
+                            isFocused: $isContentFocused,
+                            showLineNumbers: false,
+                            fontSize: 15,
+                            initialCursorOffset: contentTapOffset
+                        )
+                        .padding(.horizontal, 8)
+                        .padding(.vertical, 4)
+                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
                     } else {
                         ZStack(alignment: .bottomTrailing) {
                             ScrollView {
-                                Text(memo.content.isEmpty ? "（本文なし）" : memo.content)
-                                    .font(.system(size: 15))
-                                    .foregroundColor(memo.content.isEmpty ? Color.secondary.opacity(0.4) : Color.primary)
-                                    .lineLimit(nil)
-                                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                                    .padding(12)
+                                TappableReadOnlyText(
+                                    text: memo.content.isEmpty ? "（本文なし）" : memo.content,
+                                    font: .systemFont(ofSize: 15),
+                                    textColor: memo.content.isEmpty
+                                        ? UIColor.secondaryLabel.withAlphaComponent(0.4)
+                                        : UIColor.label,
+                                    onTapAtOffset: { offset in
+                                        commitTitle()
+                                        isTitleFocused = false
+                                        editingContent = memo.content
+                                        // 空テキスト時はオフセット不要
+                                        contentTapOffset = memo.content.isEmpty ? nil : offset
+                                        isContentEditing = true
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                            isContentFocused = true
+                                        }
+                                    }
+                                )
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                                .padding(12)
                             }
                             .frame(maxWidth: .infinity, maxHeight: .infinity)
                             .simultaneousGesture(
@@ -477,16 +497,6 @@ struct QuickSortCellView: View {
                                 .buttonStyle(.plain)
                                 .padding(8)
                                 .transition(.scale.combined(with: .opacity))
-                            }
-                        }
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            commitTitle()
-                            isTitleFocused = false
-                            editingContent = memo.content
-                            isContentEditing = true
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                isContentFocused = true
                             }
                         }
                     }

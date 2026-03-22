@@ -25,6 +25,8 @@ struct MemoInputView: View {
     @State private var newTagIsChild = false
     // 既存メモ読み込み時は閲覧モード（タップで編集開始）
     @State private var isEditing = true
+    /// タップ位置のカーソルオフセット（nil=末尾）
+    @State private var contentTapOffset: Int?
     // 削除確認ダイアログ
     @State private var showDeleteAlert = false
     // 本文クリア確認ダイアログ
@@ -271,7 +273,8 @@ struct MemoInputView: View {
                         LineNumberTextEditor(
                             text: $viewModel.inputText,
                             isFocused: $isTextEditorFocused,
-                            showLineNumbers: showLineNumbers
+                            showLineNumbers: showLineNumbers,
+                            initialCursorOffset: contentTapOffset
                         )
                         .padding(.leading, showLineNumbers ? 0 : 10)
                         .padding(.trailing, 4)
@@ -284,18 +287,31 @@ struct MemoInputView: View {
                                     ReadOnlyLineNumbers(text: viewModel.inputText)
                                         .frame(width: 36)
                                 }
-                                Text(viewModel.inputText.isEmpty ? " " : viewModel.inputText)
-                                    .font(.system(size: 17))
-                                    .foregroundStyle(viewModel.inputText.isEmpty ? .clear : .primary)
-                                    .frame(maxWidth: .infinity, alignment: .topLeading)
-                                    .padding(.leading, showLineNumbers ? 6 : 15)
-                                    .padding(.trailing, 9)
+                                TappableReadOnlyText(
+                                    text: viewModel.inputText.isEmpty ? " " : viewModel.inputText,
+                                    font: .systemFont(ofSize: 17),
+                                    textColor: viewModel.inputText.isEmpty
+                                        ? .clear
+                                        : .label,
+                                    onTapAtOffset: { offset in
+                                        contentTapOffset = viewModel.inputText.isEmpty ? nil : offset
+                                        isEditing = true
+                                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                            isTextEditorFocused = true
+                                        }
+                                    }
+                                )
+                                .frame(maxWidth: .infinity, alignment: .topLeading)
+                                .padding(.leading, showLineNumbers ? 6 : 15)
+                                .padding(.trailing, 9)
                             }
                             .padding(.top, 24)
                             .padding(.bottom, 40)
                         }
                         .contentShape(Rectangle())
                         .onTapGesture {
+                            // ScrollViewの空白部分タップ（テキスト外）→ 末尾カーソル
+                            contentTapOffset = nil
                             isEditing = true
                             isTextEditorFocused = true
                         }

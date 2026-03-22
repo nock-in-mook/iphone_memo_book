@@ -12,6 +12,8 @@ struct MemoDetailView: View {
     @State private var editText: String = ""
     @State private var editTitle: String = ""
     @State private var isBodyFocused: Bool = false
+    /// タップ位置のカーソルオフセット（nil=末尾）
+    @State private var contentTapOffset: Int?
     @FocusState private var isTitleFocused: Bool
     @AppStorage("showCharCount") private var showCharCount = false
     @AppStorage("showLineNumbers") private var showLineNumbers = false
@@ -235,7 +237,8 @@ struct MemoDetailView: View {
                 LineNumberTextEditor(
                     text: $editText,
                     isFocused: $isBodyFocused,
-                    showLineNumbers: showLineNumbers
+                    showLineNumbers: showLineNumbers,
+                    initialCursorOffset: contentTapOffset
                 )
                 .padding(.leading, showLineNumbers ? 0 : 8)
                 .padding(.trailing, 8)
@@ -281,19 +284,24 @@ struct MemoDetailView: View {
                             ReadOnlyLineNumbers(text: memo.content)
                                 .frame(width: 36)
                         }
-                        Text(memo.content)
-                            .font(.system(size: 17))
-                            .foregroundStyle(.primary)
-                            .frame(maxWidth: .infinity, alignment: .topLeading)
-                            .padding(.leading, showLineNumbers ? 6 : 12)
-                            .padding(.trailing, 12)
+                        TappableReadOnlyText(
+                            text: memo.content,
+                            font: .systemFont(ofSize: 17),
+                            textColor: .label,
+                            onTapAtOffset: { offset in
+                                startEditing(atOffset: offset)
+                            }
+                        )
+                        .frame(maxWidth: .infinity, alignment: .topLeading)
+                        .padding(.leading, showLineNumbers ? 6 : 12)
+                        .padding(.trailing, 12)
                     }
                     .padding(.vertical, 8)
                 }
             }
             .frame(maxHeight: .infinity)
             .contentShape(Rectangle())
-            .onTapGesture { startEditing() }
+            .onTapGesture { startEditing(atOffset: nil) }
         }
     }
 
@@ -439,10 +447,17 @@ struct MemoDetailView: View {
 
     // MARK: - ヘルパー
 
-    private func startEditing() {
+    private func startEditing(atOffset offset: Int? = nil) {
         editText = memo.content
         editTitle = memo.title
+        contentTapOffset = offset
         isEditing = true
+        // タップ位置からの開始時は自動フォーカス
+        if offset != nil {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                isBodyFocused = true
+            }
+        }
     }
 
     private func saveEdits() {

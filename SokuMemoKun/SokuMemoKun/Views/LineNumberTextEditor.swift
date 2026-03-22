@@ -7,8 +7,14 @@ struct LineNumberTextEditor: UIViewRepresentable {
     @Binding var isFocused: Bool
     var showLineNumbers: Bool
     var fontSize: CGFloat = 17
+    /// 初回フォーカス時のカーソル位置（nil = 末尾）
+    var initialCursorOffset: Int? = nil
 
-    func makeCoordinator() -> Coordinator { Coordinator(self) }
+    func makeCoordinator() -> Coordinator {
+        let c = Coordinator(self)
+        c.pendingCursorOffset = initialCursorOffset
+        return c
+    }
 
     func makeUIView(context: Context) -> GutteredTextView {
         let view = GutteredTextView(fontSize: fontSize)
@@ -28,7 +34,21 @@ struct LineNumberTextEditor: UIViewRepresentable {
 
         // フォーカス管理
         if isFocused && !view.textView.isFirstResponder {
-            DispatchQueue.main.async { view.textView.becomeFirstResponder() }
+            DispatchQueue.main.async {
+                view.textView.becomeFirstResponder()
+                // カーソル位置を設定（初回のみ）
+                if let offset = context.coordinator.pendingCursorOffset {
+                    let safe = min(offset, (view.textView.text ?? "").count)
+                    view.textView.selectedRange = NSRange(location: safe, length: 0)
+                    // カーソル位置が見えるようスクロール
+                    if let pos = view.textView.position(from: view.textView.beginningOfDocument, offset: safe),
+                       let range = view.textView.textRange(from: pos, to: pos) {
+                        let rect = view.textView.firstRect(for: range)
+                        view.textView.scrollRectToVisible(rect.insetBy(dx: 0, dy: -40), animated: false)
+                    }
+                    context.coordinator.pendingCursorOffset = nil
+                }
+            }
         } else if !isFocused && view.textView.isFirstResponder {
             view.textView.resignFirstResponder()
         }
@@ -36,6 +56,8 @@ struct LineNumberTextEditor: UIViewRepresentable {
 
     class Coordinator: NSObject, UITextViewDelegate {
         let parent: LineNumberTextEditor
+        /// 初回フォーカス時に適用するカーソル位置
+        var pendingCursorOffset: Int?
         init(_ p: LineNumberTextEditor) { parent = p }
 
         func textViewDidChange(_ tv: UITextView) {
