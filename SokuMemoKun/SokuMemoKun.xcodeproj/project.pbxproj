@@ -42,6 +42,7 @@
 		QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000003 /* QuickSortFilterView.swift */; };
 		QSORT0000000000000006 /* QuickSortResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000005 /* QuickSortResultView.swift */; };
 		7FF1C40E480B40878DCE9C7E /* ButtonLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 49097C56B98F49AA81B462BC /* ButtonLabView.swift */; };
+		8311BCCD72654DF8941F0720 /* TextStyleLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 25F5264F9E5B450596546867 /* TextStyleLabView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -81,6 +82,7 @@
 		QSORT0000000000000003 /* QuickSortFilterView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortFilterView.swift; sourceTree = "<group>"; };
 		QSORT0000000000000005 /* QuickSortResultView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortResultView.swift; sourceTree = "<group>"; };
 		49097C56B98F49AA81B462BC /* ButtonLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = ButtonLabView.swift; path = SokuMemoKun/Views/ButtonLabView.swift; sourceTree = SOURCE_ROOT; };
+		25F5264F9E5B450596546867 /* TextStyleLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = TextStyleLabView.swift; path = SokuMemoKun/Views/TextStyleLabView.swift; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +104,7 @@
 				6A194A4EB966F4152317D179 /* TextureLabView.swift */,
 				C0L0RLAB000000000001 /* ColorLabView.swift */,
 				49097C56B98F49AA81B462BC /* ButtonLabView.swift */,
+				25F5264F9E5B450596546867 /* TextStyleLabView.swift */,
 			);
 			sourceTree = "<group>";
 		};
@@ -280,6 +283,7 @@
 				A00245AE9633A906577EE733 /* TextureLabView.swift in Sources */,
 				C0L0RLAB000000000002 /* ColorLabView.swift in Sources */,
 				7FF1C40E480B40878DCE9C7E /* ButtonLabView.swift in Sources */,
+				8311BCCD72654DF8941F0720 /* TextStyleLabView.swift in Sources */,
 				TAGSUG0000000000000002 /* TagFrequency.swift in Sources */,
 				TAGSUG0000000000000004 /* TagCooccurrence.swift in Sources */,
 				TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */,

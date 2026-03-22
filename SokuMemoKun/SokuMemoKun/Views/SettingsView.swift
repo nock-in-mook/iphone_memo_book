@@ -106,6 +106,11 @@ struct SettingsView: View {
                     } label: {
                         Label("爆速モード ボタンデザイン", systemImage: "button.programmable")
                     }
+                    NavigationLink {
+                        TextStyleLabView()
+                    } label: {
+                        Label("テキストスタイル", systemImage: "textformat")
+                    }
                 }
 
                 // 影ラボ

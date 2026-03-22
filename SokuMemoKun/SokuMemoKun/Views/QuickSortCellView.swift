@@ -51,28 +51,28 @@ struct QuickSortCellView: View {
             let cardH = geo.size.height * 0.35  // カード上下幅を控えめに
 
             VStack(spacing: 0) {
-                Spacer(minLength: 12)
+                    Spacer(minLength: 12)
 
-                // ── メモカード（タイトル+本文+タグフッター）──
-                memoCard
-                    .frame(width: cardW, height: cardH)
-                    .frame(maxWidth: .infinity)
+                    // ── メモカード（タイトル+本文+タグフッター）──
+                    memoCard
+                        .frame(width: cardW, height: cardH)
+                        .frame(maxWidth: .infinity)
 
-                Spacer(minLength: 10)
+                    Spacer(minLength: 10)
 
-                // ── ルーレット（タグ編集時のみ表示）──
-                if showDialArea {
-                    dialArea
-                        .frame(height: QuickSortCellView.dialAreaHeight, alignment: .top)
-                        .clipped()
-                        .transition(.move(edge: .trailing).combined(with: .opacity))
-                }
+                    // ── ルーレット（タグ編集時のみ表示）──
+                    if showDialArea {
+                        dialArea
+                            .frame(height: QuickSortCellView.dialAreaHeight, alignment: .top)
+                            .clipped()
+                            .transition(.move(edge: .trailing).combined(with: .opacity))
+                    }
 
-                Spacer(minLength: 10)
+                    Spacer(minLength: 10)
 
-                // ── コントローラーエリア（弧の仕切り線 + ボタン + 操作パネル）──
-                controllerArea
-                    .padding(.bottom, 4)
+                    // ── コントローラーエリア（弧の仕切り線 + ボタン + 操作パネル）──
+                    controllerArea
+                        .padding(.bottom, 4)
             }
         }
         .onAppear {
@@ -400,36 +400,14 @@ struct QuickSortCellView: View {
 
     private var controllerArea: some View {
         VStack(spacing: 0) {
-            // 弧の仕切り線（端から端まで、太く濃く）
+            // 弧の仕切り線
             ArcDivider()
                 .stroke(Color.secondary.opacity(0.5), lineWidth: 2.5)
-                .frame(height: 48)
+                .frame(height: 60)
 
             // 3ボタン（弧に沿って配置・P2ベース押せるボタン）
-            HStack(spacing: 24) {
-                // タイトル編集
-                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.35)) {
-                    isTitleFocused = true
-                } label: {
-                    Text("タイトル編集")
-                        .font(.system(size: 12, weight: .bold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 14)
-                        .padding(.vertical, 7)
-                        .background(
-                            ZStack {
-                                ArcCapsule().fill(Color(white: 0.95))
-                                ArcCapsule().fill(
-                                    LinearGradient(colors: [Color.green.opacity(0.2), Color.green.opacity(0.35)],
-                                                   startPoint: .top, endPoint: .bottom)
-                                )
-                            }
-                        )
-                }
-                .rotationEffect(.degrees(-4))
-                .offset(y: 2)
-
-                // 本文編集
+            ZStack {
+                // 本文編集（中央固定）
                 TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.35)) {
                     commitTitle()
                     isTitleFocused = false
@@ -439,7 +417,7 @@ struct QuickSortCellView: View {
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
                         .padding(.horizontal, 18)
-                        .padding(.vertical, 7)
+                        .padding(.top, 5).padding(.bottom, 9)
                         .background(
                             ArcCapsule().fill(
                                 LinearGradient(colors: [Color(white: 0.98), Color(white: 0.88)],
@@ -447,9 +425,31 @@ struct QuickSortCellView: View {
                             )
                         )
                 }
-                .offset(y: -8)
+                .offset(y: -10)
 
-                // タグ編集
+                // タイトル編集（左）
+                TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.35)) {
+                    isTitleFocused = true
+                } label: {
+                    Text("タイトル編集")
+                        .font(.system(size: 12, weight: .bold, design: .rounded))
+                        .foregroundStyle(.primary)
+                        .frame(width: 90)
+                        .padding(.top, 5).padding(.bottom, 9)
+                        .background(
+                            ZStack {
+                                ArcCapsule().fill(Color(white: 0.95))
+                                ArcCapsule().fill(
+                                    LinearGradient(colors: [Color.orange.opacity(0.3), Color.orange.opacity(0.5)],
+                                                   startPoint: .top, endPoint: .bottom)
+                                )
+                            }
+                        )
+                }
+                .rotationEffect(.degrees(-11))
+                .offset(x: -135, y: 0)
+
+                // タグ編集（右）
                 TapPressableView(shadowHeight: 5, shadowColor: .black.opacity(0.35)) {
                     withAnimation(.easeInOut(duration: 0.25)) {
                         showDialArea.toggle()
@@ -458,23 +458,22 @@ struct QuickSortCellView: View {
                     Text("タグ編集")
                         .font(.system(size: 12, weight: .bold, design: .rounded))
                         .foregroundStyle(.primary)
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 7)
+                        .frame(width: 90)
+                        .padding(.top, 5).padding(.bottom, 9)
                         .background(
                             ZStack {
                                 ArcCapsule().fill(Color(white: 0.95))
                                 ArcCapsule().fill(
-                                    LinearGradient(colors: [Color.blue.opacity(0.18), Color.blue.opacity(0.33)],
+                                    LinearGradient(colors: [Color.cyan.opacity(0.18), Color.cyan.opacity(0.35)],
                                                    startPoint: .top, endPoint: .bottom)
                                 )
                             }
                         )
                 }
-                .rotationEffect(.degrees(4))
-                .offset(y: 2)
+                .rotationEffect(.degrees(11))
+                .offset(x: 135, y: 0)
             }
-            .padding(.horizontal, 16)
-            .padding(.top, -14)
+            .padding(.top, -22)
 
             // 操作パネル（前へ / ゴミ箱 / 次へ）
             controlPanel
@@ -617,6 +616,49 @@ struct QuickSortCellView: View {
     }
 }
 
+// テキストを緩やかな弧に沿って表示
+// テキストを緩やかな弧に沿って表示（Y offset方式）
+struct CurvedText: View {
+    let text: String
+    let radius: CGFloat // 未使用（互換性のため残す）
+    let font: Font
+    var charSpacing: Double = 5 // 未使用
+
+    var body: some View {
+        let chars = Array(text)
+        let count = chars.count
+        let mid = Double(count - 1) / 2.0
+        let bulge: CGFloat = 2.5 // 弧の深さ（控えめ）
+
+        HStack(spacing: 1) {
+            ForEach(0..<count, id: \.self) { i in
+                let t = (Double(i) - mid) / max(mid, 1) // -1〜1
+                let y = bulge * CGFloat(t * t) // 放物線（中央が高い）
+                Text(String(chars[i]))
+                    .font(font)
+                    .foregroundStyle(.primary)
+                    .offset(y: y)
+            }
+        }
+    }
+}
+
+// 弧の上側を塗りつぶすShape
+struct ArcFill: Shape {
+    func path(in rect: CGRect) -> Path {
+        var path = Path()
+        path.move(to: CGPoint(x: rect.minX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.minY))
+        path.addLine(to: CGPoint(x: rect.maxX, y: rect.maxY))
+        path.addQuadCurve(
+            to: CGPoint(x: rect.minX, y: rect.maxY),
+            control: CGPoint(x: rect.midX, y: rect.minY)
+        )
+        path.closeSubpath()
+        return path
+    }
+}
+
 // 控えめな弧の仕切り線
 struct ArcDivider: Shape {
     func path(in rect: CGRect) -> Path {
@@ -635,7 +677,7 @@ struct ArcCapsule: Shape {
     func path(in rect: CGRect) -> Path {
         let r = rect.height / 2
         // 仕切り線と同じ円弧に沿う（bulge ∝ width²）
-        let bulge: CGFloat = rect.width * rect.width / 6400
+        let bulge: CGFloat = rect.width * rect.width / 4800
         var path = Path()
         // 左端の丸み（外側に膨らむ）
         path.move(to: CGPoint(x: r, y: rect.maxY))
