@@ -94,6 +94,7 @@ struct QuickSortCellView: View {
                         .animation(.easeInOut(duration: 0.25), value: isTitleFocused)
                         .animation(.easeInOut(duration: 0.25), value: showDialArea)
                         .animation(.easeInOut(duration: 0.25), value: keyboardHeight)
+                        .animation(.easeInOut(duration: 0.25), value: editFromTap)
 
                     Spacer(minLength: 10)
 
@@ -424,16 +425,34 @@ struct QuickSortCellView: View {
 
                     // 本文（インライン編集）
                     if isContentEditing {
-                        LineNumberTextEditor(
-                            text: $editingContent,
-                            isFocused: $isContentFocused,
-                            showLineNumbers: false,
-                            fontSize: 15,
-                            initialCursorOffset: contentTapOffset
-                        )
-                        .padding(.horizontal, 8)
-                        .padding(.vertical, 4)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+                        ZStack(alignment: .bottomTrailing) {
+                            LineNumberTextEditor(
+                                text: $editingContent,
+                                isFocused: $isContentFocused,
+                                showLineNumbers: false,
+                                fontSize: 15,
+                                initialCursorOffset: contentTapOffset
+                            )
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
+
+                            // タップ経由編集時: 拡大ボタン（editHサイズへ）
+                            if editFromTap {
+                                Button {
+                                    withAnimation(.easeInOut(duration: 0.25)) { editFromTap = false }
+                                } label: {
+                                    Image(systemName: "arrow.up.left.and.arrow.down.right")
+                                        .font(.system(size: 13, weight: .medium))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 30, height: 30)
+                                        .background(Circle().fill(Color.blue.opacity(0.7)))
+                                }
+                                .buttonStyle(.plain)
+                                .padding(8)
+                                .transition(.scale.combined(with: .opacity))
+                            }
+                        }
                     } else {
                         ZStack(alignment: .bottomTrailing) {
                             ScrollView {
