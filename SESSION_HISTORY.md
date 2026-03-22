@@ -1159,3 +1159,16 @@ Mac環境でのビルド＆シミュレータ動作確認。
 - 整理モード拡大ボタン統一（isExpanded一本化、editFromTapで自動拡大抑制）
 - ROADMAP命名変更: グラフリンク→メモリンク
 - リリース前タスクに「Memolette」商標チェック追加
+
+---
+## Memolette_047 (2026-03-23)
+
+### ToDoリスト機能の基盤実装
+- feature/uikit-carousel を main にマージ
+- feature/todo-list ブランチ作成
+- TodoItemモデル新規作成（SwiftData、parentIDでツリー階層、Tagリレーション）
+- TagモデルにtodoItemsリレーション追加（タグ流用方式）
+- TodoListView新規作成（フラット化ツリー表示、項目追加、チェック、展開/折りたたみ）
+- MainViewに整理モード横にToDoアイコン（checklist）追加、fullScreenCoverで表示
+- ModelContainerにTodoItem登録
+- 設計議論: タグ流用vs専用リスト → タグ流用に決定、無限階層対応
