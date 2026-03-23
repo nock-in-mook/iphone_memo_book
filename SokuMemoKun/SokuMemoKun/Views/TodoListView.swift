@@ -73,6 +73,14 @@ struct TodoListView: View {
                                     addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
                                 }
                             }
+                            // ヒント
+                            if allItems.count > 0 {
+                                Text("長押しで編集")
+                                    .font(.system(size: 11))
+                                    .foregroundStyle(.secondary.opacity(0.4))
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.top, 4)
+                            }
                         }
                         .padding(.top, 8)
                     }
