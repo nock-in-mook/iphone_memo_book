@@ -71,10 +71,13 @@ struct TodoListsView: View {
                     }
                 }
             }
-            .fullScreenCover(item: $selectedList) { list in
+            .sheet(item: $selectedList) { list in
                 TodoListView(todoList: list) {
                     selectedList = nil
                 }
+                .presentationDetents([.fraction(0.88)])
+                .presentationDragIndicator(.visible)
+                .interactiveDismissDisabled(false)
             }
 
             // ダイアログ
