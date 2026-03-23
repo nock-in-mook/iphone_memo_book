@@ -113,6 +113,15 @@ struct SettingsView: View {
                     }
                 }
 
+                // アイコンラボ
+                Section("アイコンラボ") {
+                    NavigationLink {
+                        IconLabView()
+                    } label: {
+                        Label("ToDoリスト アイコン候補", systemImage: "star.square.on.square")
+                    }
+                }
+
                 // 影ラボ
                 Section("影ラボ") {
                     NavigationLink { TextureLab1() } label: { Text("1: タブシェイプ影") }
