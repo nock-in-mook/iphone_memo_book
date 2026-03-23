@@ -56,7 +56,7 @@ struct TodoListView: View {
 
                 // ToDoリスト（フラット化して表示）
                 ScrollView {
-                    LazyVStack(spacing: 0) {
+                    LazyVStack(spacing: 4) {
                         ForEach(flatRows) { row in
                             switch row.kind {
                             case .item(let item):
@@ -103,6 +103,10 @@ struct TodoListView: View {
 
         // ルートレベルの追加行
         rows.append(FlatRow(id: "add-root", kind: .addButton(parentID: nil), depth: 0))
+        // 入力中ならもう1行先読み追加行を出す
+        if !newItemText.isEmpty {
+            rows.append(FlatRow(id: "add-root-next", kind: .addButton(parentID: nil), depth: 0))
+        }
         return rows
     }
 
@@ -119,12 +123,21 @@ struct TodoListView: View {
             }
             // 子の追加行
             rows.append(FlatRow(id: "add-\(item.id.uuidString)", kind: .addButton(parentID: item.id), depth: depth + 1))
+            // 子レベルでも入力中なら先読み行を出す
+            if let text = newChildTexts[item.id], !text.isEmpty {
+                rows.append(FlatRow(id: "add-\(item.id.uuidString)-next", kind: .addButton(parentID: item.id), depth: depth + 1))
+            }
         }
     }
 
     // MARK: - 子を持っているか
     private func hasChildren(_ itemID: UUID) -> Bool {
         allItems.contains { $0.parentID == itemID }
+    }
+
+    // MARK: - 帯の左インデント量
+    private func indentLeading(_ depth: Int) -> CGFloat {
+        CGFloat(depth) * 24
     }
 
     // MARK: - ToDo行
@@ -146,26 +159,13 @@ struct TodoListView: View {
                 Image(systemName: "trash")
                     .font(.system(size: 16))
                     .foregroundStyle(.white)
-                    .frame(width: 70, height: .infinity)
+                    .frame(width: 70)
                     .frame(maxHeight: .infinity)
             }
             .background(Color.red)
 
-            // メインコンテンツ
+            // メインコンテンツ（帯スタイル）
             HStack(spacing: 8) {
-                // ツリーライン（インデント）
-                if depth > 0 {
-                    HStack(spacing: 0) {
-                        ForEach(0..<depth, id: \.self) { _ in
-                            Rectangle()
-                                .fill(Color.secondary.opacity(0.15))
-                                .frame(width: 1)
-                                .padding(.horizontal, 10)
-                        }
-                    }
-                    .frame(width: CGFloat(depth) * 22)
-                }
-
                 // チェックボックス
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
@@ -239,16 +239,20 @@ struct TodoListView: View {
                     .buttonStyle(.plain)
                 }
             }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 6)
+            .padding(.horizontal, 12)
+            .padding(.vertical, 8)
+            .background(
+                RoundedRectangle(cornerRadius: 8)
+                    .fill(Color(UIColor.secondarySystemBackground))
+            )
+            .padding(.leading, 16 + indentLeading(depth))
+            .padding(.trailing, 16)
             .background(Color(UIColor.systemBackground))
             .offset(x: isSwiped ? -70 : 0)
             .gesture(
                 DragGesture(minimumDistance: 20)
                     .onChanged { value in
-                        // 左スワイプのみ
                         if value.translation.width < 0 {
-                            // 他の項目のスワイプをリセット
                             if swipedItemID != item.id {
                                 swipedItemID = nil
                             }
@@ -296,26 +300,33 @@ struct TodoListView: View {
     // MARK: - 追加行（「+ 項目を追加」）
     @ViewBuilder
     private func addItemRow(parentID: UUID?, depth: Int, rowID: String) -> some View {
-        HStack(spacing: 8) {
-            // ツリーライン（インデント）
-            if depth > 0 {
-                HStack(spacing: 0) {
-                    ForEach(0..<depth, id: \.self) { _ in
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.15))
-                            .frame(width: 1)
-                            .padding(.horizontal, 10)
-                    }
-                }
-                .frame(width: CGFloat(depth) * 22)
-            }
+        let isNext = rowID.hasSuffix("-next")
 
+        HStack(spacing: 8) {
             Image(systemName: "plus")
                 .font(.system(size: 14))
                 .foregroundStyle(.secondary.opacity(0.4))
 
-            if parentID == nil {
-                // ルートレベルの入力
+            if isNext {
+                // 先読み行：タップで前の入力を確定し、こちらにフォーカス移動
+                Text("項目を追加")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.secondary.opacity(0.4))
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        if parentID == nil {
+                            addItem(title: newItemText, parentID: nil)
+                            newItemText = ""
+                            isNewItemFocused = true
+                        } else if let pid = parentID {
+                            let text = newChildTexts[pid] ?? ""
+                            addItem(title: text, parentID: pid)
+                            newChildTexts[pid] = ""
+                            focusedAddField = "add-\(pid.uuidString)"
+                        }
+                    }
+            } else if parentID == nil {
                 TextField("項目を追加", text: $newItemText)
                     .font(.system(size: 16))
                     .foregroundStyle(.secondary)
@@ -326,7 +337,6 @@ struct TodoListView: View {
                         isNewItemFocused = true
                     }
             } else {
-                // 子レベルの入力
                 let binding = Binding<String>(
                     get: { newChildTexts[parentID!] ?? "" },
                     set: { newChildTexts[parentID!] = $0 }
@@ -342,8 +352,14 @@ struct TodoListView: View {
                     }
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 8)
+        .background(
+            RoundedRectangle(cornerRadius: 8)
+                .strokeBorder(Color.secondary.opacity(0.2), style: StrokeStyle(lineWidth: 1, dash: [4]))
+        )
+        .padding(.leading, 16 + indentLeading(depth))
+        .padding(.trailing, 16)
     }
 
     // MARK: - 項目を削除（子も再帰的に削除）
