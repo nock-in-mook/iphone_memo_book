@@ -42,41 +42,48 @@ struct TodoListView: View {
     @State private var swipedItemID: UUID?
     @State private var swipeOffset: CGFloat = 0
 
+    // 進捗情報
+    private var totalCount: Int { allItems.count }
+    private var doneCount: Int { allItems.filter(\.isDone).count }
+    private var progress: Double {
+        totalCount == 0 ? 0 : Double(doneCount) / Double(totalCount)
+    }
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
-                // タイトル表示
-                Text(todoList.title)
-                    .font(.system(size: 22, weight: .bold))
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 20)
-                    .padding(.top, 16)
-                    .padding(.bottom, 12)
+                // リッチヘッダー
+                headerView
 
                 Divider()
                     .padding(.horizontal, 16)
 
-                // ToDoリスト（フラット化して表示）
-                ScrollView {
-                    LazyVStack(spacing: 4) {
-                        ForEach(flatRows) { row in
-                            switch row.kind {
-                            case .item(let item):
-                                todoRow(item: item, depth: row.depth)
-                            case .addButton(let parentID):
-                                addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
+                if allItems.isEmpty {
+                    // 空状態
+                    emptyStateView
+                } else {
+                    // ToDoリスト（フラット化して表示）
+                    ScrollView {
+                        LazyVStack(spacing: 4) {
+                            ForEach(flatRows) { row in
+                                switch row.kind {
+                                case .item(let item):
+                                    todoRow(item: item, depth: row.depth)
+                                case .addButton(let parentID):
+                                    addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
+                                }
                             }
                         }
+                        .padding(.top, 8)
                     }
-                    .padding(.top, 8)
-                }
-                .onTapGesture {
-                    if let editID = editingItemID,
-                       let item = allItems.first(where: { $0.id == editID }) {
-                        commitEdit(item: item)
-                    }
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        swipedItemID = nil
+                    .onTapGesture {
+                        if let editID = editingItemID,
+                           let item = allItems.first(where: { $0.id == editID }) {
+                            commitEdit(item: item)
+                        }
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            swipedItemID = nil
+                        }
                     }
                 }
             }
@@ -88,6 +95,110 @@ struct TodoListView: View {
                     }
                 }
             }
+        }
+    }
+
+    // MARK: - リッチヘッダー
+    private var headerView: some View {
+        VStack(spacing: 8) {
+            HStack(spacing: 10) {
+                // リストアイコン
+                Image(systemName: "checklist")
+                    .font(.system(size: 24))
+                    .foregroundStyle(.blue)
+
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(todoList.title)
+                        .font(.system(size: 20, weight: .bold, design: .rounded))
+
+                    if totalCount > 0 {
+                        Text("\(doneCount)/\(totalCount) 完了")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Spacer()
+
+                // 完了率バッジ
+                if totalCount > 0 {
+                    Text("\(Int(progress * 100))%")
+                        .font(.system(size: 14, weight: .bold, design: .rounded))
+                        .foregroundStyle(progress >= 1.0 ? .green : .blue)
+                        .padding(.horizontal, 10)
+                        .padding(.vertical, 4)
+                        .background(
+                            Capsule()
+                                .fill((progress >= 1.0 ? Color.green : Color.blue).opacity(0.12))
+                        )
+                }
+            }
+
+            // 進捗バー
+            if totalCount > 0 {
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(Color.secondary.opacity(0.12))
+                            .frame(height: 6)
+
+                        RoundedRectangle(cornerRadius: 3)
+                            .fill(progress >= 1.0 ? Color.green : Color.blue)
+                            .frame(width: geo.size.width * progress, height: 6)
+                            .animation(.easeInOut(duration: 0.3), value: progress)
+                    }
+                }
+                .frame(height: 6)
+            }
+        }
+        .padding(.horizontal, 20)
+        .padding(.top, 16)
+        .padding(.bottom, 12)
+    }
+
+    // MARK: - 空状態
+    private var emptyStateView: some View {
+        VStack(spacing: 16) {
+            Spacer()
+
+            Image(systemName: "text.badge.plus")
+                .font(.system(size: 40))
+                .foregroundStyle(.secondary.opacity(0.3))
+
+            Text("項目を追加してみましょう")
+                .font(.system(size: 15))
+                .foregroundStyle(.secondary)
+
+            // 最初の入力行
+            HStack(spacing: 8) {
+                Image(systemName: "plus")
+                    .font(.system(size: 14))
+                    .foregroundStyle(.secondary.opacity(0.4))
+
+                TextField("最初の項目を入力", text: $newItemText)
+                    .font(.system(size: 16))
+                    .focused($isNewItemFocused)
+                    .onSubmit {
+                        addItem(title: newItemText, parentID: nil)
+                        newItemText = ""
+                        isNewItemFocused = true
+                    }
+                    .onAppear {
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
+                            isNewItemFocused = true
+                        }
+                    }
+            }
+            .padding(.horizontal, 12)
+            .padding(.vertical, 10)
+            .background(
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(Color.blue.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [6]))
+            )
+            .padding(.horizontal, 32)
+
+            Spacer()
+            Spacer()
         }
     }
 
@@ -244,7 +355,9 @@ struct TodoListView: View {
             .padding(.vertical, 8)
             .background(
                 RoundedRectangle(cornerRadius: 8)
-                    .fill(Color(UIColor.secondarySystemBackground))
+                    .fill(item.isDone
+                          ? Color.green.opacity(0.08)
+                          : Color(UIColor.secondarySystemBackground))
             )
             .padding(.leading, 16 + indentLeading(depth))
             .padding(.trailing, 16)
