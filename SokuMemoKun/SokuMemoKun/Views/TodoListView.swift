@@ -36,6 +36,9 @@ struct TodoListView: View {
     @State private var swipedItemID: UUID?
     @State private var swipeOffset: CGFloat = 0
 
+    // キーボード高さ
+    @State private var keyboardHeight: CGFloat = 0
+
     // ドラッグ並び替え（ForEachの順序は変えず、オフセットだけで表現）
     @State private var draggingItemID: UUID?
     @State private var dragTranslation: CGFloat = 0
@@ -64,39 +67,63 @@ struct TodoListView: View {
                     emptyStateView
                 } else {
                     // ToDoリスト（フラット化して表示）
-                    ScrollView {
-                        LazyVStack(spacing: 4) {
-                            ForEach(flatRows) { row in
-                                switch row.kind {
-                                case .item(let item):
-                                    todoRow(item: item, depth: row.depth)
-                                        .zIndex(draggingItemID == item.id ? 10 : 0)
-                                case .addButton(let parentID):
-                                    addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
+                    ScrollViewReader { proxy in
+                        ScrollView {
+                            LazyVStack(spacing: 4) {
+                                ForEach(flatRows) { row in
+                                    switch row.kind {
+                                    case .item(let item):
+                                        todoRow(item: item, depth: row.depth)
+                                            .zIndex(draggingItemID == item.id ? 10 : 0)
+                                            .id(item.id)
+                                    case .addButton(let parentID):
+                                        addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
+                                            .id(row.id)
+                                    }
                                 }
+                                // ヒント
+                                if allItems.count > 0 {
+                                    HStack(spacing: 5) {
+                                        Image(systemName: "hand.tap")
+                                            .font(.system(size: 12))
+                                        Text("タップで編集 ・ 長押しで並び替え ・ 左スワイプで削除")
+                                            .font(.system(size: 13))
+                                    }
+                                    .foregroundStyle(.secondary.opacity(0.4))
+                                    .frame(maxWidth: .infinity, alignment: .center)
+                                    .padding(.top, 4)
+                                }
+                                // キーボード回避用スペーサー
+                                Spacer()
+                                    .frame(height: keyboardHeight > 0 ? keyboardHeight : 0)
                             }
-                            // ヒント
-                            if allItems.count > 0 {
-                                HStack(spacing: 5) {
-                                    Image(systemName: "hand.tap")
-                                        .font(.system(size: 12))
-                                    Text("タップで編集 ・ 長押しで並び替え ・ 左スワイプで削除")
-                                        .font(.system(size: 13))
-                                }
-                                .foregroundStyle(.secondary.opacity(0.4))
-                                .frame(maxWidth: .infinity, alignment: .center)
-                                .padding(.top, 4)
+                            .padding(.top, 8)
+                        }
+                        .scrollDismissesKeyboard(.interactively)
+                        .onTapGesture {
+                            if let editID = editingItemID,
+                               let item = allItems.first(where: { $0.id == editID }) {
+                                commitEdit(item: item)
+                            }
+                            withAnimation(.easeInOut(duration: 0.2)) {
+                                swipedItemID = nil
                             }
                         }
-                        .padding(.top, 8)
-                    }
-                    .onTapGesture {
-                        if let editID = editingItemID,
-                           let item = allItems.first(where: { $0.id == editID }) {
-                            commitEdit(item: item)
+                        .onChange(of: editingItemID) { _, newID in
+                            if let id = newID {
+                                withAnimation(.easeInOut(duration: 0.25)) {
+                                    proxy.scrollTo(id, anchor: .center)
+                                }
+                            }
                         }
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            swipedItemID = nil
+                        .onChange(of: keyboardHeight) { _, _ in
+                            if let id = editingItemID {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                        proxy.scrollTo(id, anchor: .center)
+                                    }
+                                }
+                            }
                         }
                     }
                 }
@@ -133,6 +160,16 @@ struct TodoListView: View {
         }
         .onAppear {
             cleanupEmptyItems()
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
+            if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
+                let screenH = UIScreen.main.bounds.height
+                let kbH = screenH - frame.origin.y
+                keyboardHeight = kbH > 0 ? kbH : 0
+            }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            keyboardHeight = 0
         }
     }
 
