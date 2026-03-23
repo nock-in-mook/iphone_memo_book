@@ -53,43 +53,51 @@ struct TodoListView: View {
                     // 空状態
                     emptyStateView
                 } else {
-                    // ToDoリスト（フラット化して表示）
+                    // ToDoリスト（Listベース: スワイプ・スクロール・リオーダー全対応）
                     ScrollViewReader { proxy in
-                        ScrollView {
-                            LazyVStack(spacing: 4) {
-                                ForEach(flatRows) { row in
-                                    switch row.kind {
-                                    case .item(let item):
-                                        todoRow(item: item, depth: row.depth)
-                                            .id(item.id)
-                                    case .addButton(let parentID):
-                                        addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
-                                            .id(row.id)
-                                    }
-                                }
-                                // ヒント
-                                if allItems.count > 0 {
-                                    HStack(spacing: 5) {
-                                        Image(systemName: "hand.tap")
-                                            .font(.system(size: 12))
-                                        Text("タップで編集 ・ 長押しでメニュー")
-                                            .font(.system(size: 13))
-                                    }
-                                    .foregroundStyle(.secondary.opacity(0.4))
-                                    .frame(maxWidth: .infinity, alignment: .center)
-                                    .padding(.top, 4)
+                        List {
+                            ForEach(flatRows) { row in
+                                switch row.kind {
+                                case .item(let item):
+                                    todoRow(item: item, depth: row.depth)
+                                        .id(item.id)
+                                        .swipeActions(edge: .trailing, allowsFullSwipe: true) {
+                                            Button(role: .destructive) {
+                                                withAnimation {
+                                                    deleteItem(item)
+                                                }
+                                            } label: {
+                                                Label("削除", systemImage: "trash")
+                                            }
+                                        }
+                                case .addButton(let parentID):
+                                    addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
+                                        .id(row.id)
                                 }
                             }
-                            .padding(.top, 8)
-                            .padding(.bottom, 60)
+                            // ヒント
+                            if allItems.count > 0 {
+                                HStack(spacing: 5) {
+                                    Image(systemName: "hand.tap")
+                                        .font(.system(size: 12))
+                                    Text("タップで編集 ・ 長押しでメニュー ・ 左スワイプで削除")
+                                        .font(.system(size: 13))
+                                }
+                                .foregroundStyle(.secondary.opacity(0.4))
+                                .frame(maxWidth: .infinity, alignment: .center)
+                                .padding(.top, 4)
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets())
+                            }
                         }
+                        .listStyle(.plain)
+                        .scrollContentBackground(.hidden)
                         .scrollDismissesKeyboard(.interactively)
                         .onChange(of: editingItemID) { _, newID in
                             if let id = newID {
-                                // 少し待ってからスクロール（ForEach描画完了後）
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                     withAnimation(.easeInOut(duration: 0.15)) {
-                                        // 見える位置にスクロール（最小限の移動）
                                         proxy.scrollTo(id, anchor: .bottom)
                                     }
                                 }
@@ -353,9 +361,12 @@ struct TodoListView: View {
                       ? Color.green.opacity(0.08)
                       : Color(UIColor.secondarySystemBackground))
         )
-        .padding(.leading, 16 + indentLeading(depth))
-        .padding(.trailing, 16)
-        // 長押しメニュー（削除・並び替え）
+        .padding(.leading, indentLeading(depth))
+        // List行スタイル除去
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
+        // 長押しメニュー（編集・並び替え）
         .contextMenu {
             Button {
                 startEditing(item: item)
@@ -372,14 +383,6 @@ struct TodoListView: View {
             } label: {
                 Label("下へ移動", systemImage: "arrow.down")
             }
-            Divider()
-            Button(role: .destructive) {
-                withAnimation(.easeInOut(duration: 0.25)) {
-                    deleteItem(item)
-                }
-            } label: {
-                Label("削除", systemImage: "trash")
-            }
         }
     }
 
@@ -393,9 +396,12 @@ struct TodoListView: View {
                 .font(.system(size: 22))
                 .foregroundStyle(.secondary.opacity(0.25))
         }
-        .padding(.leading, 16 + indentLeading(depth) + 14)
+        .padding(.leading, indentLeading(depth) + 14)
         .padding(.vertical, 4)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .listRowSeparator(.hidden)
+        .listRowBackground(Color.clear)
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
     }
 
     // MARK: - 項目を削除（子も再帰的に削除）
