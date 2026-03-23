@@ -98,7 +98,7 @@ struct TodoListView: View {
                     HStack(spacing: 5) {
                         Image(systemName: "checklist")
                             .font(.system(size: 14))
-                            .foregroundStyle(.secondary)
+                            .foregroundStyle(.blue)
                         Text("ToDoリスト")
                             .font(.system(size: 16, weight: .semibold, design: .rounded))
                     }
