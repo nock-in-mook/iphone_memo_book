@@ -31,6 +31,15 @@ struct TodoListView: View {
     // 展開中の項目（子を表示中）
     @State private var expandedItems: Set<UUID> = []
 
+    // 編集中の項目
+    @State private var editingItemID: UUID?
+    @State private var editingText: String = ""
+    @FocusState private var isEditingFocused: Bool
+
+    // スワイプ削除
+    @State private var swipedItemID: UUID?
+    @State private var swipeOffset: CGFloat = 0
+
     var body: some View {
         NavigationStack {
             VStack(spacing: 0) {
@@ -58,6 +67,16 @@ struct TodoListView: View {
                         }
                     }
                     .padding(.top, 8)
+                }
+                .onTapGesture {
+                    // 編集中なら確定、スワイプ状態ならリセット
+                    if let editID = editingItemID,
+                       let item = allItems.first(where: { $0.id == editID }) {
+                        commitEdit(item: item)
+                    }
+                    withAnimation(.easeInOut(duration: 0.2)) {
+                        swipedItemID = nil
+                    }
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -113,82 +132,165 @@ struct TodoListView: View {
     private func todoRow(item: TodoItem, depth: Int) -> some View {
         let isExpanded = expandedItems.contains(item.id)
         let hasKids = hasChildren(item.id)
+        let isSwiped = swipedItemID == item.id
+        let isEditing = editingItemID == item.id
 
-        HStack(spacing: 8) {
-            // ツリーライン（インデント）
-            if depth > 0 {
-                HStack(spacing: 0) {
-                    ForEach(0..<depth, id: \.self) { _ in
-                        Rectangle()
-                            .fill(Color.secondary.opacity(0.15))
-                            .frame(width: 1)
-                            .padding(.horizontal, 10)
-                    }
-                }
-                .frame(width: CGFloat(depth) * 22)
-            }
-
-            // チェックボックス
+        ZStack(alignment: .trailing) {
+            // 削除ボタン（スワイプで露出）
             Button {
-                withAnimation(.easeInOut(duration: 0.2)) {
-                    item.isDone.toggle()
-                    item.updatedAt = Date()
-                    try? modelContext.save()
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    deleteItem(item)
+                    swipedItemID = nil
                 }
             } label: {
-                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 20))
-                    .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.5))
+                Image(systemName: "trash")
+                    .font(.system(size: 16))
+                    .foregroundStyle(.white)
+                    .frame(width: 70, height: .infinity)
+                    .frame(maxHeight: .infinity)
             }
-            .buttonStyle(.plain)
+            .background(Color.red)
 
-            // タイトル
-            Text(item.title)
-                .font(.system(size: 16))
-                .strikethrough(item.isDone, color: .secondary)
-                .foregroundStyle(item.isDone ? .secondary : .primary)
-                .frame(maxWidth: .infinity, alignment: .leading)
-
-            // 展開/折りたたみ矢印
-            if hasKids {
-                // 子がある → 展開/折りたたみ
-                Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        if isExpanded {
-                            expandedItems.remove(item.id)
-                        } else {
-                            expandedItems.insert(item.id)
+            // メインコンテンツ
+            HStack(spacing: 8) {
+                // ツリーライン（インデント）
+                if depth > 0 {
+                    HStack(spacing: 0) {
+                        ForEach(0..<depth, id: \.self) { _ in
+                            Rectangle()
+                                .fill(Color.secondary.opacity(0.15))
+                                .frame(width: 1)
+                                .padding(.horizontal, 10)
                         }
                     }
-                } label: {
-                    Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary.opacity(0.5))
-                        .frame(width: 30, height: 30)
+                    .frame(width: CGFloat(depth) * 22)
                 }
-                .buttonStyle(.plain)
-            } else {
-                // 子がない → タップで展開して子追加モードに
+
+                // チェックボックス
                 Button {
                     withAnimation(.easeInOut(duration: 0.2)) {
-                        if isExpanded {
-                            expandedItems.remove(item.id)
-                        } else {
-                            expandedItems.insert(item.id)
-                            focusedAddField = "add-\(item.id.uuidString)"
-                        }
+                        item.isDone.toggle()
+                        item.updatedAt = Date()
+                        try? modelContext.save()
                     }
                 } label: {
-                    Image(systemName: "chevron.right")
-                        .font(.system(size: 12, weight: .semibold))
-                        .foregroundStyle(.secondary.opacity(0.2))
-                        .frame(width: 30, height: 30)
+                    Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
+                        .font(.system(size: 20))
+                        .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.5))
                 }
                 .buttonStyle(.plain)
+
+                // タイトル（通常表示 or インライン編集）
+                if isEditing {
+                    TextField("", text: $editingText)
+                        .font(.system(size: 16))
+                        .focused($isEditingFocused)
+                        .onSubmit {
+                            commitEdit(item: item)
+                        }
+                        .onAppear {
+                            isEditingFocused = true
+                        }
+                } else {
+                    Text(item.title)
+                        .font(.system(size: 16))
+                        .strikethrough(item.isDone, color: .secondary)
+                        .foregroundStyle(item.isDone ? .secondary : .primary)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .contentShape(Rectangle())
+                        .onTapGesture {
+                            startEditing(item: item)
+                        }
+                }
+
+                // 展開/折りたたみ矢印
+                if hasKids {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if isExpanded {
+                                expandedItems.remove(item.id)
+                            } else {
+                                expandedItems.insert(item.id)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.secondary.opacity(0.5))
+                            .frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if isExpanded {
+                                expandedItems.remove(item.id)
+                            } else {
+                                expandedItems.insert(item.id)
+                                focusedAddField = "add-\(item.id.uuidString)"
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "chevron.right")
+                            .font(.system(size: 12, weight: .semibold))
+                            .foregroundStyle(.secondary.opacity(0.2))
+                            .frame(width: 30, height: 30)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            .padding(.horizontal, 16)
+            .padding(.vertical, 6)
+            .background(Color(UIColor.systemBackground))
+            .offset(x: isSwiped ? -70 : 0)
+            .gesture(
+                DragGesture(minimumDistance: 20)
+                    .onChanged { value in
+                        // 左スワイプのみ
+                        if value.translation.width < 0 {
+                            // 他の項目のスワイプをリセット
+                            if swipedItemID != item.id {
+                                swipedItemID = nil
+                            }
+                        }
+                    }
+                    .onEnded { value in
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            if value.translation.width < -50 {
+                                swipedItemID = item.id
+                            } else {
+                                swipedItemID = nil
+                            }
+                        }
+                    }
+            )
+        }
+        .clipped()
+        .contextMenu {
+            Button {
+                startEditing(item: item)
+            } label: {
+                Label("編集", systemImage: "pencil")
+            }
+            Button {
+                moveItem(item, direction: .up)
+            } label: {
+                Label("上へ移動", systemImage: "arrow.up")
+            }
+            Button {
+                moveItem(item, direction: .down)
+            } label: {
+                Label("下へ移動", systemImage: "arrow.down")
+            }
+            Divider()
+            Button(role: .destructive) {
+                withAnimation(.easeInOut(duration: 0.25)) {
+                    deleteItem(item)
+                }
+            } label: {
+                Label("削除", systemImage: "trash")
             }
         }
-        .padding(.horizontal, 16)
-        .padding(.vertical, 6)
     }
 
     // MARK: - 追加行（「+ 項目を追加」）
@@ -242,6 +344,69 @@ struct TodoListView: View {
         }
         .padding(.horizontal, 16)
         .padding(.vertical, 6)
+    }
+
+    // MARK: - 項目を削除（子も再帰的に削除）
+    private func deleteItem(_ item: TodoItem) {
+        // 子項目を再帰的に削除
+        let children = allItems.filter { $0.parentID == item.id }
+        for child in children {
+            deleteItem(child)
+        }
+        modelContext.delete(item)
+        try? modelContext.save()
+    }
+
+    // MARK: - 項目の並び替え
+    private enum MoveDirection { case up, down }
+
+    private func moveItem(_ item: TodoItem, direction: MoveDirection) {
+        // 同階層の兄弟を取得（sortOrder順）
+        var siblings = allItems
+            .filter { $0.parentID == item.parentID }
+            .sorted { $0.sortOrder < $1.sortOrder }
+
+        guard let index = siblings.firstIndex(where: { $0.id == item.id }) else { return }
+
+        let targetIndex: Int
+        switch direction {
+        case .up:
+            guard index > 0 else { return }
+            targetIndex = index - 1
+        case .down:
+            guard index < siblings.count - 1 else { return }
+            targetIndex = index + 1
+        }
+
+        // スワップ
+        siblings.swapAt(index, targetIndex)
+
+        // sortOrderを振り直し
+        withAnimation(.easeInOut(duration: 0.2)) {
+            for (i, sibling) in siblings.enumerated() {
+                sibling.sortOrder = i
+                sibling.updatedAt = Date()
+            }
+            try? modelContext.save()
+        }
+    }
+
+    // MARK: - インライン編集開始
+    private func startEditing(item: TodoItem) {
+        editingItemID = item.id
+        editingText = item.title
+    }
+
+    // MARK: - 編集確定
+    private func commitEdit(item: TodoItem) {
+        let trimmed = editingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        if !trimmed.isEmpty {
+            item.title = trimmed
+            item.updatedAt = Date()
+            try? modelContext.save()
+        }
+        editingItemID = nil
+        editingText = ""
     }
 
     // MARK: - 項目を追加
