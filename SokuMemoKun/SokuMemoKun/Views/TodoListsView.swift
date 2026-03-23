@@ -33,6 +33,12 @@ struct TodoListsView: View {
                     } label: {
                         Label("新規", systemImage: "plus")
                             .font(.system(size: 14, weight: .semibold))
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(
+                                RoundedRectangle(cornerRadius: 8)
+                                    .strokeBorder(Color.accentColor, lineWidth: 1.5)
+                            )
                     }
                 }
                 .padding(.horizontal, 16)
