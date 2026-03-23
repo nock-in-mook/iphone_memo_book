@@ -45,7 +45,9 @@ struct TodoListView: View {
     // ドラッグ並び替え
     @State private var draggingItemID: UUID?
     @State private var dragTranslation: CGFloat = 0
-    @State private var swapCount: Int = 0
+    @State private var dragSiblingOrder: [UUID]?  // ドラッグ中の一時的な表示順
+    @State private var dragParentID: UUID?         // ドラッグ中アイテムの親
+    @State private var dragInitialIndex: Int = 0
     private let estimatedRowHeight: CGFloat = 44
 
     // 進捗情報
@@ -76,6 +78,7 @@ struct TodoListView: View {
                                 case .item(let item):
                                     todoRow(item: item, depth: row.depth)
                                         .zIndex(draggingItemID == item.id ? 10 : 0)
+                                        .animation(draggingItemID == item.id ? nil : .easeInOut(duration: 0.15), value: dragSiblingOrder)
                                 case .addButton(let parentID):
                                     addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
                                 }
@@ -230,9 +233,7 @@ struct TodoListView: View {
     // MARK: - ツリーをフラット化
     private var flatRows: [FlatRow] {
         var rows: [FlatRow] = []
-        let roots = allItems
-            .filter { $0.parentID == nil }
-            .sorted { $0.sortOrder < $1.sortOrder }
+        let roots = sortedSiblings(parentID: nil)
 
         for item in roots {
             appendRows(for: item, depth: 0, into: &rows)
@@ -252,9 +253,7 @@ struct TodoListView: View {
 
         let isExpanded = expandedItems.contains(item.id)
         if isExpanded {
-            let kids = allItems
-                .filter { $0.parentID == item.id }
-                .sorted { $0.sortOrder < $1.sortOrder }
+            let kids = sortedSiblings(parentID: item.id)
             for child in kids {
                 appendRows(for: child, depth: depth + 1, into: &rows)
             }
@@ -420,8 +419,14 @@ struct TodoListView: View {
                         case .second(true, let drag):
                             if draggingItemID == nil {
                                 draggingItemID = item.id
-                                swapCount = 0
+                                dragParentID = item.parentID
                                 dragTranslation = 0
+                                // 同階層の兄弟IDをsortOrder順でスナップショット
+                                let siblings = allItems
+                                    .filter { $0.parentID == item.parentID }
+                                    .sorted { $0.sortOrder < $1.sortOrder }
+                                dragSiblingOrder = siblings.map(\.id)
+                                dragInitialIndex = siblings.firstIndex(where: { $0.id == item.id }) ?? 0
                                 UIImpactFeedbackGenerator(style: .medium).impactOccurred()
                                 // 編集中なら確定
                                 if let editID = editingItemID,
@@ -438,12 +443,22 @@ struct TodoListView: View {
                         }
                     }
                     .onEnded { _ in
+                        // ドロップ: sortOrderを確定
+                        if let order = dragSiblingOrder {
+                            for (i, id) in order.enumerated() {
+                                if let item = allItems.first(where: { $0.id == id }) {
+                                    item.sortOrder = i
+                                    item.updatedAt = Date()
+                                }
+                            }
+                            try? modelContext.save()
+                        }
                         withAnimation(.easeInOut(duration: 0.2)) {
                             draggingItemID = nil
                             dragTranslation = 0
-                            swapCount = 0
+                            dragSiblingOrder = nil
+                            dragParentID = nil
                         }
-                        try? modelContext.save()
                     }
             )
         }
@@ -452,7 +467,7 @@ struct TodoListView: View {
         .opacity(draggingItemID == item.id ? 0.9 : 1.0)
         .scaleEffect(draggingItemID == item.id ? 1.03 : 1.0)
         .shadow(color: draggingItemID == item.id ? .black.opacity(0.15) : .clear, radius: 8, y: 4)
-        .offset(y: draggingItemID == item.id ? dragTranslation - CGFloat(swapCount) * estimatedRowHeight : 0)
+        .offset(y: draggingItemID == item.id ? dragVisualOffset(for: item.id) : 0)
     }
 
     // MARK: - 追加行（「+ 項目を追加」）
@@ -542,46 +557,36 @@ struct TodoListView: View {
         try? modelContext.save()
     }
 
-    // MARK: - ドラッグ並び替え
+    // MARK: - ドラッグ並び替え（データモデルは触らず表示順だけ変更）
+    private func sortedSiblings(parentID: UUID?) -> [TodoItem] {
+        let siblings = allItems.filter { $0.parentID == parentID }
+        if let order = dragSiblingOrder, dragParentID == parentID {
+            // ドラッグ中: 一時的な表示順を使う
+            return order.compactMap { id in siblings.first(where: { $0.id == id }) }
+        }
+        return siblings.sorted { $0.sortOrder < $1.sortOrder }
+    }
+
+    private func dragVisualOffset(for itemID: UUID) -> CGFloat {
+        guard let order = dragSiblingOrder,
+              let currentIndex = order.firstIndex(of: itemID) else { return 0 }
+        let positionShift = CGFloat(currentIndex - dragInitialIndex) * estimatedRowHeight
+        return dragTranslation - positionShift
+    }
+
     private func updateReorder(item: TodoItem) {
+        guard var order = dragSiblingOrder,
+              let currentIndex = order.firstIndex(of: item.id) else { return }
+
         let targetShift = Int(round(dragTranslation / estimatedRowHeight))
+        let targetIndex = max(0, min(order.count - 1, dragInitialIndex + targetShift))
 
-        while swapCount < targetShift {
-            if !swapWithNext(item: item) { break }
-            swapCount += 1
+        if targetIndex != currentIndex {
+            order.remove(at: currentIndex)
+            order.insert(item.id, at: targetIndex)
+            dragSiblingOrder = order
             UIImpactFeedbackGenerator(style: .light).impactOccurred()
         }
-        while swapCount > targetShift {
-            if !swapWithPrevious(item: item) { break }
-            swapCount -= 1
-            UIImpactFeedbackGenerator(style: .light).impactOccurred()
-        }
-    }
-
-    private func swapWithNext(item: TodoItem) -> Bool {
-        let siblings = allItems
-            .filter { $0.parentID == item.parentID }
-            .sorted { $0.sortOrder < $1.sortOrder }
-        guard let index = siblings.firstIndex(where: { $0.id == item.id }),
-              index < siblings.count - 1 else { return false }
-        let next = siblings[index + 1]
-        let temp = item.sortOrder
-        item.sortOrder = next.sortOrder
-        next.sortOrder = temp
-        return true
-    }
-
-    private func swapWithPrevious(item: TodoItem) -> Bool {
-        let siblings = allItems
-            .filter { $0.parentID == item.parentID }
-            .sorted { $0.sortOrder < $1.sortOrder }
-        guard let index = siblings.firstIndex(where: { $0.id == item.id }),
-              index > 0 else { return false }
-        let prev = siblings[index - 1]
-        let temp = item.sortOrder
-        item.sortOrder = prev.sortOrder
-        prev.sortOrder = temp
-        return true
     }
 
     // MARK: - インライン編集開始
