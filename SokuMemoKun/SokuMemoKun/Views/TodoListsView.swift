@@ -16,41 +16,41 @@ struct TodoListsView: View {
     @State private var selectedList: TodoList?
 
     var body: some View {
-        NavigationStack {
-            Group {
-                if todoLists.isEmpty {
-                    // リストが空のとき
-                    emptyView
-                } else {
-                    // リスト一覧
-                    listView
-                }
-            }
-            .navigationTitle("ToDoリスト")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbar {
-                ToolbarItem(placement: .topBarLeading) {
-                    Button("閉じる") {
-                        onDismiss()
+        ZStack {
+            NavigationStack {
+                Group {
+                    if todoLists.isEmpty {
+                        emptyView
+                    } else {
+                        listView
                     }
                 }
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button {
-                        showNewListDialog = true
-                    } label: {
-                        Image(systemName: "plus")
+                .navigationTitle("ToDoリスト")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .topBarLeading) {
+                        Button("閉じる") {
+                            onDismiss()
+                        }
+                    }
+                    ToolbarItem(placement: .topBarTrailing) {
+                        Button {
+                            showNewListDialog = true
+                        } label: {
+                            Image(systemName: "plus")
+                        }
+                    }
+                }
+                .fullScreenCover(item: $selectedList) { list in
+                    TodoListView(todoList: list) {
+                        selectedList = nil
                     }
                 }
             }
-            .overlay {
-                if showNewListDialog {
-                    newListDialogOverlay
-                }
-            }
-            .fullScreenCover(item: $selectedList) { list in
-                TodoListView(todoList: list) {
-                    selectedList = nil
-                }
+
+            // ダイアログはNavigationStackの外（キーボードの影響を受けない）
+            if showNewListDialog {
+                newListDialogOverlay
             }
         }
     }
