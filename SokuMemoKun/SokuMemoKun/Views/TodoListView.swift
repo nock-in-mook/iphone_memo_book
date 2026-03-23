@@ -10,6 +10,7 @@ private struct FlatRow: Identifiable {
     let id: String
     let kind: Kind
     let depth: Int
+    let isLastChild: Bool  // 同階層の最後の子か
 }
 
 struct TodoListView: View {
@@ -60,7 +61,7 @@ struct TodoListView: View {
                             ForEach(flatRows) { row in
                                 switch row.kind {
                                 case .item(let item):
-                                    todoRow(item: item, depth: row.depth)
+                                    todoRow(item: item, depth: row.depth, isLastChild: row.isLastChild)
                                         .id(item.id)
                                         .swipeActions(edge: .trailing, allowsFullSwipe: true) {
                                             Button(role: .destructive) {
@@ -237,28 +238,28 @@ struct TodoListView: View {
             .filter { $0.parentID == nil }
             .sorted { $0.sortOrder < $1.sortOrder }
 
-        for item in roots {
-            appendRows(for: item, depth: 0, into: &rows)
+        for (i, item) in roots.enumerated() {
+            appendRows(for: item, depth: 0, isLast: i == roots.count - 1, into: &rows)
         }
 
         // ルートレベルの追加ボタン
-        rows.append(FlatRow(id: "add-root", kind: .addButton(parentID: nil), depth: 0))
+        rows.append(FlatRow(id: "add-root", kind: .addButton(parentID: nil), depth: 0, isLastChild: true))
         return rows
     }
 
-    private func appendRows(for item: TodoItem, depth: Int, into rows: inout [FlatRow]) {
-        rows.append(FlatRow(id: item.id.uuidString, kind: .item(item), depth: depth))
+    private func appendRows(for item: TodoItem, depth: Int, isLast: Bool, into rows: inout [FlatRow]) {
+        rows.append(FlatRow(id: item.id.uuidString, kind: .item(item), depth: depth, isLastChild: isLast))
 
         let isExpanded = expandedItems.contains(item.id)
         if isExpanded {
             let kids = allItems
                 .filter { $0.parentID == item.id }
                 .sorted { $0.sortOrder < $1.sortOrder }
-            for child in kids {
-                appendRows(for: child, depth: depth + 1, into: &rows)
+            for (i, child) in kids.enumerated() {
+                appendRows(for: child, depth: depth + 1, isLast: i == kids.count - 1, into: &rows)
             }
             // 子の追加ボタン
-            rows.append(FlatRow(id: "add-\(item.id.uuidString)", kind: .addButton(parentID: item.id), depth: depth + 1))
+            rows.append(FlatRow(id: "add-\(item.id.uuidString)", kind: .addButton(parentID: item.id), depth: depth + 1, isLastChild: true))
         }
     }
 
@@ -267,14 +268,17 @@ struct TodoListView: View {
         allItems.contains { $0.parentID == itemID }
     }
 
-    // MARK: - 帯の左インデント量（ベース12ptでタイトルからインデント）
+    // MARK: - 帯の左インデント量
+    private let indentBase: CGFloat = 12   // ルートのインデント
+    private let indentStep: CGFloat = 28   // 階層ごとのインデント幅
+
     private func indentLeading(_ depth: Int) -> CGFloat {
-        12 + CGFloat(depth) * 24
+        indentBase + CGFloat(depth) * indentStep
     }
 
     // MARK: - ToDo行
     @ViewBuilder
-    private func todoRow(item: TodoItem, depth: Int) -> some View {
+    private func todoRow(item: TodoItem, depth: Int, isLastChild: Bool = false) -> some View {
         let isExpanded = expandedItems.contains(item.id)
         let hasKids = hasChildren(item.id)
         let isEditing = editingItemID == item.id
@@ -364,6 +368,33 @@ struct TodoListView: View {
                       : Color(UIColor.secondarySystemBackground))
         )
         .padding(.leading, indentLeading(depth))
+        // ツリーライン（子項目のみ）
+        .overlay(alignment: .leading) {
+            if depth > 0 {
+                let lineX = indentLeading(depth) - indentStep / 2 + 16  // listRowInsetsのleading分を加算
+                // 縦線（上から行の中央まで）+ 横線（行の中央へ）
+                Canvas { context, size in
+                    let midY = size.height / 2
+                    var path = Path()
+                    // 縦線: 上端から行中央まで（最後の子なら途中で止める）
+                    path.move(to: CGPoint(x: lineX, y: 0))
+                    path.addLine(to: CGPoint(x: lineX, y: midY))
+                    // 横線: 左の縦線からカードの左端まで
+                    path.move(to: CGPoint(x: lineX, y: midY))
+                    path.addLine(to: CGPoint(x: lineX + indentStep / 2 - 4, y: midY))
+                    context.stroke(path, with: .color(.secondary.opacity(0.2)), lineWidth: 1.5)
+
+                    // 最後の子でなければ、縦線を下端まで延長
+                    if !isLastChild {
+                        var extPath = Path()
+                        extPath.move(to: CGPoint(x: lineX, y: midY))
+                        extPath.addLine(to: CGPoint(x: lineX, y: size.height))
+                        context.stroke(extPath, with: .color(.secondary.opacity(0.2)), lineWidth: 1.5)
+                    }
+                }
+                .allowsHitTesting(false)
+            }
+        }
         // List行スタイル除去
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
