@@ -289,15 +289,14 @@ struct TodoListView: View {
             HStack(spacing: 8) {
                 // チェックボックス
                 Button {
-                    withAnimation(.easeInOut(duration: 0.2)) {
-                        item.isDone.toggle()
-                        item.updatedAt = Date()
-                        try? modelContext.save()
-                    }
+                    item.isDone.toggle()
+                    item.updatedAt = Date()
+                    try? modelContext.save()
                 } label: {
                     Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
                         .font(.system(size: 20))
                         .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.5))
+                        .animation(.easeInOut(duration: 0.2), value: item.isDone)
                 }
                 .buttonStyle(.plain)
 
@@ -317,6 +316,7 @@ struct TodoListView: View {
                         .font(.system(size: 16))
                         .strikethrough(item.isDone, color: .secondary)
                         .foregroundStyle(item.isDone ? .secondary : .primary)
+                        .animation(.easeInOut(duration: 0.2), value: item.isDone)
                         .frame(maxWidth: .infinity, alignment: .leading)
                         .contentShape(Rectangle())
                         .onTapGesture {
