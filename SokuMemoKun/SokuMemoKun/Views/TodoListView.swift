@@ -95,15 +95,17 @@ struct TodoListView: View {
                             .padding(.bottom, 60)
                         }
                         .scrollDismissesKeyboard(.interactively)
-                        .onTapGesture {
-                            if let editID = editingItemID,
-                               let item = allItems.first(where: { $0.id == editID }) {
-                                commitEdit(item: item)
+                        .simultaneousGesture(
+                            TapGesture().onEnded {
+                                if let editID = editingItemID,
+                                   let item = allItems.first(where: { $0.id == editID }) {
+                                    commitEdit(item: item)
+                                }
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    swipedItemID = nil
+                                }
                             }
-                            withAnimation(.easeInOut(duration: 0.2)) {
-                                swipedItemID = nil
-                            }
-                        }
+                        )
                         .onChange(of: editingItemID) { _, newID in
                             if let id = newID {
                                 // 少し待ってからスクロール（ForEach描画完了後）
