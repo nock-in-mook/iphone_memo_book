@@ -36,9 +36,6 @@ struct TodoListView: View {
     @State private var swipedItemID: UUID?
     @State private var swipeOffset: CGFloat = 0
 
-    // キーボード高さ
-    @State private var keyboardHeight: CGFloat = 0
-
     // ドラッグ並び替え（ForEachの順序は変えず、オフセットだけで表現）
     @State private var draggingItemID: UUID?
     @State private var dragTranslation: CGFloat = 0
@@ -93,9 +90,6 @@ struct TodoListView: View {
                                     .frame(maxWidth: .infinity, alignment: .center)
                                     .padding(.top, 4)
                                 }
-                                // キーボード回避用スペーサー
-                                Spacer()
-                                    .frame(height: keyboardHeight > 0 ? keyboardHeight : 0)
                             }
                             .padding(.top, 8)
                         }
@@ -111,15 +105,9 @@ struct TodoListView: View {
                         }
                         .onChange(of: editingItemID) { _, newID in
                             if let id = newID {
-                                withAnimation(.easeInOut(duration: 0.25)) {
-                                    proxy.scrollTo(id, anchor: .center)
-                                }
-                            }
-                        }
-                        .onChange(of: keyboardHeight) { _, _ in
-                            if let id = editingItemID {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation(.easeInOut(duration: 0.25)) {
+                                // 少し待ってからスクロール（ForEach描画完了後）
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
                                         proxy.scrollTo(id, anchor: .center)
                                     }
                                 }
@@ -160,16 +148,6 @@ struct TodoListView: View {
         }
         .onAppear {
             cleanupEmptyItems()
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillChangeFrameNotification)) { notification in
-            if let frame = notification.userInfo?[UIResponder.keyboardFrameEndUserInfoKey] as? CGRect {
-                let screenH = UIScreen.main.bounds.height
-                let kbH = screenH - frame.origin.y
-                keyboardHeight = kbH > 0 ? kbH : 0
-            }
-        }
-        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
-            keyboardHeight = 0
         }
     }
 
