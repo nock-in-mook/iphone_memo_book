@@ -285,17 +285,17 @@ struct TodoListView: View {
 
         // メインコンテンツ（帯スタイル）
         HStack(spacing: 8) {
-            // チェックボックス
+            // チェックボックス（四角）
             Button {
                 item.isDone.toggle()
                 item.updatedAt = Date()
                 try? modelContext.save()
             } label: {
-                Image(systemName: item.isDone ? "checkmark.circle.fill" : "circle")
-                    .font(.system(size: 22))
-                    .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.5))
+                Image(systemName: item.isDone ? "checkmark.square.fill" : "square")
+                    .font(.system(size: 20))
+                    .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.4))
                     .animation(.easeInOut(duration: 0.2), value: item.isDone)
-                    .frame(width: 36, height: 36)
+                    .frame(width: 32, height: 32)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -360,14 +360,13 @@ struct TodoListView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 8)
-        .background(
-            RoundedRectangle(cornerRadius: 8)
-                .fill(item.isDone
-                      ? Color.green.opacity(0.08)
-                      : Color(UIColor.secondarySystemBackground))
-        )
+        .padding(.vertical, 10)
         .padding(.leading, indentLeading(depth))
+        // 上下の区切り線
+        .overlay(alignment: .bottom) {
+            Divider()
+                .padding(.leading, indentLeading(depth) + 12)
+        }
         // ツリーライン（子項目のみ）
         .overlay(alignment: .leading) {
             if depth > 0 {
@@ -398,7 +397,7 @@ struct TodoListView: View {
         // List行スタイル除去
         .listRowSeparator(.hidden)
         .listRowBackground(Color.clear)
-        .listRowInsets(EdgeInsets(top: 2, leading: 16, bottom: 2, trailing: 16))
+        .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
     }
 
     // MARK: - 追加ボタン
