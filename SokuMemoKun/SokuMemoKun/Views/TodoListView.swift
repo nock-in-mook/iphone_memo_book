@@ -23,19 +23,13 @@ struct TodoListView: View {
         queryItems.filter { $0.listID == todoList.id }
     }
 
-    // 新規項目入力用
-    @State private var newItemText = ""
-    @State private var newChildTexts: [UUID: String] = [:]
-    @State private var activeAddField: String?   // 入力欄を表示中のrowID
-    @FocusState private var isNewItemFocused: Bool
-    @FocusState private var focusedAddField: String?
-
     // 展開中の項目（子を表示中）
     @State private var expandedItems: Set<UUID> = []
 
     // 編集中の項目
     @State private var editingItemID: UUID?
     @State private var editingText: String = ""
+    @State private var isAddingNewItems = false  // 連続追加モード中か
     @FocusState private var isEditingFocused: Bool
 
     // スワイプ削除
@@ -103,7 +97,6 @@ struct TodoListView: View {
                         }
                         withAnimation(.easeInOut(duration: 0.2)) {
                             swipedItemID = nil
-                            activeAddField = nil
                         }
                     }
                 }
@@ -196,33 +189,19 @@ struct TodoListView: View {
                 .font(.system(size: 15))
                 .foregroundStyle(.secondary)
 
-            // 最初の入力行
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.secondary.opacity(0.4))
-
-                TextField("最初の項目を入力", text: $newItemText)
-                    .font(.system(size: 16))
-                    .focused($isNewItemFocused)
-                    .onSubmit {
-                        addItem(title: newItemText, parentID: nil)
-                        newItemText = ""
-                        isNewItemFocused = true
-                    }
-                    .onAppear {
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.5) {
-                            isNewItemFocused = true
-                        }
-                    }
+            Button {
+                addEmptyItemAndEdit(parentID: nil)
+            } label: {
+                Label("最初の項目を追加", systemImage: "plus")
+                    .font(.system(size: 16, weight: .medium))
+                    .foregroundStyle(.blue)
+                    .padding(.horizontal, 20)
+                    .padding(.vertical, 10)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .strokeBorder(Color.blue.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [6]))
+                    )
             }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 10)
-                    .strokeBorder(Color.blue.opacity(0.3), style: StrokeStyle(lineWidth: 1.5, dash: [6]))
-            )
-            .padding(.horizontal, 32)
 
             Spacer()
             Spacer()
@@ -314,11 +293,11 @@ struct TodoListView: View {
 
                 // タイトル（通常表示 or インライン編集）
                 if isEditing {
-                    TextField("", text: $editingText)
+                    TextField("項目を入力", text: $editingText)
                         .font(.system(size: 16))
                         .focused($isEditingFocused)
                         .onSubmit {
-                            commitEdit(item: item)
+                            submitEdit(item: item)
                         }
                         .onAppear {
                             isEditingFocused = true
@@ -360,7 +339,6 @@ struct TodoListView: View {
                                 expandedItems.remove(item.id)
                             } else {
                                 expandedItems.insert(item.id)
-                                focusedAddField = "add-\(item.id.uuidString)"
                             }
                         }
                     } label: {
@@ -451,82 +429,19 @@ struct TodoListView: View {
         .animation(.easeInOut(duration: 0.15), value: dragTargetIndex)
     }
 
-    // MARK: - 追加ボタン / 入力行
+    // MARK: - 追加ボタン
     @ViewBuilder
     private func addItemRow(parentID: UUID?, depth: Int, rowID: String) -> some View {
-        if activeAddField == rowID {
-            // 入力モード
-            HStack(spacing: 8) {
-                Image(systemName: "plus")
-                    .font(.system(size: 14))
-                    .foregroundStyle(.blue.opacity(0.5))
-
-                if parentID == nil {
-                    TextField("項目を追加", text: $newItemText)
-                        .font(.system(size: 16))
-                        .focused($isNewItemFocused)
-                        .onSubmit {
-                            let text = newItemText
-                            newItemText = ""
-                            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                activeAddField = nil
-                            } else {
-                                addItem(title: text, parentID: nil)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                    isNewItemFocused = true
-                                }
-                            }
-                        }
-                } else {
-                    let binding = Binding<String>(
-                        get: { newChildTexts[parentID!] ?? "" },
-                        set: { newChildTexts[parentID!] = $0 }
-                    )
-                    TextField("項目を追加", text: binding)
-                        .font(.system(size: 16))
-                        .focused($focusedAddField, equals: rowID)
-                        .onSubmit {
-                            let text = binding.wrappedValue
-                            newChildTexts[parentID!] = ""
-                            if text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                activeAddField = nil
-                            } else {
-                                addItem(title: text, parentID: parentID)
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                    focusedAddField = rowID
-                                }
-                            }
-                        }
-                }
-            }
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
-            .background(
-                RoundedRectangle(cornerRadius: 8)
-                    .strokeBorder(Color.blue.opacity(0.25), style: StrokeStyle(lineWidth: 1, dash: [4]))
-            )
-            .padding(.leading, 16 + indentLeading(depth))
-            .padding(.trailing, 16)
-        } else {
-            // ＋ボタンだけ
-            Button {
-                activeAddField = rowID
-                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                    if parentID == nil {
-                        isNewItemFocused = true
-                    } else {
-                        focusedAddField = rowID
-                    }
-                }
-            } label: {
-                Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(.secondary.opacity(0.25))
-            }
-            .padding(.leading, 16 + indentLeading(depth) + 14)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .leading)
+        Button {
+            addEmptyItemAndEdit(parentID: parentID)
+        } label: {
+            Image(systemName: "plus.circle.fill")
+                .font(.system(size: 22))
+                .foregroundStyle(.secondary.opacity(0.25))
         }
+        .padding(.leading, 16 + indentLeading(depth) + 14)
+        .padding(.vertical, 4)
+        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
     // MARK: - 項目を削除（子も再帰的に削除）
@@ -603,22 +518,82 @@ struct TodoListView: View {
         }
     }
 
-    // MARK: - インライン編集開始
+    // MARK: - インライン編集開始（既存項目をタップ）
     private func startEditing(item: TodoItem) {
+        // 連続追加モード中に別の項目をタップ → 空の新規項目を片付ける
+        if isAddingNewItems, let editID = editingItemID,
+           let editItem = allItems.first(where: { $0.id == editID }),
+           editItem.title.isEmpty {
+            deleteItem(editItem)
+        }
+        isAddingNewItems = false
         editingItemID = item.id
         editingText = item.title
     }
 
-    // MARK: - 編集確定
+    // MARK: - Enter押下時（連続追加 or 通常確定）
+    private func submitEdit(item: TodoItem) {
+        let trimmed = editingText.trimmingCharacters(in: .whitespacesAndNewlines)
+        let parentID = item.parentID
+
+        if isAddingNewItems {
+            if trimmed.isEmpty {
+                // 空Enter → 空行を削除して連続追加終了
+                deleteItem(item)
+                editingItemID = nil
+                editingText = ""
+                isAddingNewItems = false
+            } else {
+                // 確定して次の空行へ
+                item.title = trimmed
+                item.updatedAt = Date()
+                try? modelContext.save()
+                editingItemID = nil
+                editingText = ""
+                addEmptyItemAndEdit(parentID: parentID)
+            }
+        } else {
+            // 既存項目の編集確定
+            commitEdit(item: item)
+        }
+    }
+
+    // MARK: - 編集確定（タップで離脱時）
     private func commitEdit(item: TodoItem) {
         let trimmed = editingText.trimmingCharacters(in: .whitespacesAndNewlines)
-        if !trimmed.isEmpty {
+        if isAddingNewItems && trimmed.isEmpty {
+            // 連続追加中に空のまま離脱 → 空項目を削除
+            deleteItem(item)
+        } else if !trimmed.isEmpty {
             item.title = trimmed
             item.updatedAt = Date()
             try? modelContext.save()
         }
         editingItemID = nil
         editingText = ""
+        isAddingNewItems = false
+    }
+
+    // MARK: - 空の項目を作成して即編集開始
+    private func addEmptyItemAndEdit(parentID: UUID?) {
+        let siblings = allItems.filter { $0.parentID == parentID }
+        let maxOrder = siblings.map(\.sortOrder).max() ?? -1
+
+        let item = TodoItem(title: "", listID: todoList.id, parentID: parentID, sortOrder: maxOrder + 1)
+        item.tags = [getOrCreateTodoTag()]
+        modelContext.insert(item)
+        try? modelContext.save()
+
+        if let parentID = parentID {
+            expandedItems.insert(parentID)
+        }
+
+        isAddingNewItems = true
+        editingItemID = item.id
+        editingText = ""
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            isEditingFocused = true
+        }
     }
 
     // MARK: - TODOシステムタグの取得or作成
