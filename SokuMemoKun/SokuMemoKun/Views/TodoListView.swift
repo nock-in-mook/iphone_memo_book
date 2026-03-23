@@ -285,17 +285,17 @@ struct TodoListView: View {
 
         // メインコンテンツ（帯スタイル）
         HStack(spacing: 8) {
-            // チェックボックス（四角）
+            // チェックボックス（四角・大きめ太め）
             Button {
                 item.isDone.toggle()
                 item.updatedAt = Date()
                 try? modelContext.save()
             } label: {
                 Image(systemName: item.isDone ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 20))
-                    .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.4))
+                    .font(.system(size: 28, weight: .medium))
+                    .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.35))
                     .animation(.easeInOut(duration: 0.2), value: item.isDone)
-                    .frame(width: 32, height: 32)
+                    .frame(width: 38, height: 38)
                     .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
@@ -303,7 +303,7 @@ struct TodoListView: View {
             // タイトル（通常表示 or インライン編集）
             if isEditing {
                 TextField("項目を入力", text: $editingText)
-                    .font(.system(size: 16))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .focused($isEditingFocused)
                     .onSubmit {
                         submitEdit(item: item)
@@ -313,7 +313,7 @@ struct TodoListView: View {
                     }
             } else {
                 Text(item.title)
-                    .font(.system(size: 16))
+                    .font(.system(size: 16, weight: .regular, design: .rounded))
                     .strikethrough(item.isDone, color: .secondary)
                     .foregroundStyle(item.isDone ? .secondary : .primary)
                     .animation(.easeInOut(duration: 0.2), value: item.isDone)
