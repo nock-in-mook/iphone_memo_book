@@ -96,7 +96,7 @@ struct TodoListView: View {
                 }
                 ToolbarItem(placement: .principal) {
                     HStack(spacing: 5) {
-                        Image(systemName: "list.clipboard")
+                        Image(systemName: "checklist")
                             .font(.system(size: 14))
                             .foregroundStyle(.secondary)
                         Text("ToDoリスト")
