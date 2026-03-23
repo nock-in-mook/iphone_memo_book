@@ -246,7 +246,6 @@ struct TodoListsView: View {
             .shadow(color: .black.opacity(0.2), radius: 16, y: 6)
             .padding(.horizontal, 40)
         }
-        .ignoresSafeArea(.keyboard)
         .transition(.opacity)
     }
 
