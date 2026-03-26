@@ -371,6 +371,12 @@ struct TodoListView: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 0)
         .padding(.leading, indentLeading(depth))
+        // インデント部分のパステルグリーン背景
+        .background(alignment: .leading) {
+            Rectangle()
+                .fill(Color.green.opacity(0.06))
+                .frame(width: indentLeading(depth) + 16)  // listRowInsetsのleading分を加算
+        }
         // 下の区切り線
         .background(alignment: .bottom) {
             Rectangle()
