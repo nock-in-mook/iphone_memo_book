@@ -44,6 +44,7 @@
 		TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000007 /* TagSuggestEngine.swift */; };
 		TAGSUG000000000000000A /* TagSuggestDictionary.json in Resources */ = {isa = PBXBuildFile; fileRef = TAGSUG0000000000000009 /* TagSuggestDictionary.json */; };
 		TAPTXT0000000000000002 /* TappableReadOnlyText.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAPTXT0000000000000001 /* TappableReadOnlyText.swift */; };
+		FONTLAB0000000000000002 /* FontLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = FONTLAB0000000000000001 /* FontLabView.swift */; };
 		TODO00000000000000002 /* TodoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODO00000000000000001 /* TodoItem.swift */; };
 		TODO00000000000000004 /* TodoListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODO00000000000000003 /* TodoListView.swift */; };
 		TODOL0000000000000002 /* TodoList.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODOL0000000000000001 /* TodoList.swift */; };
@@ -82,6 +83,7 @@
 		CELLVIEW00000000000001 /* QuickSortCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortCellView.swift; sourceTree = "<group>"; };
 		LNTXT00000000000000001 /* LineNumberTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineNumberTextEditor.swift; sourceTree = "<group>"; };
 		TAPTXT0000000000000001 /* TappableReadOnlyText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappableReadOnlyText.swift; sourceTree = "<group>"; };
+		FONTLAB0000000000000001 /* FontLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FontLabView.swift; path = SokuMemoKun/Views/FontLabView.swift; sourceTree = SOURCE_ROOT; };
 		TODO00000000000000001 /* TodoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoItem.swift; sourceTree = "<group>"; };
 		TODO00000000000000003 /* TodoListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListView.swift; sourceTree = "<group>"; };
 		TODOL0000000000000001 /* TodoList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoList.swift; sourceTree = "<group>"; };
@@ -177,6 +179,7 @@
 				TODO00000000000000003 /* TodoListView.swift */,
 				TODOL0000000000000003 /* TodoListsView.swift */,
 				ICONL0000000000000001 /* IconLabView.swift */,
+				FONTLAB0000000000000001 /* FontLabView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -311,6 +314,7 @@
 				QSORT0000000000000002 /* QuickSortView.swift in Sources */,
 				QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */,
 				QSORT0000000000000006 /* QuickSortResultView.swift in Sources */,
+				FONTLAB0000000000000002 /* FontLabView.swift in Sources */,
 				TODO00000000000000002 /* TodoItem.swift in Sources */,
 				TODO00000000000000004 /* TodoListView.swift in Sources */,
 				TODOL0000000000000002 /* TodoList.swift in Sources */,

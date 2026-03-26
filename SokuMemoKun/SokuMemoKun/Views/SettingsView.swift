@@ -113,6 +113,15 @@ struct SettingsView: View {
                     }
                 }
 
+                // フォントラボ
+                Section("フォントラボ") {
+                    NavigationLink {
+                        FontLabView()
+                    } label: {
+                        Label("ToDoリスト フォント候補", systemImage: "textformat.abc")
+                    }
+                }
+
                 // アイコンラボ
                 Section("アイコンラボ") {
                     NavigationLink {
