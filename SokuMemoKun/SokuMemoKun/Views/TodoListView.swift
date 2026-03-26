@@ -97,6 +97,7 @@ struct TodoListView: View {
                         .listStyle(.plain)
                         .scrollContentBackground(.hidden)
                         .scrollDismissesKeyboard(.interactively)
+                        .environment(\.defaultMinListRowHeight, 1)
                         .onChange(of: editingItemID) { _, newID in
                             if let id = newID {
                                 DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -368,7 +369,7 @@ struct TodoListView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 4)
+        .padding(.vertical, 0)
         .padding(.leading, indentLeading(depth))
         // 下の区切り線
         .background(alignment: .bottom) {
