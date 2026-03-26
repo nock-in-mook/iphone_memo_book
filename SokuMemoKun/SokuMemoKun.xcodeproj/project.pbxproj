@@ -35,6 +35,7 @@
 		CELLVIEW00000000000002 /* QuickSortCellView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CELLVIEW00000000000001 /* QuickSortCellView.swift */; };
 		E20F22AC7EBE4432A424C594 /* MemoDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 863DCF5D059F41899ADDD158 /* MemoDetailView.swift */; };
 		LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */ = {isa = PBXBuildFile; fileRef = LNTXT00000000000000001 /* LineNumberTextEditor.swift */; };
+		MEMTV00000000000000002 /* MemoTextView.swift in Sources */ = {isa = PBXBuildFile; fileRef = MEMTV00000000000000001 /* MemoTextView.swift */; };
 		QSORT0000000000000002 /* QuickSortView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000001 /* QuickSortView.swift */; };
 		QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000003 /* QuickSortFilterView.swift */; };
 		QSORT0000000000000006 /* QuickSortResultView.swift in Sources */ = {isa = PBXBuildFile; fileRef = QSORT0000000000000005 /* QuickSortResultView.swift */; };
@@ -82,6 +83,7 @@
 		CAROUSEL00000000000001 /* CarouselView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarouselView.swift; sourceTree = "<group>"; };
 		CELLVIEW00000000000001 /* QuickSortCellView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortCellView.swift; sourceTree = "<group>"; };
 		LNTXT00000000000000001 /* LineNumberTextEditor.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LineNumberTextEditor.swift; sourceTree = "<group>"; };
+		MEMTV00000000000000001 /* MemoTextView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MemoTextView.swift; sourceTree = "<group>"; };
 		TAPTXT0000000000000001 /* TappableReadOnlyText.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TappableReadOnlyText.swift; sourceTree = "<group>"; };
 		FONTLAB0000000000000001 /* FontLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; name = FontLabView.swift; path = SokuMemoKun/Views/FontLabView.swift; sourceTree = SOURCE_ROOT; };
 		TODO00000000000000001 /* TodoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoItem.swift; sourceTree = "<group>"; };
@@ -172,6 +174,7 @@
 				A1000000000000000000B9 /* MarkdownTextEditor.swift */,
 				863DCF5D059F41899ADDD158 /* MemoDetailView.swift */,
 				LNTXT00000000000000001 /* LineNumberTextEditor.swift */,
+				MEMTV00000000000000001 /* MemoTextView.swift */,
 				TAPTXT0000000000000001 /* TappableReadOnlyText.swift */,
 				QSORT0000000000000001 /* QuickSortView.swift */,
 				QSORT0000000000000003 /* QuickSortFilterView.swift */,
@@ -310,6 +313,7 @@
 				TAGSUG0000000000000006 /* TagSuggestDismissal.swift in Sources */,
 				TAGSUG0000000000000008 /* TagSuggestEngine.swift in Sources */,
 				LNTXT00000000000000002 /* LineNumberTextEditor.swift in Sources */,
+				MEMTV00000000000000002 /* MemoTextView.swift in Sources */,
 				TAPTXT0000000000000002 /* TappableReadOnlyText.swift in Sources */,
 				QSORT0000000000000002 /* QuickSortView.swift in Sources */,
 				QSORT0000000000000004 /* QuickSortFilterView.swift in Sources */,
