@@ -368,7 +368,7 @@ struct TodoListView: View {
             }
         }
         .padding(.horizontal, 12)
-        .padding(.vertical, 10)
+        .padding(.vertical, 6)
         .padding(.leading, indentLeading(depth))
         // 下の区切り線
         .background(alignment: .bottom) {
