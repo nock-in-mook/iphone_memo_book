@@ -123,17 +123,21 @@ struct TodoListsView: View {
         }
     }
 
-    // MARK: - リスト一覧（2列グリッド）
-    private let gridColumns = [
-        GridItem(.flexible(), spacing: 8),
-        GridItem(.flexible(), spacing: 8),
-    ]
-
+    // MARK: - リスト一覧（2列・高さバラバラ）
     private var listView: some View {
         ScrollView {
-            LazyVGrid(columns: gridColumns, spacing: 8) {
-                ForEach(todoLists) { list in
-                    listCard(list)
+            HStack(alignment: .top, spacing: 8) {
+                // 左列（偶数インデックス）
+                LazyVStack(spacing: 8) {
+                    ForEach(Array(todoLists.enumerated()).filter { $0.offset % 2 == 0 }, id: \.element.id) { _, list in
+                        listCard(list)
+                    }
+                }
+                // 右列（奇数インデックス）
+                LazyVStack(spacing: 8) {
+                    ForEach(Array(todoLists.enumerated()).filter { $0.offset % 2 == 1 }, id: \.element.id) { _, list in
+                        listCard(list)
+                    }
                 }
             }
             .padding(.horizontal, 12)
