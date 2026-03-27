@@ -240,7 +240,7 @@ struct TodoListsView: View {
                         let prog = Double(summary.done) / Double(summary.total)
                         ZStack {
                             Circle()
-                                .stroke(Color.secondary.opacity(0.15), lineWidth: 2.5)
+                                .stroke(Color.secondary.opacity(0.15), lineWidth: 3)
                             if prog >= 1.0 {
                                 // 全完了：レインボー
                                 Circle()
@@ -249,26 +249,26 @@ struct TodoListsView: View {
                                             colors: [.red, .orange, .yellow, .green, .blue, .purple, .red],
                                             center: .center
                                         ),
-                                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
                                     )
                             } else {
                                 Circle()
                                     .trim(from: 0, to: prog)
                                     .stroke(
                                         Color.blue,
-                                        style: StrokeStyle(lineWidth: 2.5, lineCap: .round)
+                                        style: StrokeStyle(lineWidth: 3, lineCap: .round)
                                     )
                                     .rotationEffect(.degrees(-90))
                             }
                             HStack(spacing: 0) {
                                 Text("\(Int(prog * 100))")
-                                    .font(.system(size: 7, weight: .bold, design: .rounded))
+                                    .font(.system(size: 9, weight: .bold, design: .rounded))
                                 Text("%")
-                                    .font(.system(size: 5, weight: .medium, design: .rounded))
+                                    .font(.system(size: 7, weight: .medium, design: .rounded))
                             }
                             .foregroundStyle(prog >= 1.0 ? .green : .primary)
                         }
-                        .frame(width: 24, height: 24)
+                        .frame(width: 30, height: 30)
                     }
                 }
 
@@ -299,11 +299,11 @@ struct TodoListsView: View {
                         Spacer()
                         if summary2.done == summary2.total {
                             Text("全完了")
-                                .font(.system(size: 9, weight: .medium, design: .rounded))
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary.opacity(0.5))
                         } else {
                             Text("\(summary2.done)/\(summary2.total) 完了")
-                                .font(.system(size: 9, weight: .medium, design: .rounded))
+                                .font(.system(size: 11, weight: .medium, design: .rounded))
                                 .foregroundStyle(.secondary.opacity(0.5))
                         }
                     }
@@ -326,17 +326,12 @@ struct TodoListsView: View {
                     .offset(x: 4, y: 4)
             }
         }
-        .overlay(alignment: .topLeading) {
+        .overlay(alignment: .bottomLeading) {
             if list.isLocked {
-                ZStack {
-                    Circle()
-                        .fill(Color.orange)
-                        .frame(width: 18, height: 18)
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.white)
-                }
-                .offset(x: -4, y: -4)
+                Image(systemName: "lock.fill")
+                    .font(.system(size: 10))
+                    .foregroundStyle(.red)
+                    .offset(x: 4, y: -4)
             }
         }
         .contextMenu {
