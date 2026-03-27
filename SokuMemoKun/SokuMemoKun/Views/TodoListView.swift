@@ -126,14 +126,21 @@ struct TodoListView: View {
                         .scrollContentBackground(.hidden)
                         .scrollDismissesKeyboard(.interactively)
                         .environment(\.defaultMinListRowHeight, 1)
-                        .onChange(of: editingItemID) { _, newID in
+                        .onChange(of: editingItemID) { oldID, newID in
                             if let id = newID {
                                 scrollToItem(id, proxy: proxy)
-                            } else {
-                                // 編集完了後、+ボタンが見えるようにスクロール
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                                    withAnimation(.easeInOut(duration: 0.15)) {
-                                        proxy.scrollTo("add-root", anchor: .bottom)
+                            } else if let oldID = oldID,
+                                      let item = allItems.first(where: { $0.id == oldID }) {
+                                // 編集完了後、最後の項目だった場合のみ＋ボタンにスクロール
+                                let siblings = allItems
+                                    .filter { $0.parentID == item.parentID && $0.listID == item.listID }
+                                    .sorted { $0.sortOrder < $1.sortOrder }
+                                if siblings.last?.id == oldID {
+                                    let addRowID = item.parentID.map { "add-\($0.uuidString)" } ?? "add-root"
+                                    DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                                        withAnimation(.easeInOut(duration: 0.15)) {
+                                            proxy.scrollTo(addRowID, anchor: .bottom)
+                                        }
                                     }
                                 }
                             }
@@ -186,21 +193,7 @@ struct TodoListView: View {
                     }
                 }
                 ToolbarItem(placement: .topBarTrailing) {
-                    if editingItemID != nil {
-                        Button("完了") {
-                            if let editID = editingItemID,
-                               let item = allItems.first(where: { $0.id == editID }) {
-                                commitEdit(item: item)
-                            }
-                        }
-                        .fontWeight(.semibold)
-                    } else if memoEditingItemID != nil {
-                        Button("完了") {
-                            commitMemo()
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        }
-                        .fontWeight(.semibold)
-                    } else if allItems.contains(where: { hasChildren($0.id) }) {
+                    if allItems.contains(where: { hasChildren($0.id) }) {
                         // 全展開/全収納トグル（子項目がある場合のみ表示）
                         Button {
                             if isAllExpanded {
@@ -702,6 +695,17 @@ struct TodoListView: View {
         }
     }
 
+    // メモテキストが1行に収まるか判定（UIKitのサイズ計算）
+    private func isMemoTruncated(_ text: String, font: UIFont, maxWidth: CGFloat) -> Bool {
+        let size = (text as NSString).boundingRect(
+            with: CGSize(width: CGFloat.greatestFiniteMagnitude, height: .greatestFiniteMagnitude),
+            options: [.usesLineFragmentOrigin],
+            attributes: [.font: font],
+            context: nil
+        ).size
+        return size.width > maxWidth
+    }
+
     // MARK: - 子を持っているか
     private func hasChildren(_ itemID: UUID) -> Bool {
         allItems.contains { $0.parentID == itemID }
@@ -916,6 +920,13 @@ struct TodoListView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        // タスク編集中はメモ操作せず、編集を確定して抜ける
+                        if let editID = editingItemID,
+                           let editItem = allItems.first(where: { $0.id == editID }) {
+                            commitEdit(item: editItem)
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                            return
+                        }
                         memoEditingItemID = item.id
                         memoEditingText = item.memo ?? ""
                         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
@@ -931,24 +942,54 @@ struct TodoListView: View {
             .padding(.horizontal, 4)
             .padding(.bottom, 4)
         } else if let memo = item.memo, !memo.isEmpty {
-            // 閉じ状態：付箋アイコン＋1行プレビュー
-            HStack(spacing: 3) {
+            // 閉じ状態：付箋アイコン＋1行プレビュー（展開時と同じフォント・位置）
+            let isTruncated = isMemoTruncated(memo, font: .systemFont(ofSize: 13, weight: .regular), maxWidth: UIScreen.main.bounds.width - indentLeading(depth) - 80)
+            HStack(alignment: .top, spacing: 4) {
                 Image(systemName: "doc")
                     .rotationEffect(.degrees(90))
-                    .font(.system(size: 10))
+                    .font(.system(size: 11))
+                    .foregroundStyle(Color.purple.opacity(0.5))
+                    .padding(.top, 2)
                 Text(memo)
-                    .font(.system(size: 12, weight: .regular, design: .rounded))
+                    .font(.system(size: 13, weight: .regular, design: .rounded))
+                    .foregroundStyle(Color.purple.opacity(0.6))
                     .lineLimit(1)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
-            .foregroundStyle(.purple.opacity(0.5))
-            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(Color.purple.opacity(0.04))
+            .cornerRadius(6)
             .padding(.horizontal, 4)
-            .padding(.bottom, 2)
+            .padding(.bottom, 4)
             .contentShape(Rectangle())
                 .onTapGesture {
-                    withAnimation(.easeInOut(duration: 0.15)) {
+                    // タスク編集中は編集を確定して抜ける
+                    if let editID = editingItemID,
+                       let editItem = allItems.first(where: { $0.id == editID }) {
+                        commitEdit(item: editItem)
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        return
+                    }
+                    // メモ編集中はメモを確定して抜けるだけ
+                    if memoEditingItemID != nil {
                         commitMemo()
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        return
+                    }
+                    if isTruncated {
+                        // 切り詰められている → 閲覧モードで全文表示
+                        withAnimation(.easeInOut(duration: 0.15)) {
+                            memoOpenItems.insert(item.id)
+                        }
+                    } else {
+                        // 全文表示済み → 直接編集モードへ
                         memoOpenItems.insert(item.id)
+                        memoEditingItemID = item.id
+                        memoEditingText = item.memo ?? ""
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            isMemoFocused = true
+                        }
                     }
                 }
         }
@@ -1001,14 +1042,14 @@ struct TodoListView: View {
                         addEmptyItemAndEdit(parentID: parentID)
                     } label: {
                         HStack(spacing: 0) {
-                            // L字: 縦線＋角丸＋横線＋＋ボタン
+                            // L字罫線（縦→角丸→横→＋ボタン）
                             LShapeLine(color: lineColor)
-                                .frame(width: 14, height: 20)
+                                .frame(width: 12, height: 22)
                             Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 16))
+                                .font(.system(size: 15))
                                 .foregroundStyle(lineColor)
-                            Spacer()
                         }
+                        .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
                     .disabled(isDisabled)
