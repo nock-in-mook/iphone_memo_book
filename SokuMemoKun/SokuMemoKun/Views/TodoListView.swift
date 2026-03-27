@@ -978,10 +978,16 @@ struct TodoListView: View {
                 }
             }
         }
-        // シンプルモード: 全祖先から伸びる縦線（各階層の帯の中央、編集中は非表示）
+        // 全階層の縦線（帯の中央、編集中は非表示）
         .overlay(alignment: .leading) {
-            if depth > 0 && editingItemID == nil {
+            if editingItemID == nil {
                 ZStack(alignment: .leading) {
+                    // ルート階層の緑縦線（緑帯の中央）
+                    Rectangle()
+                        .fill(Color.green.opacity(0.5))
+                        .frame(width: 1.5)
+                        .padding(.leading, (indentBase + 12) / 2 - 0.75)
+                    // 子階層以降の縦線
                     ForEach(0..<depth, id: \.self) { d in
                         Rectangle()
                             .fill(depthAccentColor(d + 1))
@@ -1080,18 +1086,39 @@ struct TodoListView: View {
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
         } else {
-            // ルート追加（プラスボタン）
+            // ルート追加（L字罫線＋緑＋ボタン）
+            let isDisabled = editingItemID != nil || memoEditingItemID != nil
+            let rootLineColor: Color = isDisabled ? .green.opacity(0.15) : .green.opacity(0.5)
             Button {
                 addEmptyItemAndEdit(parentID: nil)
             } label: {
                 Image(systemName: "plus.circle.fill")
-                    .font(.system(size: 22))
-                    .foregroundStyle(.secondary.opacity(0.25))
-                    .contentShape(Rectangle())
+                    .font(.system(size: 15))
+                    .foregroundStyle(rootLineColor)
+                    .frame(maxWidth: .infinity, alignment: .leading)
             }
             .buttonStyle(.plain)
-            .padding(.vertical, 4)
-            .frame(maxWidth: .infinity, alignment: .center)
+            .disabled(isDisabled)
+            .padding(.trailing, 12)
+            .padding(.vertical, 2)
+            .padding(.leading, (indentBase + 12) / 2 - 0.75 + 14)
+            // L字罫線
+            .overlay(alignment: .topLeading) {
+                let lineX: CGFloat = (indentBase + 12) / 2 - 0.75
+                LShapeCorner(color: rootLineColor)
+                    .frame(width: 14, height: 12)
+                    .padding(.leading, lineX)
+            }
+            // 縦線（上半分）
+            .overlay(alignment: .topLeading) {
+                let lineX: CGFloat = (indentBase + 12) / 2 - 0.75
+                GeometryReader { geo in
+                    Rectangle()
+                        .fill(rootLineColor)
+                        .frame(width: 1.5, height: geo.size.height * 0.5 - 12)
+                        .padding(.leading, lineX)
+                }
+            }
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
