@@ -47,6 +47,9 @@ struct TodoListView: View {
     @State private var memoEditingText: String = ""
     @FocusState private var isMemoFocused: Bool
 
+    // 表示モード（シンプル/詳細）
+    @State private var isSimpleMode: Bool = false
+
 
 
     // 進捗情報（ルート項目のみ）
@@ -223,30 +226,61 @@ struct TodoListView: View {
             commitMemo()
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
-        // 全タスク削除フロートボタン（下端中央）
+        // フロートボタン（下端: 左=表示切替、右=削除）
         .overlay(alignment: .bottom) {
             if allItems.count > 0 && editingItemID == nil && memoEditingItemID == nil {
-                Button {
-                    showClearAllDialog = true
-                } label: {
-                    HStack(spacing: 5) {
-                        Image(systemName: "list.bullet")
-                            .font(.system(size: 14, weight: .medium))
-                        Text("削除")
-                            .font(.system(size: 14, weight: .medium, design: .rounded))
+                HStack {
+                    // 表示切替ボタン（左下）
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            isSimpleMode.toggle()
+                        }
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: isSimpleMode ? "list.bullet" : "list.bullet.indent")
+                                .font(.system(size: 14, weight: .medium))
+                            Text(isSimpleMode ? "シンプル" : "詳細")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                        }
+                        .foregroundStyle(.secondary.opacity(0.7))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 9)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 0.5)
+                        )
                     }
-                    .foregroundStyle(.red.opacity(0.6))
-                    .padding(.horizontal, 18)
-                    .padding(.vertical, 9)
-                    .background(
-                        Capsule()
-                            .fill(.ultraThinMaterial)
-                    )
-                    .overlay(
-                        Capsule()
-                            .strokeBorder(Color.red.opacity(0.15), lineWidth: 0.5)
-                    )
+
+                    Spacer()
+
+                    // 全タスク削除ボタン（右下）
+                    Button {
+                        showClearAllDialog = true
+                    } label: {
+                        HStack(spacing: 5) {
+                            Image(systemName: "list.bullet")
+                                .font(.system(size: 14, weight: .medium))
+                            Text("削除")
+                                .font(.system(size: 14, weight: .medium, design: .rounded))
+                        }
+                        .foregroundStyle(.red.opacity(0.6))
+                        .padding(.horizontal, 18)
+                        .padding(.vertical, 9)
+                        .background(
+                            Capsule()
+                                .fill(.ultraThinMaterial)
+                        )
+                        .overlay(
+                            Capsule()
+                                .strokeBorder(Color.red.opacity(0.15), lineWidth: 0.5)
+                        )
+                    }
                 }
+                .padding(.horizontal, 16)
                 .padding(.bottom, 8)
             }
         }
@@ -669,6 +703,16 @@ struct TodoListView: View {
         return colors[depth % colors.count]
     }
 
+    // シンプルモード用：階層ごとのアクセント色（濃いめ）
+    private func depthAccentColor(_ depth: Int) -> Color {
+        let colors: [Color] = [
+            .green.opacity(0.5),      // ルート（depth 0）: 緑
+            .purple.opacity(0.5),     // 子階層1: 紫
+            .orange.opacity(0.5),     // 子階層2: オレンジ
+        ]
+        return colors[depth % colors.count]
+    }
+
     private func indentLeading(_ depth: Int) -> CGFloat {
         indentBase + CGFloat(depth) * indentStep
     }
@@ -921,33 +965,62 @@ struct TodoListView: View {
     private func addItemRow(parentID: UUID?, depth: Int, rowID: String) -> some View {
         if let parentID = parentID,
            let parent = allItems.first(where: { $0.id == parentID }) {
-            // 子タスク追加（点線枠スタイル）
+            // 子タスク追加
             let isDisabled = editingItemID != nil || memoEditingItemID != nil
-            Button {
-                addEmptyItemAndEdit(parentID: parentID)
-            } label: {
-                HStack(spacing: 4) {
-                    Image(systemName: "plus")
-                        .font(.system(size: 12, weight: .medium))
-                    Text("\"\(parent.title)\"  の子タスクを追加")
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .lineLimit(1)
+            let accentColor = depthAccentColor(depth)
+
+            Group {
+                if isSimpleMode {
+                    // シンプルモード: 罫線＋色付き＋ボタン
+                    Button {
+                        addEmptyItemAndEdit(parentID: parentID)
+                    } label: {
+                        HStack(spacing: 0) {
+                            // 罫線
+                            Rectangle()
+                                .fill(accentColor)
+                                .frame(height: 1)
+                            // ＋ボタン
+                            Image(systemName: "plus.circle.fill")
+                                .font(.system(size: 16))
+                                .foregroundStyle(isDisabled ? accentColor.opacity(0.3) : accentColor)
+                                .padding(.leading, 4)
+                        }
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isDisabled)
+                    .padding(.trailing, 12)
+                    .padding(.vertical, 2)
+                    .padding(.leading, indentLeading(depth) + 16)
+                } else {
+                    // 詳細モード: 点線枠スタイル
+                    Button {
+                        addEmptyItemAndEdit(parentID: parentID)
+                    } label: {
+                        HStack(spacing: 4) {
+                            Image(systemName: "plus")
+                                .font(.system(size: 12, weight: .medium))
+                            Text("\"\(parent.title)\"  の子タスクを追加")
+                                .font(.system(size: 12, weight: .medium, design: .rounded))
+                                .lineLimit(1)
+                        }
+                        .foregroundStyle(.secondary.opacity(isDisabled ? 0.15 : 0.4))
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(
+                            RoundedRectangle(cornerRadius: 6)
+                                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
+                                .foregroundStyle(.secondary.opacity(isDisabled ? 0.08 : 0.2))
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .disabled(isDisabled)
+                    .padding(.trailing, 12)
+                    .padding(.vertical, 2)
+                    .padding(.leading, indentLeading(depth) + 16)
                 }
-                .foregroundStyle(.secondary.opacity(isDisabled ? 0.15 : 0.4))
-                .padding(.horizontal, 12)
-                .padding(.vertical, 6)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(
-                    RoundedRectangle(cornerRadius: 6)
-                        .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                        .foregroundStyle(.secondary.opacity(isDisabled ? 0.08 : 0.2))
-                )
             }
-            .buttonStyle(.plain)
-            .disabled(isDisabled)
-            .padding(.trailing, 12)
-            .padding(.vertical, 2)
-            .padding(.leading, indentLeading(depth) + 16)
             // 親階層の帯を継続表示（自分の階層は除く）
             .background(alignment: .leading) {
                 HStack(spacing: 0) {
