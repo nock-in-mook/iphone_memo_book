@@ -1,18 +1,17 @@
 import SwiftUI
 import SwiftData
 
-// L字罫線（シンプルモードの子タスク追加行用）
-private struct LShapeLine: View {
+// L字の角丸部分のみ描画（縦線はRectangleで別途描画して重なり防止）
+private struct LShapeCorner: View {
     let color: Color
     var body: some View {
         Canvas { context, size in
-            let lineWidth: CGFloat = 1.5
             let radius: CGFloat = 4
-            var path = Path()
-            // 上端中央から下へ、角丸で右へ
-            let startX = size.width * 0.15
+            let startX: CGFloat = 0.75  // Rectangleの中央と一致
             let endX = size.width
-            let midY = size.height * 0.5
+            let midY = size.height
+            // 角丸カーブ＋横線（Rectangleに合わせて太めに）
+            var path = Path()
             path.move(to: CGPoint(x: startX, y: 0))
             path.addLine(to: CGPoint(x: startX, y: midY - radius))
             path.addQuadCurve(
@@ -20,7 +19,7 @@ private struct LShapeLine: View {
                 control: CGPoint(x: startX, y: midY)
             )
             path.addLine(to: CGPoint(x: endX, y: midY))
-            context.stroke(path, with: .color(color), lineWidth: lineWidth)
+            context.stroke(path, with: .color(color), lineWidth: 2)
         }
     }
 }
@@ -71,8 +70,6 @@ struct TodoListView: View {
     @State private var memoEditingText: String = ""
     @FocusState private var isMemoFocused: Bool
 
-    // 表示モード（シンプル/詳細）
-    @State private var isSimpleMode: Bool = false
 
 
 
@@ -243,61 +240,30 @@ struct TodoListView: View {
             commitMemo()
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
         }
-        // フロートボタン（下端: 左=表示切替、右=削除）
+        // 全タスク削除フロートボタン（下端中央）
         .overlay(alignment: .bottom) {
             if allItems.count > 0 && editingItemID == nil && memoEditingItemID == nil {
-                HStack {
-                    // 表示切替ボタン（左下）
-                    Button {
-                        withAnimation(.easeInOut(duration: 0.2)) {
-                            isSimpleMode.toggle()
-                        }
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: isSimpleMode ? "list.bullet" : "list.bullet.indent")
-                                .font(.system(size: 14, weight: .medium))
-                            Text(isSimpleMode ? "シンプル" : "詳細")
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                        }
-                        .foregroundStyle(.secondary.opacity(0.7))
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 9)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(Color.secondary.opacity(0.15), lineWidth: 0.5)
-                        )
+                Button {
+                    showClearAllDialog = true
+                } label: {
+                    HStack(spacing: 5) {
+                        Image(systemName: "list.bullet")
+                            .font(.system(size: 14, weight: .medium))
+                        Text("削除")
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
                     }
-
-                    Spacer()
-
-                    // 全タスク削除ボタン（右下）
-                    Button {
-                        showClearAllDialog = true
-                    } label: {
-                        HStack(spacing: 5) {
-                            Image(systemName: "list.bullet")
-                                .font(.system(size: 14, weight: .medium))
-                            Text("削除")
-                                .font(.system(size: 14, weight: .medium, design: .rounded))
-                        }
-                        .foregroundStyle(.red.opacity(0.6))
-                        .padding(.horizontal, 18)
-                        .padding(.vertical, 9)
-                        .background(
-                            Capsule()
-                                .fill(.ultraThinMaterial)
-                        )
-                        .overlay(
-                            Capsule()
-                                .strokeBorder(Color.red.opacity(0.15), lineWidth: 0.5)
-                        )
-                    }
+                    .foregroundStyle(.red.opacity(0.6))
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 9)
+                    .background(
+                        Capsule()
+                            .fill(.ultraThinMaterial)
+                    )
+                    .overlay(
+                        Capsule()
+                            .strokeBorder(Color.red.opacity(0.15), lineWidth: 0.5)
+                    )
                 }
-                .padding(.horizontal, 16)
                 .padding(.bottom, 8)
             }
         }
@@ -1012,6 +978,20 @@ struct TodoListView: View {
                 }
             }
         }
+        // シンプルモード: 全祖先から伸びる縦線（各階層の帯の中央、編集中は非表示）
+        .overlay(alignment: .leading) {
+            if depth > 0 && editingItemID == nil {
+                ZStack(alignment: .leading) {
+                    ForEach(0..<depth, id: \.self) { d in
+                        Rectangle()
+                            .fill(depthAccentColor(d + 1))
+                            .frame(width: 1.5)
+                            .padding(.leading, indentBase + 12 + CGFloat(d) * indentStep + indentStep / 2 - 0.75)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+            }
+        }
         // 下の区切り線
         .background(alignment: .bottom) {
             Rectangle()
@@ -1034,56 +1014,40 @@ struct TodoListView: View {
             let isDisabled = editingItemID != nil || memoEditingItemID != nil
             let accentColor = depthAccentColor(depth)
 
+            // L字罫線＋色付き＋ボタン
+            let lineColor = isDisabled ? accentColor.opacity(0.3) : accentColor
             Group {
-                if isSimpleMode {
-                    // シンプルモード: L字罫線＋色付き＋ボタン（左端）
-                    let lineColor = isDisabled ? accentColor.opacity(0.3) : accentColor
                     Button {
                         addEmptyItemAndEdit(parentID: parentID)
                     } label: {
-                        HStack(spacing: 0) {
-                            // L字罫線（縦→角丸→横→＋ボタン）
-                            LShapeLine(color: lineColor)
-                                .frame(width: 12, height: 22)
-                            Image(systemName: "plus.circle.fill")
-                                .font(.system(size: 15))
-                                .foregroundStyle(lineColor)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(isDisabled)
-                    .padding(.trailing, 12)
-                    .padding(.vertical, 0)
-                    .padding(.leading, indentLeading(depth) + 16)
-                } else {
-                    // 詳細モード: 点線枠スタイル
-                    Button {
-                        addEmptyItemAndEdit(parentID: parentID)
-                    } label: {
-                        HStack(spacing: 4) {
-                            Image(systemName: "plus")
-                                .font(.system(size: 12, weight: .medium))
-                            Text("\"\(parent.title)\"  の子タスクを追加")
-                                .font(.system(size: 12, weight: .medium, design: .rounded))
-                                .lineLimit(1)
-                        }
-                        .foregroundStyle(.secondary.opacity(isDisabled ? 0.15 : 0.4))
-                        .padding(.horizontal, 12)
-                        .padding(.vertical, 6)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .background(
-                            RoundedRectangle(cornerRadius: 6)
-                                .strokeBorder(style: StrokeStyle(lineWidth: 1, dash: [4]))
-                                .foregroundStyle(.secondary.opacity(isDisabled ? 0.08 : 0.2))
-                        )
+                        Image(systemName: "plus.circle.fill")
+                            .font(.system(size: 15))
+                            .foregroundStyle(lineColor)
+                            .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
                     .disabled(isDisabled)
                     .padding(.trailing, 12)
                     .padding(.vertical, 2)
-                    .padding(.leading, indentLeading(depth) + 16)
-                }
+                    // ＋ボタンの左位置: 帯中央 + L字の横幅分
+                    .padding(.leading, indentBase + 12 + CGFloat(depth - 1) * indentStep + indentStep / 2 - 0.75 + 14)
+                    // L字罫線：角丸＋横線のみCanvasで描画（縦線との重なり防止）
+                    .overlay(alignment: .topLeading) {
+                        let lineX: CGFloat = indentBase + 12 + CGFloat(depth - 1) * indentStep + indentStep / 2 - 0.75
+                        LShapeCorner(color: lineColor)
+                            .frame(width: 14, height: 12)
+                            .padding(.leading, lineX)
+                    }
+                    // 縦線（上半分のみ、Rectangleで子行の縦線と統一）
+                    .overlay(alignment: .topLeading) {
+                        let lineX: CGFloat = indentBase + 12 + CGFloat(depth - 1) * indentStep + indentStep / 2 - 0.75
+                        GeometryReader { geo in
+                            Rectangle()
+                                .fill(lineColor)
+                                .frame(width: 1.5, height: geo.size.height * 0.5 - 12)
+                                .padding(.leading, lineX)
+                        }
+                    }
             }
             // 親階層の帯を継続表示（自分の階層は除く）
             .background(alignment: .leading) {
@@ -1096,6 +1060,20 @@ struct TodoListView: View {
                             .fill(depthColor(d))
                             .frame(width: indentStep)
                     }
+                }
+            }
+            // シンプルモード: 上位祖先の縦線（自分の階層のL字より上の階層）
+            .overlay(alignment: .leading) {
+                if depth > 1 && editingItemID == nil {
+                    ZStack(alignment: .leading) {
+                        ForEach(0..<(depth - 1), id: \.self) { d in
+                            Rectangle()
+                                .fill(depthAccentColor(d + 1))
+                                .frame(width: 1.5)
+                                .padding(.leading, indentBase + 12 + CGFloat(d) * indentStep + indentStep / 2 - 0.75)
+                        }
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .listRowSeparator(.hidden)
@@ -1194,10 +1172,12 @@ struct TodoListView: View {
             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
             return
         }
-        // 編集中の項目があれば先に確定
+        // 編集中の項目があれば先に確定するだけ（新しい編集には入らない）
         if let editID = editingItemID,
            let editItem = allItems.first(where: { $0.id == editID }) {
             commitEdit(item: editItem)
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            return
         }
         editingItemID = item.id
         editingText = item.title
