@@ -32,8 +32,9 @@ struct TodoListView: View {
     @State private var showExpandDialog = false
     // 全チェッククリアダイアログ
     @State private var showResetDialog = false
-    // 全タスク削除ダイアログ
+    // 全タスク削除ダイアログ（2段階）
     @State private var showClearAllDialog = false
+    @State private var showClearAllConfirm = false
 
     // 編集中の項目
     @State private var editingItemID: UUID?
@@ -89,6 +90,7 @@ struct TodoListView: View {
                                 case .addButton(let parentID):
                                     addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
                                         .id(row.id)
+                                        .moveDisabled(true)
                                 }
                             }
                             .onMove(perform: moveFlatRows)
@@ -99,11 +101,36 @@ struct TodoListView: View {
                         .environment(\.defaultMinListRowHeight, 1)
                         .onChange(of: editingItemID) { _, newID in
                             if let id = newID {
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                scrollToItem(id, proxy: proxy)
+                            } else {
+                                // 編集完了後、+ボタンが見えるようにスクロール
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
                                     withAnimation(.easeInOut(duration: 0.15)) {
-                                        proxy.scrollTo(id, anchor: .bottom)
+                                        proxy.scrollTo("add-root", anchor: .bottom)
                                     }
                                 }
+                            }
+                        }
+                        .onChange(of: memoEditingItemID) { _, newID in
+                            if let id = newID {
+                                scrollToItem(id, proxy: proxy)
+                            }
+                        }
+                        .onChange(of: isEditingFocused) { _, focused in
+                            if focused, let id = editingItemID {
+                                scrollToItem(id, proxy: proxy)
+                            } else if !focused, let editID = editingItemID,
+                                      let item = allItems.first(where: { $0.id == editID }) {
+                                // フォーカスが外れたら完了と同じ扱い
+                                commitEdit(item: item)
+                            }
+                        }
+                        .onChange(of: isMemoFocused) { _, focused in
+                            if focused, let id = memoEditingItemID {
+                                scrollToItem(id, proxy: proxy)
+                            } else if !focused && memoEditingItemID != nil {
+                                // メモもフォーカス外れたら保存
+                                commitMemo()
                             }
                         }
                     }
@@ -119,7 +146,8 @@ struct TodoListView: View {
                     }
                     .foregroundStyle(.secondary.opacity(0.4))
                     .frame(maxWidth: .infinity, alignment: .center)
-                    .padding(.vertical, 8)
+                    .padding(.top, 24)
+                    .padding(.bottom, 50)
                 }
             }
             .navigationBarTitleDisplayMode(.inline)
@@ -137,6 +165,12 @@ struct TodoListView: View {
                                let item = allItems.first(where: { $0.id == editID }) {
                                 commitEdit(item: item)
                             }
+                        }
+                        .fontWeight(.semibold)
+                    } else if memoEditingItemID != nil {
+                        Button("完了") {
+                            commitMemo()
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         }
                         .fontWeight(.semibold)
                     } else if allItems.contains(where: { hasChildren($0.id) }) {
@@ -195,15 +229,15 @@ struct TodoListView: View {
                 Button {
                     showClearAllDialog = true
                 } label: {
-                    HStack(spacing: 4) {
+                    HStack(spacing: 5) {
                         Image(systemName: "list.bullet")
-                            .font(.system(size: 12, weight: .medium))
+                            .font(.system(size: 14, weight: .medium))
                         Text("削除")
-                            .font(.system(size: 12, weight: .medium, design: .rounded))
+                            .font(.system(size: 14, weight: .medium, design: .rounded))
                     }
                     .foregroundStyle(.red.opacity(0.6))
-                    .padding(.horizontal, 14)
-                    .padding(.vertical, 7)
+                    .padding(.horizontal, 18)
+                    .padding(.vertical, 9)
                     .background(
                         Capsule()
                             .fill(.ultraThinMaterial)
@@ -356,9 +390,9 @@ struct TodoListView: View {
                             .multilineTextAlignment(.center)
                         VStack(spacing: 10) {
                             Button {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    clearAllItems()
+                                withAnimation(.easeInOut(duration: 0.15)) {
                                     showClearAllDialog = false
+                                    showClearAllConfirm = true
                                 }
                             } label: {
                                 Text("全て削除する")
@@ -372,6 +406,64 @@ struct TodoListView: View {
                             Button {
                                 withAnimation(.easeInOut(duration: 0.15)) {
                                     showClearAllDialog = false
+                                }
+                            } label: {
+                                Text("キャンセル")
+                                    .font(.system(size: 14, weight: .medium, design: .rounded))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .foregroundStyle(.secondary)
+                            }
+                        }
+                    }
+                    .padding(20)
+                    .background(.regularMaterial)
+                    .cornerRadius(16)
+                    .shadow(color: .black.opacity(0.15), radius: 10, y: 4)
+                    .padding(.horizontal, 40)
+                }
+                .transition(.opacity)
+            }
+        }
+        // 全タスク削除 2段階目（最終確認）
+        .overlay {
+            if showClearAllConfirm {
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                        .onTapGesture {
+                            withAnimation(.easeInOut(duration: 0.15)) {
+                                showClearAllConfirm = false
+                            }
+                        }
+                    VStack(spacing: 16) {
+                        Image(systemName: "exclamationmark.triangle.fill")
+                            .font(.system(size: 28))
+                            .foregroundStyle(.red)
+                        Text("本当によろしいですか？")
+                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                        Text("全タスクを削除します。この操作は取り消せません。")
+                            .font(.system(size: 13, design: .rounded))
+                            .foregroundStyle(.secondary)
+                            .multilineTextAlignment(.center)
+                        VStack(spacing: 10) {
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.2)) {
+                                    clearAllItems()
+                                    showClearAllConfirm = false
+                                }
+                            } label: {
+                                Text("削除する")
+                                    .font(.system(size: 14, weight: .bold, design: .rounded))
+                                    .frame(maxWidth: .infinity)
+                                    .padding(.vertical, 10)
+                                    .background(Color.red)
+                                    .foregroundStyle(.white)
+                                    .cornerRadius(8)
+                            }
+                            Button {
+                                withAnimation(.easeInOut(duration: 0.15)) {
+                                    showClearAllConfirm = false
                                 }
                             } label: {
                                 Text("キャンセル")
@@ -591,27 +683,33 @@ struct TodoListView: View {
 
         // メインコンテンツ（帯スタイル）
         HStack(spacing: 0) { // 外側HStack（インデント用）
-        // インデント領域（タップを吸収して何もしない）
+        // インデント領域（タップでフォーカス解除、チェックボックスには伝播しない）
         Color.white.opacity(0.001)
             .frame(width: indentLeading(depth))
             .contentShape(Rectangle())
-            .onTapGesture { /* タップを吸収 */ }
+            .onTapGesture {
+                if let editID = editingItemID,
+                   let item = allItems.first(where: { $0.id == editID }) {
+                    commitEdit(item: item)
+                }
+                commitMemo()
+                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            }
         VStack(spacing: 0) {
         HStack(spacing: 8) {
-            // チェックボックス（四角・大きめ太め）
-            Button {
-                item.isDone.toggle()
-                item.updatedAt = Date()
-                try? modelContext.save()
-            } label: {
-                Image(systemName: item.isDone ? "checkmark.square.fill" : "square")
-                    .font(.system(size: 28, weight: .medium))
-                    .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.35))
-                    .animation(.easeInOut(duration: 0.2), value: item.isDone)
-                    .frame(width: 38, height: 38)
-                    .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+            // チェックボックス（タップ領域をアイコンに限定）
+            Image(systemName: item.isDone ? "checkmark.square.fill" : "square")
+                .font(.system(size: 28, weight: .medium))
+                .foregroundStyle(item.isDone ? .green : .secondary.opacity(0.35))
+                .animation(.easeInOut(duration: 0.2), value: item.isDone)
+                .frame(width: 28, height: 28)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    guard !isAnythingEditing else { return }
+                    item.isDone.toggle()
+                    item.updatedAt = Date()
+                    try? modelContext.save()
+                }
 
             // タイトル（通常表示 or インライン編集）
             if isEditing {
@@ -667,9 +765,10 @@ struct TodoListView: View {
                     }
                 }
             } label: {
-                Image(systemName: "note.text")
+                Image(systemName: (item.memo ?? "").isEmpty ? "doc" : "doc.fill")
+                    .rotationEffect(.degrees(90))
                     .font(.system(size: 13, weight: .medium))
-                    .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : ((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.2) : Color.orange.opacity(0.7)))
+                    .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : ((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.2) : Color.purple.opacity(0.5)))
                     .frame(width: 28, height: 28)
             }
             .buttonStyle(.plain)
@@ -721,26 +820,40 @@ struct TodoListView: View {
         if memoOpenItems.contains(item.id) {
             VStack(alignment: .leading, spacing: 4) {
                 if memoEditingItemID == item.id {
-                    // 編集モード
-                    TextField("メモを入力", text: $memoEditingText, axis: .vertical)
-                        .font(.system(size: 13, weight: .regular, design: .rounded))
-                        .foregroundStyle(Color.purple.opacity(0.6))
-                        .lineLimit(1...10)
-                        .focused($isMemoFocused)
+                    // 編集モード（付箋アイコン＋入力欄）
+                    HStack(alignment: .top, spacing: 4) {
+                        Image(systemName: "doc")
+                            .rotationEffect(.degrees(90))
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.purple.opacity(0.5))
+                            .padding(.top, 2)
+                        TextField("メモを入力", text: $memoEditingText, axis: .vertical)
+                            .font(.system(size: 13, weight: .regular, design: .rounded))
+                            .foregroundStyle(Color.purple.opacity(0.6))
+                            .lineLimit(1...10)
+                            .focused($isMemoFocused)
+                    }
                 } else {
-                    // 閲覧モード（タップで編集へ）
-                    Text((item.memo ?? "").isEmpty ? "メモを入力" : item.memo!)
-                        .font(.system(size: 13, weight: .regular, design: .rounded))
-                        .foregroundStyle((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.4) : Color.purple.opacity(0.6))
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            memoEditingItemID = item.id
-                            memoEditingText = item.memo ?? ""
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
-                                isMemoFocused = true
-                            }
+                    // 閲覧モード（付箋アイコン＋テキスト、タップで編集へ）
+                    HStack(alignment: .top, spacing: 4) {
+                        Image(systemName: "doc")
+                            .rotationEffect(.degrees(90))
+                            .font(.system(size: 11))
+                            .foregroundStyle(Color.purple.opacity(0.5))
+                            .padding(.top, 2)
+                        Text((item.memo ?? "").isEmpty ? "メモを入力" : item.memo!)
+                            .font(.system(size: 13, weight: .regular, design: .rounded))
+                            .foregroundStyle((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.4) : Color.purple.opacity(0.6))
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        memoEditingItemID = item.id
+                        memoEditingText = item.memo ?? ""
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                            isMemoFocused = true
                         }
+                    }
                 }
             }
             .padding(.horizontal, 8)
@@ -750,15 +863,20 @@ struct TodoListView: View {
             .padding(.horizontal, 4)
             .padding(.bottom, 4)
         } else if let memo = item.memo, !memo.isEmpty {
-            // 閉じ状態：「メモ:本文」紫字で1行プレビュー
-            Text("メモ: \(memo)")
-                .font(.system(size: 12, weight: .regular, design: .rounded))
-                .foregroundStyle(.purple.opacity(0.5))
-                .lineLimit(1)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, 4)
-                .padding(.bottom, 2)
-                .contentShape(Rectangle())
+            // 閉じ状態：付箋アイコン＋1行プレビュー
+            HStack(spacing: 3) {
+                Image(systemName: "doc")
+                    .rotationEffect(.degrees(90))
+                    .font(.system(size: 10))
+                Text(memo)
+                    .font(.system(size: 12, weight: .regular, design: .rounded))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(.purple.opacity(0.5))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 4)
+            .padding(.bottom, 2)
+            .contentShape(Rectangle())
                 .onTapGesture {
                     withAnimation(.easeInOut(duration: 0.15)) {
                         commitMemo()
@@ -776,7 +894,7 @@ struct TodoListView: View {
                 // ルートレベルのインデント（常に緑）
                 Rectangle()
                     .fill(Color.green.opacity(0.12))
-                    .frame(width: indentBase + 16)  // listRowInsetsのleading分を加算
+                    .frame(width: indentBase + 12)  // listRowInsetsのleading分を加算（チェックボックスにかぶらないよう調整）
                 // 各階層のインデント帯
                 ForEach(0..<depth, id: \.self) { d in
                     Rectangle()
@@ -835,7 +953,7 @@ struct TodoListView: View {
                 HStack(spacing: 0) {
                     Rectangle()
                         .fill(Color.green.opacity(0.12))
-                        .frame(width: indentBase + 16)
+                        .frame(width: indentBase + 12)
                     ForEach(0..<max(0, depth - 1), id: \.self) { d in
                         Rectangle()
                             .fill(depthColor(d))
@@ -862,6 +980,21 @@ struct TodoListView: View {
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
+        }
+    }
+
+    // MARK: - スクロールヘルパー（キーボード対応）
+    private func scrollToItem(_ id: UUID, proxy: ScrollViewProxy) {
+        // 即座に1回、キーボード表示後にもう1回
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                proxy.scrollTo(id, anchor: .bottom)
+            }
+        }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                proxy.scrollTo(id, anchor: .bottom)
+            }
         }
     }
 
@@ -918,6 +1051,12 @@ struct TodoListView: View {
 
     // MARK: - インライン編集開始（既存項目をタップ）
     private func startEditing(item: TodoItem) {
+        // メモ編集中なら保存して抜けるだけ（項目編集には入らない）
+        if memoEditingItemID != nil {
+            commitMemo()
+            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+            return
+        }
         // 編集中の項目があれば先に確定
         if let editID = editingItemID,
            let editItem = allItems.first(where: { $0.id == editID }) {

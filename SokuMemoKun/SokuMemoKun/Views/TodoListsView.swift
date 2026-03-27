@@ -326,12 +326,17 @@ struct TodoListsView: View {
                     .offset(x: 4, y: 4)
             }
         }
-        .overlay(alignment: .bottomLeading) {
+        .overlay(alignment: .topLeading) {
             if list.isLocked {
-                Image(systemName: "lock.fill")
-                    .font(.system(size: 9))
-                    .foregroundStyle(.red.opacity(0.6))
-                    .offset(x: 4, y: -4)
+                ZStack {
+                    Circle()
+                        .fill(Color.orange)
+                        .frame(width: 18, height: 18)
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8))
+                        .foregroundStyle(.white)
+                }
+                .offset(x: -4, y: -4)
             }
         }
         .contextMenu {
