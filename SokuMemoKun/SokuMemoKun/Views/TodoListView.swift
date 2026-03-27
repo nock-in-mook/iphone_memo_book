@@ -1,6 +1,30 @@
 import SwiftUI
 import SwiftData
 
+// L字罫線（シンプルモードの子タスク追加行用）
+private struct LShapeLine: View {
+    let color: Color
+    var body: some View {
+        Canvas { context, size in
+            let lineWidth: CGFloat = 1.5
+            let radius: CGFloat = 4
+            var path = Path()
+            // 上端中央から下へ、角丸で右へ
+            let startX = size.width * 0.15
+            let endX = size.width
+            let midY = size.height * 0.5
+            path.move(to: CGPoint(x: startX, y: 0))
+            path.addLine(to: CGPoint(x: startX, y: midY - radius))
+            path.addQuadCurve(
+                to: CGPoint(x: startX + radius, y: midY),
+                control: CGPoint(x: startX, y: midY)
+            )
+            path.addLine(to: CGPoint(x: endX, y: midY))
+            context.stroke(path, with: .color(color), lineWidth: lineWidth)
+        }
+    }
+}
+
 // ツリーをフラット化した表示用の行データ
 private struct FlatRow: Identifiable {
     enum Kind {
@@ -971,26 +995,25 @@ struct TodoListView: View {
 
             Group {
                 if isSimpleMode {
-                    // シンプルモード: 罫線＋色付き＋ボタン
+                    // シンプルモード: L字罫線＋色付き＋ボタン（左端）
+                    let lineColor = isDisabled ? accentColor.opacity(0.3) : accentColor
                     Button {
                         addEmptyItemAndEdit(parentID: parentID)
                     } label: {
                         HStack(spacing: 0) {
-                            // 罫線
-                            Rectangle()
-                                .fill(accentColor)
-                                .frame(height: 1)
-                            // ＋ボタン
+                            // L字: 縦線＋角丸＋横線＋＋ボタン
+                            LShapeLine(color: lineColor)
+                                .frame(width: 14, height: 20)
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 16))
-                                .foregroundStyle(isDisabled ? accentColor.opacity(0.3) : accentColor)
-                                .padding(.leading, 4)
+                                .foregroundStyle(lineColor)
+                            Spacer()
                         }
                     }
                     .buttonStyle(.plain)
                     .disabled(isDisabled)
                     .padding(.trailing, 12)
-                    .padding(.vertical, 2)
+                    .padding(.vertical, 0)
                     .padding(.leading, indentLeading(depth) + 16)
                 } else {
                     // 詳細モード: 点線枠スタイル
