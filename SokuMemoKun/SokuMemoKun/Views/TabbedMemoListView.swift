@@ -1255,13 +1255,18 @@ struct TabbedMemoListView: View {
                                     let currentTag = tabItems[selectedTabIndex].tag
                                     onAddMemo?(currentTag?.id, selectedChildFilterID)
                                 } label: {
-                                    HStack(spacing: 5) {
-                                        Image(systemName: "plus.circle")
-                                            .font(.system(size: 15))
-                                        Text("このフォルダにメモ作成")
-                                            .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                    VStack(spacing: 2) {
+                                        HStack(spacing: 5) {
+                                            Image(systemName: "plus.circle")
+                                                .font(.system(size: 15))
+                                            Text("このフォルダに")
+                                                .font(.system(size: 14, weight: .semibold, design: .rounded))
+                                        }
+                                        Text("メモ作成")
+                                            .font(.system(size: 14, weight: .semibold, design: .rounded))
                                     }
                                     .foregroundStyle(.blue)
+                                    .multilineTextAlignment(.center)
                                     .padding(.horizontal, 12)
                                     .padding(.vertical, 8)
                                     .background(
