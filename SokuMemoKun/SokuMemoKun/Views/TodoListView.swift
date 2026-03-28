@@ -1079,7 +1079,7 @@ struct TodoListView: View {
         }
         // List行スタイル除去
         .listRowSeparator(.hidden)
-        .listRowBackground(Color.clear)
+        .listRowBackground(Color(uiColor: .systemBackground))
         .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
     }
 
@@ -1156,7 +1156,7 @@ struct TodoListView: View {
                 }
             }
             .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .listRowBackground(Color(uiColor: .systemBackground))
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
         } else {
             // ルート追加（チェックボックスの中心に緑＋ボタン）
@@ -1175,7 +1175,7 @@ struct TodoListView: View {
             // チェックボックスの中心に合わせる: indentLeading(0) + 16(listRowInsets内) + 34/2 - 22/2
             .padding(.leading, indentLeading(0) + 16 + 6)
             .listRowSeparator(.hidden)
-            .listRowBackground(Color.clear)
+            .listRowBackground(Color(uiColor: .systemBackground))
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
         }
     }
