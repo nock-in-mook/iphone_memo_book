@@ -46,7 +46,7 @@ struct TodoListView: View {
     // 展開中の項目（子を表示中）
     @State private var expandedItems: Set<UUID> = []
     // 最大階層数（depth 0〜5 = 6階層、色帯2周分）
-    private let maxDepth = 5
+    private let maxDepth = 4  // 5階層まで（depth 0〜4）
     // 全展開ダイアログ
     @State private var showExpandDialog = false
     // 全チェッククリアダイアログ
@@ -750,21 +750,26 @@ struct TodoListView: View {
     private let indentStep: CGFloat = 28   // 階層ごとのインデント幅（緑帯と統一）
 
     // 階層ごとのインデント色（紫→オレンジ→緑…ループ）
+    // 階層ごとの背景色（薄め）— depth 0=緑, 1=紫, 2=オレンジ, 3=青, 4=茶
     private func depthColor(_ depth: Int) -> Color {
         let colors: [Color] = [
-            .purple.opacity(0.10),    // 子階層1: 紫
-            .orange.opacity(0.10),    // 子階層2: オレンジ
-            .green.opacity(0.12),     // 子階層3: 緑（ルートと同じ）
+            .green.opacity(0.10),     // 階層0: 緑
+            .purple.opacity(0.10),    // 階層1: 紫
+            .orange.opacity(0.10),    // 階層2: オレンジ
+            .blue.opacity(0.10),      // 階層3: 青
+            .brown.opacity(0.10),     // 階層4: 茶色
         ]
         return colors[depth % colors.count]
     }
 
-    // シンプルモード用：階層ごとのアクセント色（濃いめ）
+    // 階層ごとのアクセント色（濃いめ、罫線・＋ボタン・メモ用）
     private func depthAccentColor(_ depth: Int) -> Color {
         let colors: [Color] = [
-            .green.opacity(0.5),      // ルート（depth 0）: 緑
-            .purple.opacity(0.5),     // 子階層1: 紫
-            .orange.opacity(0.5),     // 子階層2: オレンジ
+            .green.opacity(0.5),      // 階層0: 緑
+            .purple.opacity(0.5),     // 階層1: 紫
+            .orange.opacity(0.5),     // 階層2: オレンジ
+            .blue.opacity(0.5),       // 階層3: 青
+            .brown.opacity(0.5),      // 階層4: 茶色
         ]
         return colors[depth % colors.count]
     }
@@ -780,6 +785,7 @@ struct TodoListView: View {
         let isExpanded = expandedItems.contains(item.id)
         let hasKids = hasChildren(item.id)
         let isEditing = editingItemID == item.id
+        let memoColor = depthAccentColor(depth)  // メモの色（階層色）
         let isAnythingEditing = editingItemID != nil || memoEditingItemID != nil
 
         // メインコンテンツ（帯スタイル）
@@ -869,7 +875,7 @@ struct TodoListView: View {
                 Image(systemName: (item.memo ?? "").isEmpty ? "doc" : "doc.fill")
                     .rotationEffect(.degrees(90))
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : ((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.35) : Color.purple.opacity(0.5)))
+                    .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : ((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.35) : memoColor))
                     .frame(width: 36, height: 36)
             }
             .buttonStyle(.plain)
@@ -926,11 +932,11 @@ struct TodoListView: View {
                         Image(systemName: "doc")
                             .rotationEffect(.degrees(90))
                             .font(.system(size: 11))
-                            .foregroundStyle(Color.purple.opacity(0.5))
+                            .foregroundStyle(memoColor)
                             .padding(.top, 2)
                         TextField("\"\(item.title)\"  にメモを追加", text: $memoEditingText, axis: .vertical)
                             .font(.system(size: 13, weight: .regular, design: .rounded))
-                            .foregroundStyle(Color.purple.opacity(0.6))
+                            .foregroundStyle(memoColor)
                             .lineLimit(1...10)
                             .focused($isMemoFocused)
                     }
@@ -940,11 +946,11 @@ struct TodoListView: View {
                         Image(systemName: "doc")
                             .rotationEffect(.degrees(90))
                             .font(.system(size: 11))
-                            .foregroundStyle(Color.purple.opacity(0.5))
+                            .foregroundStyle(memoColor)
                             .padding(.top, 2)
                         Text((item.memo ?? "").isEmpty ? "\"\(item.title)\"  にメモを追加" : item.memo!)
                             .font(.system(size: 13, weight: .regular, design: .rounded))
-                            .foregroundStyle((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.4) : Color.purple.opacity(0.6))
+                            .foregroundStyle((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.4) : memoColor)
                             .frame(maxWidth: .infinity, alignment: .leading)
                         // メモ削除ボタン（メモがある時のみ）
                         if !(item.memo ?? "").isEmpty {
@@ -981,7 +987,7 @@ struct TodoListView: View {
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(Color.purple.opacity(0.04))
+            .background(memoColor.opacity(0.08))
             .cornerRadius(6)
             .padding(.horizontal, 4)
             .padding(.bottom, 4)
@@ -992,17 +998,17 @@ struct TodoListView: View {
                 Image(systemName: "doc")
                     .rotationEffect(.degrees(90))
                     .font(.system(size: 11))
-                    .foregroundStyle(Color.purple.opacity(0.5))
+                    .foregroundStyle(memoColor)
                     .padding(.top, 2)
                 Text(memo)
                     .font(.system(size: 13, weight: .regular, design: .rounded))
-                    .foregroundStyle(Color.purple.opacity(0.6))
+                    .foregroundStyle(memoColor)
                     .lineLimit(1)
                     .frame(maxWidth: .infinity, alignment: .leading)
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 6)
-            .background(Color.purple.opacity(0.04))
+            .background(memoColor.opacity(0.08))
             .cornerRadius(6)
             .padding(.horizontal, 4)
             .padding(.bottom, 4)
@@ -1043,9 +1049,7 @@ struct TodoListView: View {
         } // 外側HStack（インデント用）
         // 縦線の位置から右を階層色で塗りつぶし
         .background(alignment: .trailing) {
-            let fillColor: Color = depth == 0
-                ? Color.green.opacity(0.08)
-                : depthColor(depth - 1).opacity(0.8)
+            let fillColor: Color = depthColor(depth).opacity(0.8)
             // 塗りの左端 = 縦線の位置（depth 0 は行全体）
             let paintLeft: CGFloat = depth == 0
                 ? 0
