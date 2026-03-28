@@ -276,7 +276,7 @@ struct MemoInputView: View {
             ZStack(alignment: .topTrailing) {
                 // 本文入力（編集中はTextEditor、閲覧中はText）
                 ZStack(alignment: .topLeading) {
-                    if isEditing {
+                    if isEditing || !viewModel.inputText.isEmpty {
                         LineNumberTextEditor(
                             text: $viewModel.inputText,
                             isFocused: $isTextEditorFocused,
@@ -528,8 +528,8 @@ struct MemoInputView: View {
             }
         }
         .onChange(of: viewModel.loadMemoCounter) { _, _ in
-            // 既存メモ読み込み時は閲覧モードで開始
-            isEditing = false
+            // 既存メモ読み込み時もLineNumberTextEditorを表示（フォーカスなし）
+            isEditing = true
             isTextEditorFocused = false
         }
         .onChange(of: viewModel.inputText) { _, newValue in

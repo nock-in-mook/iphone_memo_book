@@ -170,6 +170,7 @@ struct MainView: View {
                 }
             }
             .ignoresSafeArea(.keyboard)
+            .contentShape(Rectangle())
             .simultaneousGesture(
                 TapGesture().onEnded {
                     // 画面のどこをタップしてもキーボードを閉じる
