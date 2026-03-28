@@ -1,20 +1,21 @@
 import SwiftUI
 import SwiftData
 
-// L字の角部分（縦線の下端＋横線をRectangleで描画、ピクセル精度で統一）
+// L字の角部分（縦線＋横線をRectangleで描画、重なりなし）
 private struct LShapeCorner: View {
     let color: Color
+    private let lineWidth: CGFloat = 1.5
     var body: some View {
         GeometryReader { geo in
             // 縦線（上端から下端まで）
             Rectangle()
                 .fill(color)
-                .frame(width: 1.5, height: geo.size.height)
-            // 横線（縦線の下端から右端まで）
+                .frame(width: lineWidth, height: geo.size.height)
+            // 横線（縦線の右端から右端まで、重なり防止）
             Rectangle()
                 .fill(color)
-                .frame(width: geo.size.width, height: 1.5)
-                .position(x: geo.size.width / 2, y: geo.size.height)
+                .frame(width: geo.size.width - lineWidth, height: lineWidth)
+                .offset(x: lineWidth, y: geo.size.height - lineWidth)
         }
     }
 }
