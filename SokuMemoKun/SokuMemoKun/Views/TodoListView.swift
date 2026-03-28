@@ -895,7 +895,7 @@ struct TodoListView: View {
                             } label: {
                                 Image(systemName: "trash")
                                     .font(.system(size: 11))
-                                    .foregroundStyle(Color.secondary.opacity(0.3))
+                                    .foregroundStyle(Color.secondary.opacity(0.5))
                                     .padding(4)
                             }
                             .buttonStyle(.plain)
