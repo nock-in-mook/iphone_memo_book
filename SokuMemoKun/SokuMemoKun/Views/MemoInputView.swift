@@ -517,6 +517,10 @@ struct MemoInputView: View {
         .onChange(of: isTextEditorFocused) { _, focused in
             // フォーカス喪失→カーソルが消えるだけ（Viewは切り替えない、スクロール位置保持）
         }
+        // キーボード非表示通知でフォーカス状態を同期
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in
+            isTextEditorFocused = false
+        }
         .onChange(of: showParentDial) { _, isShowing in
             // ルーレット展開時はテキストのフォーカスを外す
             if isShowing {
