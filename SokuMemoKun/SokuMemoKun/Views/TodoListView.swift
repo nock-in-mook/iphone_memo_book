@@ -1148,34 +1148,49 @@ struct TodoListView: View {
 
     // MARK: - ドラッグ並び替え（List .onMove）
     private func moveFlatRows(from source: IndexSet, to destination: Int) {
-        var rows = flatRows
+        let rows = flatRows
 
         // 移動元のアイテムを特定
         guard let sourceIndex = source.first,
               case .item(let movedItem) = rows[sourceIndex].kind else { return }
 
-        // 移動先が同じ親の範囲内か確認
         let movedParentID = movedItem.parentID
 
-        // 移動先のアイテムの親を確認（移動先が範囲外なら無視）
-        let destIndex = destination > sourceIndex ? destination - 1 : destination
-        let clampedDest = min(max(destIndex, 0), rows.count - 1)
-        if clampedDest < rows.count {
-            switch rows[clampedDest].kind {
+        // 移動先の隣接アイテムの親を確認
+        // destination は「挿入先のインデックス」なので、その前後を確認
+        let checkIndex = destination > sourceIndex
+            ? min(destination, rows.count - 1)      // 下に移動: 挿入先の位置
+            : max(destination, 0)                     // 上に移動: 挿入先の位置
+
+        // 移動先が同じ親でなければ元に戻す
+        var isValidMove = false
+        if checkIndex >= 0 && checkIndex < rows.count {
+            switch rows[checkIndex].kind {
             case .item(let destItem):
-                // 移動先が違う親なら無視
-                if destItem.parentID != movedParentID { return }
-            case .addButton:
-                // ＋ボタン行への移動は許可（同じ親の末尾）
-                break
+                isValidMove = destItem.parentID == movedParentID
+            case .addButton(let parentID):
+                // ＋ボタン行は、その親の子として扱う
+                isValidMove = parentID == movedParentID
             }
         }
 
-        // flatRows上で移動
-        rows.move(fromOffsets: source, toOffset: destination)
+        // 不正な移動 → sortOrderを振り直して元の順序を強制復元
+        if !isValidMove {
+            let siblings = allItems
+                .filter { $0.parentID == movedParentID }
+                .sorted { $0.sortOrder < $1.sortOrder }
+            for (i, item) in siblings.enumerated() {
+                item.sortOrder = i
+            }
+            try? modelContext.save()
+            return
+        }
 
-        // 同じ親の兄弟だけ抽出してsortOrderを振り直す
-        let siblings = rows.compactMap { row -> TodoItem? in
+        // 正当な移動 → flatRows上で移動してsortOrder更新
+        var mutableRows = rows
+        mutableRows.move(fromOffsets: source, toOffset: destination)
+
+        let siblings = mutableRows.compactMap { row -> TodoItem? in
             if case .item(let item) = row.kind, item.parentID == movedParentID {
                 return item
             }
