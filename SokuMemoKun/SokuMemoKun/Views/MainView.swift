@@ -170,10 +170,12 @@ struct MainView: View {
                 }
             }
             .ignoresSafeArea(.keyboard)
-            .onTapGesture {
-                // 画面のどこをタップしてもキーボードを閉じる
-                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-            }
+            .simultaneousGesture(
+                TapGesture().onEnded {
+                    // 画面のどこをタップしてもキーボードを閉じる
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                }
+            )
             .onChange(of: viewModel.inputText) { _, _ in triggerSuggest() }
             .onChange(of: viewModel.titleText) { _, _ in triggerSuggest() }
             .onChange(of: viewModel.selectedTagID) { _, newVal in
@@ -293,6 +295,14 @@ struct MainView: View {
                                 .font(.system(size: 15))
                         }
                     }
+                }
+                // キーボード上部に「完了」ボタン
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完了") {
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    }
+                    .font(.system(size: 15, weight: .semibold))
                 }
             }
             // 保存トースト
