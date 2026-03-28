@@ -1133,13 +1133,13 @@ struct TabbedMemoListView: View {
                             .zIndex(2)
                     }
 
-                    // 左下: ゴミ箱ボタン
+                    // 下部ボタンバー（1つのHStackで均等配置）
                     if !isCompact {
                     VStack {
                         Spacer()
-                        HStack {
+                        HStack(spacing: 8) {
                         if isSelectMode {
-                            // 取消ボタン
+                            // 選択モード: 取消 + 実行ボタン
                             Button {
                                 selectMode = .none
                                 selectedMemoIDs.removeAll()
@@ -1156,7 +1156,7 @@ struct TabbedMemoListView: View {
                                     )
                             }
                             .buttonStyle(.plain)
-                            // 実行ボタン（モードに応じて変わる）
+                            Spacer()
                             if selectMode == .delete {
                                 Button {
                                     showDeleteConfirm = true
@@ -1206,7 +1206,7 @@ struct TabbedMemoListView: View {
                                 .disabled(selectedMemoIDs.isEmpty)
                             }
                         } else {
-                            // 通常時: ゴミ箱ボタン
+                            // 通常時: ゴミ箱 | トップ移動 | (メモ作成) | グリッド
                             Button {
                                 selectMode = .delete
                                 selectedMemoIDs.removeAll()
@@ -1226,7 +1226,7 @@ struct TabbedMemoListView: View {
                                     )
                             }
                             .buttonStyle(.plain)
-                            // 通常時: トップに移動ボタン
+
                             Button {
                                 selectMode = .moveToTop
                                 selectedMemoIDs.removeAll()
@@ -1246,20 +1246,11 @@ struct TabbedMemoListView: View {
                                     )
                             }
                             .buttonStyle(.plain)
-                        }
-                            Spacer()
-                    }
-                    .padding(.horizontal, 10)
-                    .padding(.bottom, 8)
-                    }
-                    }
 
-                    // 下部中央: メモ作成ボタン（「すべて」「よく見る」タブでは非表示）
-                    if !isCompact && !isSelectMode && !isAllTab && !isFrequentTab {
-                        VStack {
                             Spacer()
-                            HStack {
-                                Spacer()
+
+                            // メモ作成ボタン（「すべて」「よく見る」タブでは非表示）
+                            if !isAllTab && !isFrequentTab {
                                 Button {
                                     let currentTag = tabItems[selectedTabIndex].tag
                                     onAddMemo?(currentTag?.id, selectedChildFilterID)
@@ -1271,35 +1262,29 @@ struct TabbedMemoListView: View {
                                             .font(.system(size: 15, weight: .semibold, design: .rounded))
                                     }
                                     .foregroundStyle(.blue)
+                                    .padding(.horizontal, 12)
+                                    .padding(.vertical, 8)
+                                    .background(
+                                        Capsule()
+                                            .fill(Color(uiColor: .systemGray6))
+                                            .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                                    )
+                                    .overlay(
+                                        Capsule()
+                                            .stroke(Color.gray.opacity(0.4), lineWidth: 1.0)
+                                    )
                                 }
                                 .buttonStyle(.plain)
-                                .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
-                                .background(
-                                    Capsule()
-                                        .fill(Color(uiColor: .systemGray6))
-                                        .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
-                                )
-                                .overlay(
-                                    Capsule()
-                                        .stroke(Color.gray.opacity(0.4), lineWidth: 1.0)
-                                )
-                                Spacer()
                             }
-                            .padding(.horizontal, 10)
-                            .padding(.bottom, 8)
-                        }
-                    }
 
-                    // 右下: グリッドサイズボタン
-                    VStack {
-                        Spacer()
-                        HStack {
                             Spacer()
+
                             gridSizeButton
-                                .padding(.horizontal, 10)
-                                .padding(.bottom, 8)
                         }
+                        }
+                        .padding(.horizontal, 10)
+                        .padding(.bottom, 8)
+                    }
                     }
                 }
                 }
