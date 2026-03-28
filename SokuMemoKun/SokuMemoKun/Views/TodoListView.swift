@@ -869,7 +869,7 @@ struct TodoListView: View {
                 Image(systemName: (item.memo ?? "").isEmpty ? "doc" : "doc.fill")
                     .rotationEffect(.degrees(90))
                     .font(.system(size: 16, weight: .medium))
-                    .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : ((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.2) : Color.purple.opacity(0.5)))
+                    .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : ((item.memo ?? "").isEmpty ? Color.secondary.opacity(0.35) : Color.purple.opacity(0.5)))
                     .frame(width: 36, height: 36)
             }
             .buttonStyle(.plain)
@@ -906,7 +906,7 @@ struct TodoListView: View {
                 } label: {
                     Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
                         .font(.system(size: 15, weight: .semibold))
-                        .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : (isExpanded ? Color.orange : Color.secondary.opacity(0.2)))
+                        .foregroundStyle(isAnythingEditing ? Color.secondary.opacity(0.2) : (isExpanded ? Color.orange : Color.secondary.opacity(0.35)))
                         .frame(width: 40, height: 40)
                 }
                 .buttonStyle(.plain)
@@ -1073,7 +1073,7 @@ struct TodoListView: View {
         // 下の区切り線
         .background(alignment: .bottom) {
             Rectangle()
-                .fill(Color.secondary.opacity(0.15))
+                .fill(Color.secondary.opacity(0.3))
                 .frame(height: 0.5)
                 .padding(.leading, indentLeading(depth) + 12)
         }
