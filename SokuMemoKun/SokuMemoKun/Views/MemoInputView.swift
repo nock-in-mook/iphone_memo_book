@@ -760,12 +760,13 @@ struct MemoInputView: View {
             }
             .disabled(viewModel.inputText.isEmpty)
 
-            // 右: 差分あり→「確定」、差分なし→「閉じる」（既存メモを開いている時のみ表示）
+            // 右: 編集中→「確定」、それ以外→「メモを閉じる」
             if viewModel.editingMemo != nil {
-                if hasDiff {
+                if isTextEditorFocused {
+                    // 編集中（カーソルあり）→ 即座に「確定」
                     Button {
-                        isEditing = true
                         isTextEditorFocused = false
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         onConfirm?()
                     } label: {
                         Label("確定", systemImage: "checkmark.circle").font(.system(size: 14))
@@ -773,18 +774,17 @@ struct MemoInputView: View {
                     }
                 } else {
                     Button {
-                        isEditing = true
                         isTextEditorFocused = false
                         viewModel.clearInput()
                     } label: {
-                        Label("閉じる", systemImage: "xmark.circle").font(.system(size: 14))
+                        Label("メモを閉じる", systemImage: "xmark.circle").font(.system(size: 14))
                     }
                 }
             } else if viewModel.hasText {
                 // 新規メモでテキストがある場合のみ「確定」
                 Button {
-                    isEditing = true
                     isTextEditorFocused = false
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     onConfirm?()
                 } label: {
                     Label("確定", systemImage: "checkmark.circle").font(.system(size: 14))
