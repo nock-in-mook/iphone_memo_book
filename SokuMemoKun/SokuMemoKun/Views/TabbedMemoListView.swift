@@ -978,7 +978,10 @@ struct TabbedMemoListView: View {
                 // メモコンテンツ（タブごとにトランジション）
                 ZStack {
 
-                    if isFrequentTab {
+                    if isCompact {
+                        // 最大化時: メモ一覧を非表示
+                        Color.clear
+                    } else if isFrequentTab {
                         // 「よく見る」特殊レイアウト: 左右分割
                         frequentTabContent(geo: geo)
                     } else if filteredMemos.isEmpty {
@@ -1058,13 +1061,18 @@ struct TabbedMemoListView: View {
                             onAddToCurrentTab?(currentTag?.id)
                         } label: {
                             Label("記入中のメモをここに保存", systemImage: "arrow.down.doc")
-                                .font(.system(size: 13, weight: .medium, design: .rounded))
-                                .foregroundStyle(.secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
+                                .font(.system(size: 15, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.blue)
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 8)
                                 .background(
                                     Capsule()
-                                        .fill(Color(uiColor: .systemBackground).opacity(0.85))
+                                        .fill(Color(uiColor: .systemGray6))
+                                        .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                                )
+                                .overlay(
+                                    Capsule()
+                                        .stroke(Color.gray.opacity(0.4), lineWidth: 1.0)
                                 )
                         }
                         .buttonStyle(.plain)
