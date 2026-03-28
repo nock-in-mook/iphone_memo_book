@@ -30,6 +30,7 @@ struct NewTagSheetView: View {
 
     var body: some View {
         NavigationStack {
+            ScrollView {
             VStack(spacing: 16) {
                 // タグ名入力
                 VStack(alignment: .leading, spacing: 6) {
@@ -104,9 +105,9 @@ struct NewTagSheetView: View {
                     ColorPaletteGrid(selectedIndex: $selectedColorIndex)
                 }
 
-                Spacer()
             }
             .padding(20)
+            }
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .principal) {
