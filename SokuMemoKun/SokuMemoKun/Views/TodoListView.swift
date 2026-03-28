@@ -1353,15 +1353,19 @@ struct TodoListView: View {
 
         let item = TodoItem(title: "", listID: todoList.id, parentID: parentID, sortOrder: maxOrder + 1)
         item.tags = [getOrCreateTodoTag()]
-        modelContext.insert(item)
-        // save()はsubmitEdit側で行う（ここでsave()すると@Query再フェッチで前の編集が消える）
 
-        if let parentID = parentID {
-            expandedItems.insert(parentID)
+        // アニメーションなしで挿入（depth 0で一瞬描画されるチラつき防止）
+        var transaction = Transaction()
+        transaction.disablesAnimations = true
+        withTransaction(transaction) {
+            modelContext.insert(item)
+            if let parentID = parentID {
+                expandedItems.insert(parentID)
+            }
+            editingItemID = item.id
+            editingText = ""
         }
 
-        editingItemID = item.id
-        editingText = ""
         DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
             isEditingFocused = true
         }
