@@ -366,16 +366,16 @@ struct MemoInputView: View {
                         }
                     } label: {
                         Image(systemName: isExpanded ? "arrow.down.forward.and.arrow.up.backward" : "arrow.up.backward.and.arrow.down.forward")
-                            .font(.system(size: 12, weight: .semibold))
+                            .font(.system(size: 10, weight: .semibold))
                             .foregroundStyle(.white)
-                            .frame(width: 25, height: 25)
+                            .frame(width: 21, height: 21)
                             .background(
                                 Circle().fill(Color.blue.opacity(0.6))
                             )
                             .shadow(color: .black.opacity(0.2), radius: 2, x: -1, y: 1)
                     }
-                    .padding(.trailing, 4)
-                    .padding(.bottom, 8)
+                    .padding(.trailing, 3)
+                    .padding(.bottom, 3)
                 }
             }
             .overlay(alignment: .bottomLeading) {
@@ -805,7 +805,7 @@ struct MemoInputView: View {
     private let trayCornerRadius: CGFloat = 10
 
     // タブ寸法
-    private let tabWidth: CGFloat = 56      // タブの横幅（「◀ タグ」テキスト分）
+    private let tabWidth: CGFloat = 38      // タブの横幅（「タグ」テキスト分）
     private let tabHeight: CGFloat = 22     // タブの高さ（最初のデザインと同じ細さ）
     private let tabRadius: CGFloat = 6      // タブの左側角丸
 
@@ -970,13 +970,12 @@ struct MemoInputView: View {
                     // 完全収納時: 矢印だけ
                     Text("◀").font(.system(size: 12))
                 } else {
-                    Text(showParentDial ? "▶" : "◀").font(.system(size: 12))
                     Text(showParentDial ? "しまう" : "タグ").font(.system(size: 13, weight: .bold, design: .rounded))
                 }
             }
             .foregroundStyle(.white)
             .frame(width: trayHidden ? hiddenPeekAmount : tabWidth, height: tabHeight, alignment: .leading)
-            .padding(.leading, trayHidden ? 4 : 6)
+            .padding(.leading, trayHidden ? 4 : 3)
             .contentShape(Rectangle())
             .onTapGesture {
                 withAnimation(.spring(response: 0.3)) {

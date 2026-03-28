@@ -527,13 +527,13 @@ struct QuickSortCellView: View {
 
     private func expandButtonLabel(expanded: Bool) -> some View {
         Image(systemName: expanded ? "arrow.down.forward.and.arrow.up.backward" : "arrow.up.backward.and.arrow.down.forward")
-            .font(.system(size: 12, weight: .semibold))
+            .font(.system(size: 10, weight: .semibold))
             .foregroundStyle(.white)
-            .frame(width: 25, height: 25)
+            .frame(width: 21, height: 21)
             .background(Circle().fill(Color.blue.opacity(0.6)))
             .shadow(color: .black.opacity(0.2), radius: 2, x: -1, y: 1)
-            .padding(.trailing, 4)
-            .padding(.bottom, 8)
+            .padding(.trailing, 3)
+            .padding(.bottom, 3)
     }
 
     @ViewBuilder
