@@ -1054,6 +1054,7 @@ struct TabbedMemoListView: View {
                 // 上部ツールバー
                 if isCompact {
                     // コンパクト時（入力欄展開）: 「記入中のメモをここに保存」
+                    let canSaveHere = !isAllTab && !isFrequentTab && !isNoTagTab
                     HStack {
                         Spacer()
                         Button {
@@ -1062,7 +1063,7 @@ struct TabbedMemoListView: View {
                         } label: {
                             Label("記入中のメモをここに保存", systemImage: "arrow.down.doc")
                                 .font(.system(size: 15, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.blue)
+                                .foregroundStyle(canSaveHere ? .blue : .secondary.opacity(0.3))
                                 .padding(.horizontal, 14)
                                 .padding(.vertical, 8)
                                 .background(
@@ -1072,10 +1073,11 @@ struct TabbedMemoListView: View {
                                 )
                                 .overlay(
                                     Capsule()
-                                        .stroke(Color.gray.opacity(0.4), lineWidth: 1.0)
+                                        .stroke(Color.gray.opacity(canSaveHere ? 0.4 : 0.15), lineWidth: 1.0)
                                 )
                         }
                         .buttonStyle(.plain)
+                        .disabled(!canSaveHere)
                         Spacer()
                     }
                     .padding(.horizontal, 10)
