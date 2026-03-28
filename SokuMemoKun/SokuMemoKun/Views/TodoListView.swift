@@ -1123,12 +1123,12 @@ struct TodoListView: View {
                         }
                     }
             }
-            // 行全体を親階層の色で塗りつぶし
+            // 行全体をこの階層の色で塗りつぶし（子と同じ色）
             .background {
-                if depth <= 1 {
+                if depth == 0 {
                     Color.green.opacity(0.08)
                 } else {
-                    depthColor(depth - 2).opacity(0.8)
+                    depthColor(depth - 1).opacity(0.8)
                 }
             }
             // シンプルモード: 上位祖先の縦線（自分の階層のL字より上の階層）
