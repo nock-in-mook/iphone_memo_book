@@ -297,14 +297,14 @@ struct QuickSortView: View {
             }
 
 
-            // カルーセル（フリック無効・タップのみでページ移動）
+            // カルーセル（フリックでページ送り対応）
             CarouselView(
                 items: activeMemos,
                 cardWidth: geo.size.width,
                 cardHeight: cellHeight,
                 currentMemoID: $scrolledMemoID,
                 isScrolling: $isCarouselScrolling,
-                isScrollDisabled: true,
+                isScrollDisabled: false,
                 dialHeight: QuickSortCellView.dialAreaHeight,
                 cardContent: { memo in
                     return AnyView(
