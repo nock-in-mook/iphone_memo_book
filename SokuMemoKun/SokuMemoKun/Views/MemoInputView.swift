@@ -763,11 +763,10 @@ struct MemoInputView: View {
             // 右: 編集中→「確定」、それ以外→「メモを閉じる」
             if viewModel.editingMemo != nil {
                 if isTextEditorFocused {
-                    // 編集中（カーソルあり）→ 即座に「確定」
+                    // 編集中（カーソルあり）→ カーソルを消すだけ（枠外タップと同じ）
                     Button {
                         isTextEditorFocused = false
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        onConfirm?()
                     } label: {
                         Label("確定", systemImage: "checkmark.circle").font(.system(size: 14))
                             .foregroundStyle(.blue)
