@@ -1,25 +1,20 @@
 import SwiftUI
 import SwiftData
 
-// L字の角丸部分のみ描画（縦線はRectangleで別途描画して重なり防止）
+// L字の角部分（縦線の下端＋横線をRectangleで描画、ピクセル精度で統一）
 private struct LShapeCorner: View {
     let color: Color
     var body: some View {
-        Canvas { context, size in
-            let radius: CGFloat = 4
-            let startX: CGFloat = 0.75  // Rectangleの中央と一致
-            let endX = size.width
-            let midY = size.height
-            // 角丸カーブ＋横線（Rectangleに合わせて太めに）
-            var path = Path()
-            path.move(to: CGPoint(x: startX, y: 0))
-            path.addLine(to: CGPoint(x: startX, y: midY - radius))
-            path.addQuadCurve(
-                to: CGPoint(x: startX + radius, y: midY),
-                control: CGPoint(x: startX, y: midY)
-            )
-            path.addLine(to: CGPoint(x: endX, y: midY))
-            context.stroke(path, with: .color(color), lineWidth: 1.5)
+        GeometryReader { geo in
+            // 縦線（上端から下端まで）
+            Rectangle()
+                .fill(color)
+                .frame(width: 1.5, height: geo.size.height)
+            // 横線（縦線の下端から右端まで）
+            Rectangle()
+                .fill(color)
+                .frame(width: geo.size.width, height: 1.5)
+                .position(x: geo.size.width / 2, y: geo.size.height)
         }
     }
 }
