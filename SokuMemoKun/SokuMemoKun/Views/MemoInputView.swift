@@ -338,7 +338,7 @@ struct MemoInputView: View {
                         Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
                             .font(.system(size: 17))
                             .foregroundStyle(.gray.opacity(0.5))
-                            .padding(.leading, showLineNumbers ? 44 : 14)
+                            .padding(.leading, showLineNumbers ? 48 : 18)
                             .padding(.trailing, 8)
                             .padding(.top, 28)
                             .padding(.bottom, 24)
@@ -806,7 +806,7 @@ struct MemoInputView: View {
     private let trayCornerRadius: CGFloat = 10
 
     // タブ寸法
-    private let tabWidth: CGFloat = 80      // タブの横幅（「◀ タグ付け」テキスト分）
+    private let tabWidth: CGFloat = 56      // タブの横幅（「◀ タグ」テキスト分）
     private let tabHeight: CGFloat = 22     // タブの高さ（最初のデザインと同じ細さ）
     private let tabRadius: CGFloat = 6      // タブの左側角丸
 
@@ -972,7 +972,7 @@ struct MemoInputView: View {
                     Text("◀").font(.system(size: 12))
                 } else {
                     Text(showParentDial ? "▶" : "◀").font(.system(size: 12))
-                    Text(showParentDial ? "しまう" : "タグ付け").font(.system(size: 13, weight: .bold, design: .rounded))
+                    Text(showParentDial ? "しまう" : "タグ").font(.system(size: 13, weight: .bold, design: .rounded))
                 }
             }
             .foregroundStyle(.white)
@@ -1039,7 +1039,7 @@ struct MemoInputView: View {
                 .frame(width: 20, height: 60)
                 .background(
                     RoundedRectangle(cornerRadius: 4)
-                        .fill(Color.white.opacity(0.2))
+                        .fill(Color.white.opacity(0.15))
                 )
                 .contentShape(Rectangle())
                 .onTapGesture {

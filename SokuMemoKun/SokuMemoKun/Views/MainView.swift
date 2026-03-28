@@ -84,7 +84,8 @@ struct MainView: View {
                                 hasDiff: viewModel.inputText != originalContent || viewModel.titleText != originalTitle,
                                 onConfirm: { confirmMemo() }
                             )
-                            .frame(height: isInputExpanded ? geo.size.height * 0.85 : geo.size.height * 0.48 - 30)
+                            // ルーレット下端に揃える固定高さ: タブ22+上余白10+ルーレット211+ボタン行9+下余白6+ヘッダー40+Divider2+フッター28 = 328
+.frame(height: isInputExpanded ? geo.size.height * 0.85 : 328)
 
                             // Specialメニュー用スペース（入力欄とフォルダの間）
                             // 並び替えモード中は非表示（全体を上に詰める）

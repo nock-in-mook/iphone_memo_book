@@ -424,11 +424,11 @@ struct TagDialView: View {
             if sc {
                 drawCanvasEdge(context: &context, cx: cx, cy: cy, radius: childInnerR, lineWidth: 1.5, brightness: (0.3, 0.45, 0.3))
             }
-            // ポインター
-            drawCanvasPointer(context: &context, cy: cy)
+            // ポインター（収納時は非表示）
+            if isOpen { drawCanvasPointer(context: &context, cy: cy) }
             // インナーシャドウ（弧の左端位置を計算して、弧の外にはみ出さないようにする）
             let shadowSize: CGFloat = 7
-            let shadowColor = Color.black.opacity(0.3)
+            let shadowColor = Color.black.opacity(0.1)
             let clear = Color.clear
             let sinAngle = min(1.0, cy / parentOuterR)
             let cosAngle = sqrt(1.0 - sinAngle * sinAngle)
@@ -484,7 +484,7 @@ struct TagDialView: View {
                 let isNone = option.id == "none"
                 context.fill(sector, with: .color(isNone ? .white : option.color))
             } else {
-                context.fill(sector, with: .color(hasTag ? .white : Color(white: 0.92)))
+                context.fill(sector, with: .color(Color(white: 0.92)))
             }
 
             // テキスト・仕切り線にはfadeを適用
@@ -514,7 +514,8 @@ struct TagDialView: View {
                 context.stroke(bottomLine, with: .color(Color(white: 0.35).opacity(Double(fade) * 0.5)), lineWidth: 1.5)
             }
 
-            // テキスト
+            // テキスト（収納時は非表示）
+            guard isOpen else { context.opacity = 1.0; continue }
             let cgMid = (180.0 - Double(displayAngle)) * .pi / 180
             let textX = cx + midR * CGFloat(cos(cgMid))
             let textY = cy + midR * CGFloat(sin(cgMid))
@@ -603,8 +604,11 @@ struct TagDialView: View {
         pointer.addLine(to: CGPoint(x: pLeft + pw, y: cy))
         pointer.addLine(to: CGPoint(x: pLeft, y: cy + ph / 2))
         pointer.closeSubpath()
+        let pointerColors: [Color] = isOpen
+            ? [Color(red: 0.9, green: 0.15, blue: 0.1), Color(red: 0.7, green: 0.1, blue: 0.08)]
+            : [Color(white: 0.55), Color(white: 0.45)]
         context.fill(pointer, with: .linearGradient(
-            Gradient(colors: [Color(red: 0.9, green: 0.15, blue: 0.1), Color(red: 0.7, green: 0.1, blue: 0.08)]),
+            Gradient(colors: pointerColors),
             startPoint: CGPoint(x: 0, y: cy - ph / 2), endPoint: CGPoint(x: 0, y: cy + ph / 2)
         ))
         var hl = Path()
@@ -686,13 +690,13 @@ struct TagDialView: View {
                                         innerR: innerR, outerR: outerR, fade: fade)
                         }
 
-                        // テキスト
-                        sectorTextView(
+                        // テキスト（収納時は非表示）
+                        if isOpen { sectorTextView(
                             option: option, center: center,
                             midR: (innerR + outerR) / 2,
                             displayAngle: displayAngle, isSelected: isSelected,
                             maxChars: maxChars
-                        )
+                        ) }
                     }
                     .opacity(fade)
                 }
@@ -733,7 +737,7 @@ struct TagDialView: View {
             if option.id == "none" { return .white }
             return option.color
         } else {
-            return .white
+            return Color(white: 0.92)
         }
     }
 
@@ -749,7 +753,7 @@ struct TagDialView: View {
         let isNoneTag = option.id == "none"
         let isParent = maxChars >= 10
         let maxFontSize: CGFloat = isNoneTag ? (isParent ? 16 : 14) : (isParent ? 22 : 16)
-        let textColor: Color = isNoneTag ? Color(white: 0.55) : (isSelected ? .black : Color(white: 0.25))
+        let textColor: Color = isNoneTag ? Color(white: 0.55) : Color(white: 0.25)
 
         // 文字数制限（半角幅換算）
         let maxHalfWidthUnits: CGFloat = isParent ? 10 : 7
@@ -879,10 +883,9 @@ struct TagDialView: View {
         }
         .fill(
             LinearGradient(
-                colors: [
-                    Color(red: 0.9, green: 0.15, blue: 0.1),
-                    Color(red: 0.7, green: 0.1, blue: 0.08)
-                ],
+                colors: isOpen
+                    ? [Color(red: 0.9, green: 0.15, blue: 0.1), Color(red: 0.7, green: 0.1, blue: 0.08)]
+                    : [Color(white: 0.55), Color(white: 0.45)],
                 startPoint: UnitPoint(x: 0, y: (cy - ph / 2) / dialHeight),
                 endPoint: UnitPoint(x: 0, y: (cy + ph / 2) / dialHeight)
             )
@@ -905,7 +908,7 @@ struct TagDialView: View {
 
         // 上辺
         VStack(spacing: 0) {
-            LinearGradient(colors: [.black.opacity(0.2), .clear],
+            LinearGradient(colors: [.black.opacity(0.08), .clear],
                            startPoint: .top, endPoint: .bottom)
                 .frame(height: shadowSize)
                 .padding(.leading, shadowLeft)
@@ -915,7 +918,7 @@ struct TagDialView: View {
         // 下辺
         VStack(spacing: 0) {
             Spacer(minLength: 0)
-            LinearGradient(colors: [.black.opacity(0.2), .clear],
+            LinearGradient(colors: [.black.opacity(0.08), .clear],
                            startPoint: .bottom, endPoint: .top)
                 .frame(height: shadowSize)
                 .padding(.leading, shadowLeft)
@@ -924,7 +927,7 @@ struct TagDialView: View {
         // 右辺
         HStack(spacing: 0) {
             Spacer(minLength: 0)
-            LinearGradient(colors: [.black.opacity(0.2), .clear],
+            LinearGradient(colors: [.black.opacity(0.08), .clear],
                            startPoint: .trailing, endPoint: .leading)
                 .frame(width: shadowSize)
         }
