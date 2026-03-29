@@ -318,9 +318,11 @@ struct QuickSortCellView: View {
             isContentEditing = false
         }
         if showDialArea {
-            withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false }
+            // ルーレット表示中はタグモードに戻る（ルーレットは残す）
+            editMode = .tag
+        } else {
+            editMode = .none
         }
-        editMode = .none
     }
 
     // 外部からの編集モード切替
@@ -332,18 +334,16 @@ struct QuickSortCellView: View {
         case .none:
             isTitleFocused = false
             if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
-            if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
+            // ルーレット表示中は閉じない（しまうボタンで明示的に閉じる）
             commitTitle()
         case .title:
             if isContentEditing { commitContent(); isContentEditing = false; isContentFocused = false }
-            if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
             if !isTitleFocused { isTitleFocused = true }
             flashTitle = true
             DispatchQueue.main.asyncAfter(deadline: .now() + 0.35) { flashTitle = false }
         case .content:
             commitTitle()
             isTitleFocused = false
-            if showDialArea { withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false } }
             editingContent = memo.content
             contentTapOffset = nil  // ボタン経由 → 末尾カーソル
             editFromTap = false     // ボタン経由 → カード拡大OK
