@@ -337,7 +337,7 @@ struct MemoInputView: View {
                         Text(viewModel.isMarkdown ? "タップでマークダウン編集..." : "メモを入力...")
                             .font(.system(size: 17))
                             .foregroundStyle(.gray.opacity(0.5))
-                            .padding(.leading, showLineNumbers ? 48 : 18)
+                            .padding(.leading, showLineNumbers ? 48 : 21)
                             .padding(.trailing, 8)
                             .padding(.top, 20)
                             .padding(.bottom, 24)
