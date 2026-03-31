@@ -25,6 +25,7 @@ private struct FlatRow: Identifiable {
     enum Kind {
         case item(TodoItem)
         case addButton(parentID: UUID?) // 「+ 項目を追加」行
+        case bottomSpacer               // 最下端のスクロールバッファ
     }
     let id: String
     let kind: Kind
@@ -116,6 +117,13 @@ struct TodoListView: View {
                                     addItemRow(parentID: parentID, depth: row.depth, rowID: row.id)
                                         .id(row.id)
                                         .moveDisabled(true)
+                                case .bottomSpacer:
+                                    Color.clear
+                                        .frame(height: 300)
+                                        .listRowSeparator(.hidden)
+                                        .listRowBackground(Color.clear)
+                                        .listRowInsets(EdgeInsets())
+                                        .moveDisabled(true)
                                 }
                             }
                             .onMove(perform: moveFlatRows)
@@ -125,7 +133,7 @@ struct TodoListView: View {
                         .scrollDismissesKeyboard(.never)
                         .environment(\.defaultMinListRowHeight, 1)
                         .animation(nil, value: allItems.count)
-                        // 編集中は「完了」バーの高さ分だけ下に余白
+                        // 編集中は完了バーの高さ分だけ下に余白
                         .safeAreaInset(edge: .bottom) {
                             if editingItemID != nil || memoEditingItemID != nil {
                                 Color.clear.frame(height: 44)
@@ -743,8 +751,13 @@ struct TodoListView: View {
             appendRows(for: item, depth: 0, isLast: i == roots.count - 1, into: &rows)
         }
 
-        // ルートレベルの追加ボタン（編集中も表示）
+        // ルートレベルの追加ボタン
         rows.append(FlatRow(id: "add-root", kind: .addButton(parentID: nil), depth: 0, isLastChild: true))
+
+        // 編集中はスクロールバッファ（キーボード閉じ時の引き戻し防止）
+        if editingItemID != nil || memoEditingItemID != nil {
+            rows.append(FlatRow(id: "bottom-spacer", kind: .bottomSpacer, depth: 0, isLastChild: true))
+        }
         return rows
     }
 
@@ -1321,6 +1334,8 @@ struct TodoListView: View {
             case .addButton(let parentID):
                 // ＋ボタン行は、その親の子として扱う
                 isValidMove = parentID == movedParentID
+            case .bottomSpacer:
+                isValidMove = false
             }
         }
 
@@ -1463,6 +1478,7 @@ struct TodoListView: View {
         transaction.disablesAnimations = true
         withTransaction(transaction) {
             modelContext.insert(item)
+            // 親を展開済みにする（ルートの場合は仮想親）
             if let parentID = parentID {
                 expandedItems.insert(parentID)
             }
