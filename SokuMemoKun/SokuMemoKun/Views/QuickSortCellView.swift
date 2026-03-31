@@ -57,6 +57,13 @@ struct QuickSortCellView: View {
     // ルーレット表示（タグ編集ボタンで切替）
     @State private var showDialArea = false
 
+    // タグ履歴
+    @State private var showTagHistory = false
+    @State private var tagHistoryItems: [TagHistory] = []
+
+    // バッジ表示ディレイ（カードアニメーション後に表示）
+    @State private var showBadge = true
+
     // ロックアイコンフラッシュ
     @State private var lockIconFlash = false
 
@@ -116,6 +123,43 @@ struct QuickSortCellView: View {
                     .contentShape(Rectangle())
                     .onTapGesture { dismissEditing() }
             )
+            // タグ履歴リスト（カードの上にoverlay）
+            .overlay(alignment: .center) {
+                if showTagHistory {
+                    quickSortTagHistoryList
+                }
+            }
+        }
+        // バッジはGeometryReaderに付ける（VStackの外）
+        .overlay(alignment: .top) {
+            let noTitle = memo.title.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+            let noTag = selectedParentTagID == nil
+            let shouldShow = showBadge && !showDialArea && !isExpanded && editMode == .none && (noTitle || noTag)
+            if shouldShow {
+                VStack(spacing: 6) {
+                    if noTitle {
+                        Text("タイトルなし")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.orange.opacity(0.5))
+                    }
+                    if noTag {
+                        Text("タグなし")
+                            .font(.system(size: 16, weight: .bold, design: .rounded))
+                            .foregroundStyle(.orange.opacity(0.5))
+                    }
+                }
+                .padding(.top, 100)
+                .allowsHitTesting(false)
+            }
+        }
+        // バッジ表示ディレイ（カードアニメーション完了後に表示）
+        .onChange(of: showDialArea) { _, _ in
+            showBadge = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showBadge = true }
+        }
+        .onChange(of: isExpanded) { _, _ in
+            showBadge = false
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) { showBadge = true }
         }
         .onAppear {
             initFromMemo()
@@ -126,6 +170,10 @@ struct QuickSortCellView: View {
         }
         .onChange(of: memo.tags.map(\.id)) { _, _ in initFromMemo() }
         .onChange(of: memo.id) { _, _ in
+            // ページ送り時にタグ履歴を記録
+            if let pid = selectedParentTagID {
+                TagHistory.record(parentTagID: pid, childTagID: selectedChildTagID, context: modelContext)
+            }
             // 編集中なら前のメモの変更を保存してから切替
             commitTitle()
             if isContentEditing { commitContent() }
@@ -171,6 +219,10 @@ struct QuickSortCellView: View {
             // タグモードから直接noneに切り替わった = タグ編集ボタンで閉じた
             if oldMode == .tag && newMode == .none {
                 withAnimation(.easeInOut(duration: 0.25)) { showDialArea = false }
+                // タグ履歴を記録
+                if let pid = selectedParentTagID {
+                    TagHistory.record(parentTagID: pid, childTagID: selectedChildTagID, context: modelContext)
+                }
             }
             applyEditMode(newMode)
         }
@@ -617,6 +669,85 @@ struct QuickSortCellView: View {
         }
     }
 
+    // MARK: - タグ履歴リスト（爆速モード）
+
+    private var quickSortTagHistoryList: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("タグ履歴")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button { showTagHistory = false } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary.opacity(0.5))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            if tagHistoryItems.isEmpty {
+                Text("まだ履歴がありません")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 12)
+            } else {
+                ScrollView {
+                    VStack(spacing: 4) {
+                        ForEach(tagHistoryItems, id: \.id) { item in
+                            if let parentTag = tags.first(where: { $0.id == item.parentTagID }) {
+                                Button {
+                                    isInternalTagChange = true
+                                    selectedParentTagID = parentTag.id
+                                    selectedChildTagID = item.childTagID
+                                    DispatchQueue.main.async { isInternalTagChange = false }
+                                    applyTagFromDial()
+                                    showTagHistory = false
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(parentTag.name)
+                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(RoundedRectangle(cornerRadius: 5).fill(tagColor(for: parentTag.colorIndex)))
+                                        if let childID = item.childTagID,
+                                           let childTag = tags.first(where: { $0.id == childID }) {
+                                            Text(childTag.name)
+                                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(RoundedRectangle(cornerRadius: 4).fill(tagColor(for: childTag.colorIndex)))
+                                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.3), lineWidth: 1))
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 180)
+
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(.secondary.opacity(0.4))
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 4)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+        )
+        .frame(maxWidth: 220)
+    }
+
     // MARK: - ルーレットエリア
 
     private var parentOptions: [(id: String, name: String, color: Color)] {
@@ -751,6 +882,27 @@ struct QuickSortCellView: View {
                         editMode = .none
                     }
                 }
+        }
+        // 履歴ボタン（トレー右下）
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                if showTagHistory {
+                    showTagHistory = false
+                } else {
+                    tagHistoryItems = TagHistory.recentHistory(context: modelContext)
+                    showTagHistory = true
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text("履歴")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.white.opacity(0.7))
+            }
+            .padding(.trailing, 12)
+            .offset(y: 16)
         }
     }
 }

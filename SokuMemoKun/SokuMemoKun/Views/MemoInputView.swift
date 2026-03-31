@@ -45,6 +45,9 @@ struct MemoInputView: View {
     @State private var showChildDial = true
     @State private var childExternalDragY: CGFloat? = nil
     @AppStorage("dialDefault") private var dialDefault: Int = 0
+    // タグ履歴
+    @Binding var showTagHistory: Bool
+    @Binding var tagHistoryItems: [TagHistory]
 
     @AppStorage("allTagSortOrder") private var allTagSortOrder: Int = -1
     @AppStorage("noTagSortOrder") private var noTagSortOrder: Int = 9999
@@ -423,6 +426,29 @@ struct MemoInputView: View {
                     .padding(.trailing, -15)
                     .offset(y: -1)
             }
+            // タグ履歴ボタン（トレーの外に配置）
+            .overlay(alignment: .bottomTrailing) {
+                if showParentDial {
+                    Button {
+                        if showTagHistory {
+                            showTagHistory = false
+                        } else {
+                            tagHistoryItems = TagHistory.recentHistory(context: modelContext)
+                            showTagHistory = true
+                        }
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
+                                .font(.system(size: 9, weight: .semibold))
+                            Text("履歴")
+                                .font(.system(size: 11, weight: .medium))
+                        }
+                        .foregroundStyle(.white.opacity(0.7))
+                    }
+                    .padding(.trailing, 8)
+                    .offset(y: 21)
+                }
+            }
             Divider()
             // フッター: 左=削除 右=コピー+保存（ルーレット展開中は無効）
             footerRow
@@ -524,6 +550,13 @@ struct MemoInputView: View {
             // ルーレット展開時はテキストのフォーカスを外す
             if isShowing {
                 isTextEditorFocused = false
+                showTagHistory = false
+            } else {
+                // ルーレットを閉じた時にタグ履歴を記録
+                if let parentID = viewModel.selectedTagID {
+                    TagHistory.record(parentTagID: parentID, childTagID: viewModel.selectedChildTagID, context: modelContext)
+                }
+                showTagHistory = false
             }
         }
         .onChange(of: viewModel.loadMemoCounter) { _, _ in
@@ -538,6 +571,7 @@ struct MemoInputView: View {
             }
             viewModel.pushUndoIfNeeded()
             viewModel.onContentChanged(context: modelContext, tags: tags)
+            showTagHistory = false
         }
         .onChange(of: viewModel.titleText) { _, _ in
             viewModel.pushUndoIfNeeded()
@@ -549,10 +583,12 @@ struct MemoInputView: View {
                 viewModel.selectedChildTagID = nil
             }
             viewModel.onTagChanged(tags: tags)
+            showTagHistory = false
         }
         .onChange(of: viewModel.selectedChildTagID) { _, _ in
             viewModel.pushUndoIfNeeded()
             viewModel.onTagChanged(tags: tags)
+            showTagHistory = false
         }
         .onAppear {
             // dialDefault: 0=チラ見せ, 1=全開, 2=完全収納
@@ -569,6 +605,7 @@ struct MemoInputView: View {
             }
             showChildDial = true // 子ルーレット常時表示
         }
+
     }
 
     // MARK: - ヘッダー
@@ -1013,6 +1050,94 @@ struct MemoInputView: View {
                     }
             )
         }
+    }
+
+    // MARK: - タグ履歴リスト
+
+    private var tagHistoryList: some View {
+        VStack(spacing: 0) {
+            // 閉じるボタン
+            HStack {
+                Text("タグ履歴")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    showTagHistory = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary.opacity(0.5))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            if tagHistoryItems.isEmpty {
+                Text("まだ履歴がありません")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 12)
+            } else {
+                ScrollView {
+                    VStack(spacing: 4) {
+                        ForEach(tagHistoryItems, id: \.id) { item in
+                            if let parentTag = tags.first(where: { $0.id == item.parentTagID }) {
+                                Button {
+                                    viewModel.selectedTagID = parentTag.id
+                                    if let childID = item.childTagID {
+                                        viewModel.selectedChildTagID = childID
+                                    } else {
+                                        viewModel.selectedChildTagID = nil
+                                    }
+                                    showTagHistory = false
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(parentTag.name)
+                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 5)
+                                                    .fill(tagColor(for: parentTag.colorIndex))
+                                            )
+                                        if let childID = item.childTagID,
+                                           let childTag = tags.first(where: { $0.id == childID }) {
+                                            Text(childTag.name)
+                                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 4)
+                                                        .fill(tagColor(for: childTag.colorIndex))
+                                                )
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 4)
+                                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                                )
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 180)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+        )
+        .frame(maxWidth: 220)
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        .padding(.trailing, 8)
     }
 
     // 子ダイアル開閉ボタン（トレー内）

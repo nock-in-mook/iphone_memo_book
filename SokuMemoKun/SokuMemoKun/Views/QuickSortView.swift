@@ -144,7 +144,7 @@ struct QuickSortView: View {
                         editedCount: editedMemoIDs.count,
                         deletedCount: deleteQueue.count,
                         deletedMemos: deleteQueue,
-                        onReviewDeleted: { showResult = false; showDeleteReview = true },
+                        onReviewDeleted: { showDeleteReview = true },
                         onNextSet: isLastSet ? nil : {
                             for m in deleteQueue { modelContext.delete(m) }
                             try? modelContext.save()
@@ -913,7 +913,7 @@ struct QuickSortView: View {
                         .font(.system(size: 14))
                         .foregroundStyle(.secondary)
 
-                    Text("「完了」画面で復元できます。")
+                    Text("結果表示画面で復元できます。")
                         .font(.system(size: 12))
                         .foregroundStyle(.secondary.opacity(0.7))
                         .padding(.top, 2)
@@ -962,6 +962,12 @@ struct QuickSortView: View {
     private var deleteReviewSheet: some View {
         NavigationStack {
             List {
+                Text("← 左スワイプで復元")
+                    .font(.system(size: 13, weight: .medium))
+                    .foregroundStyle(.green)
+                    .frame(maxWidth: .infinity, alignment: .center)
+                    .listRowBackground(Color.clear)
+                    .listRowSeparator(.hidden)
                 ForEach(deleteQueue, id: \.id) { memo in
                     VStack(alignment: .leading, spacing: 4) {
                         Text(memo.title.isEmpty ? "（タイトルなし）" : memo.title)
@@ -979,11 +985,12 @@ struct QuickSortView: View {
                     }
                 }
             }
+            .listStyle(.plain)
             .navigationTitle("削除予定のメモ")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarTrailing) {
-                    Button("戻る") { showDeleteReview = false; showResult = true }
+                    Button("戻る") { showDeleteReview = false }
                 }
             }
         }
@@ -992,11 +999,20 @@ struct QuickSortView: View {
     // MARK: - アクション
 
     private func deleteMemo(_ memo: Memo) {
+        // 削除前に現在のインデックスを記憶
+        let currentIndex = activeMemos.firstIndex(where: { $0.id == memo.id })
         deleteQueue.append(memo)
-        // 削除されたメモを指していたら次のカードに移動
+        // 削除されたメモを指していたら同じ位置（または前）のカードに移動
         if scrolledMemoID == memo.id {
-            if let next = activeMemos.first {
-                scrolledMemoID = next.id
+            if let idx = currentIndex {
+                // 同じインデックス位置のメモに移動（なければ末尾）
+                if idx < activeMemos.count {
+                    scrolledMemoID = activeMemos[idx].id
+                } else if let last = activeMemos.last {
+                    scrolledMemoID = last.id
+                }
+            } else if let first = activeMemos.first {
+                scrolledMemoID = first.id
             }
         }
         if activeMemos.isEmpty {

@@ -7,6 +7,8 @@ private let qsLogger = Logger(subsystem: "com.sokumemokun.app", category: "Quick
 
 struct MainView: View {
     @State private var viewModel = MemoInputViewModel()
+    @State private var showTagHistory = false
+    @State private var tagHistoryItems: [TagHistory] = []
     @State private var isKeyboardVisible = false
     @State private var showSettings = false
     @State private var focusInput = false
@@ -61,7 +63,9 @@ struct MainView: View {
                             focusInput: $focusInput,
                             isExpanded: .constant(false),
                             hasDiff: viewModel.inputText != originalContent || viewModel.titleText != originalTitle,
-                            onConfirm: { confirmMemo() }
+                            onConfirm: { confirmMemo() },
+                            showTagHistory: $showTagHistory,
+                            tagHistoryItems: $tagHistoryItems
                         )
                     }
                 } else {
@@ -73,7 +77,9 @@ struct MainView: View {
                                 focusInput: $focusInput,
                                 isExpanded: $isInputExpanded,
                                 hasDiff: viewModel.inputText != originalContent || viewModel.titleText != originalTitle,
-                                onConfirm: { confirmMemo() }
+                                onConfirm: { confirmMemo() },
+                                showTagHistory: $showTagHistory,
+                                tagHistoryItems: $tagHistoryItems
                             )
                             // ルーレット下端に揃える固定高さ: タブ22+上余白10+ルーレット211+ボタン行9+下余白6+ヘッダー40+Divider2+フッター28 = 328
 .frame(height: isInputExpanded ? geo.size.height * 0.85 : 328)
@@ -153,6 +159,13 @@ struct MainView: View {
                         }
 
                         tabbedMemoList
+                            .overlay(alignment: .topTrailing) {
+                                if showTagHistory {
+                                    tagHistoryListView
+                                        .padding(.trailing, 8)
+                                        .padding(.top, -10)
+                                }
+                            }
                     }
                 }
             }
@@ -502,4 +515,95 @@ struct MainView: View {
         return "タグなし"
     }
 
+    // MARK: - タグ履歴リスト（フォルダタブゾーンに表示）
+
+    private var tagHistoryListView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("タグ履歴")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button {
+                    showTagHistory = false
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary.opacity(0.5))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            if tagHistoryItems.isEmpty {
+                Text("まだ履歴がありません")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 12)
+            } else {
+                ScrollView {
+                    VStack(spacing: 4) {
+                        ForEach(tagHistoryItems, id: \.id) { item in
+                            if let parentTag = tags.first(where: { $0.id == item.parentTagID }) {
+                                Button {
+                                    viewModel.selectedTagID = parentTag.id
+                                    if let childID = item.childTagID {
+                                        viewModel.selectedChildTagID = childID
+                                    } else {
+                                        viewModel.selectedChildTagID = nil
+                                    }
+                                    showTagHistory = false
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(parentTag.name)
+                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(
+                                                RoundedRectangle(cornerRadius: 5)
+                                                    .fill(tagColor(for: parentTag.colorIndex))
+                                            )
+                                        if let childID = item.childTagID,
+                                           let childTag = tags.first(where: { $0.id == childID }) {
+                                            Text(childTag.name)
+                                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(
+                                                    RoundedRectangle(cornerRadius: 4)
+                                                        .fill(tagColor(for: childTag.colorIndex))
+                                                )
+                                                .overlay(
+                                                    RoundedRectangle(cornerRadius: 4)
+                                                        .stroke(Color.white.opacity(0.3), lineWidth: 1)
+                                                )
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 180)
+
+                // スクロール矢印
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(.secondary.opacity(0.4))
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 4)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+        )
+        .frame(maxWidth: 220)
+    }
 }

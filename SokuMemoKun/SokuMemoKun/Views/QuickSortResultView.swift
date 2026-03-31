@@ -54,7 +54,7 @@ struct QuickSortResultView: View {
                     Divider().padding(.leading, 44)
                     resultRow(icon: "✏️", label: "の本文を編集", count: editedCount)
                     Divider().padding(.leading, 44)
-                    resultRow(icon: "🗑", label: "を削除", count: deletedCount, isDestructive: true)
+                    resultRow(icon: "🗑", label: "を削除", count: deletedCount, isDestructive: true, onAction: deletedCount > 0 ? { onReviewDeleted() } : nil)
                 }
                 .background(Color(uiColor: .systemBackground))
                 .cornerRadius(14)
@@ -65,27 +65,6 @@ struct QuickSortResultView: View {
 
                 // ボタン
                 VStack(spacing: 12) {
-                    if deletedCount > 0 {
-                        Button {
-                            onReviewDeleted()
-                        } label: {
-                            HStack(spacing: 8) {
-                                Image(systemName: "trash")
-                                    .font(.system(size: 14))
-                                Text("削除したメモを確認（\(deletedCount)件）")
-                                    .font(.system(size: 15, weight: .medium))
-                            }
-                            .foregroundStyle(.red)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 48)
-                            .background(
-                                RoundedRectangle(cornerRadius: 12)
-                                    .fill(Color.red.opacity(0.08))
-                            )
-                        }
-                        .buttonStyle(.plain)
-                    }
-
                     if let onNextSet = onNextSet {
                         // 次のセットへ
                         Button {
@@ -160,7 +139,7 @@ struct QuickSortResultView: View {
     }
 
     @ViewBuilder
-    private func resultRow(icon: String, label: String, count: Int, isDestructive: Bool = false) -> some View {
+    private func resultRow(icon: String, label: String, count: Int, isDestructive: Bool = false, onAction: (() -> Void)? = nil) -> some View {
         HStack(spacing: 12) {
             Text(icon)
                 .font(.system(size: 24))
@@ -171,6 +150,17 @@ struct QuickSortResultView: View {
                 .foregroundStyle(count > 0 ? (isDestructive ? .red : .primary) : .secondary)
 
             Spacer()
+
+            if let action = onAction {
+                Button {
+                    action()
+                } label: {
+                    Text("確認")
+                        .font(.system(size: 13, weight: .medium))
+                        .foregroundStyle(.red)
+                        .underline()
+                }
+            }
 
             if count > 0 {
                 Image(systemName: "checkmark.circle.fill")

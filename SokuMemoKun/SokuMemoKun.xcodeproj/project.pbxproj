@@ -44,6 +44,7 @@
 		TODO00000000000000002 /* TodoItem.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODO00000000000000001 /* TodoItem.swift */; };
 		TODO00000000000000004 /* TodoListView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODO00000000000000003 /* TodoListView.swift */; };
 		TODOL0000000000000002 /* TodoList.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODOL0000000000000001 /* TodoList.swift */; };
+		TAGHIST000000000000002 /* TagHistory.swift in Sources */ = {isa = PBXBuildFile; fileRef = TAGHIST000000000000001 /* TagHistory.swift */; };
 		TODOL0000000000000004 /* TodoListsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = TODOL0000000000000003 /* TodoListsView.swift */; };
 		ICONL0000000000000002 /* IconLabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ICONL0000000000000001 /* IconLabView.swift */; };
 /* End PBXBuildFile section */
@@ -84,6 +85,7 @@
 		TODO00000000000000001 /* TodoItem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoItem.swift; sourceTree = "<group>"; };
 		TODO00000000000000003 /* TodoListView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListView.swift; sourceTree = "<group>"; };
 		TODOL0000000000000001 /* TodoList.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoList.swift; sourceTree = "<group>"; };
+		TAGHIST000000000000001 /* TagHistory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TagHistory.swift; sourceTree = "<group>"; };
 		TODOL0000000000000003 /* TodoListsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TodoListsView.swift; sourceTree = "<group>"; };
 		ICONL0000000000000001 /* IconLabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = IconLabView.swift; sourceTree = "<group>"; };
 		QSORT0000000000000001 /* QuickSortView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickSortView.swift; sourceTree = "<group>"; };
@@ -133,6 +135,7 @@
 				A10000000000000000001C /* Tag.swift */,
 				TODO00000000000000001 /* TodoItem.swift */,
 				TODOL0000000000000001 /* TodoList.swift */,
+				TAGHIST000000000000001 /* TagHistory.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -294,6 +297,7 @@
 				TODO00000000000000002 /* TodoItem.swift in Sources */,
 				TODO00000000000000004 /* TodoListView.swift in Sources */,
 				TODOL0000000000000002 /* TodoList.swift in Sources */,
+				TAGHIST000000000000002 /* TagHistory.swift in Sources */,
 				TODOL0000000000000004 /* TodoListsView.swift in Sources */,
 				ICONL0000000000000002 /* IconLabView.swift in Sources */,
 			);

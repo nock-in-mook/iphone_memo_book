@@ -6,12 +6,14 @@ struct SokuMemoKunApp: App {
     let sharedContainer: ModelContainer
 
     init() {
-        let container = try! ModelContainer(for: Memo.self, Tag.self, TodoItem.self, TodoList.self)
+        let container = try! ModelContainer(for: Memo.self, Tag.self, TodoItem.self, TodoList.self, TagHistory.self)
         self.sharedContainer = container
         // データリセット＆サンプル投入（一度だけ実行）
         Self.resetAndInsertSamples(container: container)
         // 長文テストメモ生成（一度だけ実行）
         Self.insertLongTextTestMemos(container: container)
+        // タグ履歴ダミーデータ（デバッグ用）
+        Self.insertDummyTagHistory(container: container)
     }
 
     var body: some Scene {
@@ -904,6 +906,34 @@ struct SokuMemoKunApp: App {
                 tags: [testTag]
             )
             context.insert(memo)
+        }
+
+        try? context.save()
+        UserDefaults.standard.set(true, forKey: key)
+    }
+
+    // タグ履歴ダミーデータ（デバッグ用・20件）
+    private static func insertDummyTagHistory(container: ModelContainer) {
+        let key = "dummyTagHistoryV1"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        let context = ModelContext(container)
+        let tags = (try? context.fetch(FetchDescriptor<Tag>())) ?? []
+        let parentTags = tags.filter { $0.parentTagID == nil && !$0.isSystem }
+
+        guard !parentTags.isEmpty else { return }
+
+        for i in 0..<20 {
+            let parent = parentTags[i % parentTags.count]
+            // 偶数番目は子タグなし、奇数番目は子タグあり（あれば）
+            let childTags = tags.filter { $0.parentTagID == parent.id }
+            let childID: UUID? = (i % 2 == 1 && !childTags.isEmpty) ? childTags[i % childTags.count].id : nil
+            let history = TagHistory(
+                parentTagID: parent.id,
+                childTagID: childID,
+                usedAt: Date().addingTimeInterval(Double(-i * 3600)) // 1時間ずつ古く
+            )
+            context.insert(history)
         }
 
         try? context.save()
