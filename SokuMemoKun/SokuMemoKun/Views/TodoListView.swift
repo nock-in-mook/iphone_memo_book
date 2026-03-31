@@ -177,11 +177,16 @@ struct TodoListView: View {
                                let item = allItems.first(where: { $0.id == id }) {
                                 let addRowID = item.parentID.map { "add-\($0.uuidString)" } ?? "add-root"
                                 scrollToRow(addRowID, proxy: proxy)
-                            } else if !focused && !isChainEditing,
-                                      let editID = editingItemID,
-                                      let item = allItems.first(where: { $0.id == editID }) {
-                                // フォーカスが外れたら完了と同じ扱い（連続入力中は除く）
-                                commitEdit(item: item)
+                            } else if !focused {
+                                // フォーカスが外れたら少し待ってからcommitEdit
+                                // （submitEditのisChainEditing=trueが先に実行される猶予）
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+                                    guard !isChainEditing else { return }
+                                    if let editID = editingItemID,
+                                       let item = allItems.first(where: { $0.id == editID }) {
+                                        commitEdit(item: item)
+                                    }
+                                }
                             }
                         }
                         .onChange(of: isMemoFocused) { _, focused in
