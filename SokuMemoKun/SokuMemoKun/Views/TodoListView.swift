@@ -68,6 +68,8 @@ struct TodoListView: View {
     @State private var memoEditingItemID: UUID?            // メモ編集中
     @State private var memoEditingText: String = ""
     @FocusState private var isMemoFocused: Bool
+    // メモ展開時のスクロール用（IDが変わるとスクロール発火）
+    @State private var scrollToMemoItemID: UUID?
 
 
 
@@ -146,6 +148,12 @@ struct TodoListView: View {
                         .onChange(of: memoEditingItemID) { _, newID in
                             if let id = newID {
                                 scrollToItem(id, proxy: proxy)
+                            }
+                        }
+                        .onChange(of: scrollToMemoItemID) { _, newID in
+                            if let id = newID {
+                                scrollToItem(id, proxy: proxy)
+                                scrollToMemoItemID = nil
                             }
                         }
                         .onChange(of: isEditingFocused) { _, focused in
@@ -866,16 +874,22 @@ struct TodoListView: View {
 
             // メモアイコン
             Button {
-                // アイテム編集中なら先に確定
+                // アイテム編集中からのタップ → 確定してメモ展開
+                let wasEditing = editingItemID != nil
                 commitCurrentEditIfNeeded()
                 withAnimation(.easeInOut(duration: 0.15)) {
                     let hasMemo = !(item.memo ?? "").isEmpty
                     if memoEditingItemID == item.id {
-                        // 編集中→保存して閲覧モードに
+                        // メモ編集中→保存して閲覧モードに
                         commitMemo(item: item)
                         if hasMemo || !memoEditingText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                             memoOpenItems.insert(item.id)
                         }
+                    } else if wasEditing {
+                        // アイテム編集から来た → メモ展開（閲覧モード）
+                        commitMemo()
+                        memoOpenItems.insert(item.id)
+                        scrollToMemoItemID = item.id
                     } else if memoOpenItems.contains(item.id) {
                         // 閲覧中→閉じる
                         commitMemo()
@@ -884,6 +898,7 @@ struct TodoListView: View {
                         // メモあり→閲覧モードで開く
                         commitMemo()
                         memoOpenItems.insert(item.id)
+                        scrollToMemoItemID = item.id
                     } else {
                         // メモなし→新規作成、即編集モード
                         commitMemo()
