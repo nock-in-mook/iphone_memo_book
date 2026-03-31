@@ -123,6 +123,12 @@ struct TodoListView: View {
                         .scrollDismissesKeyboard(.interactively)
                         .environment(\.defaultMinListRowHeight, 1)
                         .animation(nil, value: allItems.count)
+                        // メモ編集中は「完了」バーの高さ分だけ下に余白
+                        .safeAreaInset(edge: .bottom) {
+                            if memoEditingItemID != nil {
+                                Color.clear.frame(height: 44)
+                            }
+                        }
                         .onChange(of: editingItemID) { oldID, newID in
                             if let id = newID,
                                let item = allItems.first(where: { $0.id == id }) {
@@ -1011,12 +1017,9 @@ struct TodoListView: View {
                     }
                     .contentShape(Rectangle())
                     .onTapGesture {
-                        // タスク編集中はメモ操作せず、編集を確定して抜ける
-                        if let editID = editingItemID,
-                           let editItem = allItems.first(where: { $0.id == editID }) {
-                            commitEdit(item: editItem)
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            return
+                        // アイテム編集中→確定してからメモ編集開始
+                        if editingItemID != nil {
+                            commitCurrentEditIfNeeded()
                         }
                         memoEditingItemID = item.id
                         memoEditingText = item.memo ?? ""
@@ -1055,12 +1058,9 @@ struct TodoListView: View {
             .padding(.bottom, 4)
             .contentShape(Rectangle())
                 .onTapGesture {
-                    // タスク編集中は編集を確定して抜ける
-                    if let editID = editingItemID,
-                       let editItem = allItems.first(where: { $0.id == editID }) {
-                        commitEdit(item: editItem)
-                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        return
+                    // アイテム編集中→確定してメモ展開
+                    if editingItemID != nil {
+                        commitCurrentEditIfNeeded()
                     }
                     // メモ編集中はメモを確定して抜けるだけ
                     if memoEditingItemID != nil {
@@ -1068,7 +1068,7 @@ struct TodoListView: View {
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         return
                     }
-                    // 常に閲覧モードで全文展開＋ゴミ箱表示（短文でも統一）
+                    // 閲覧モードで全文展開＋ゴミ箱表示
                     withAnimation(.easeInOut(duration: 0.15)) {
                         memoOpenItems.insert(item.id)
                     }
@@ -1091,9 +1091,9 @@ struct TodoListView: View {
                     .frame(maxWidth: .infinity, alignment: .trailing)
             }
         }
-        // 子階層以降の縦線（帯の中央、編集中は非表示）
+        // 子階層以降の縦線（帯の中央、編集中・メモ編集中は非表示）
         .overlay(alignment: .leading) {
-            if depth > 0 && editingItemID == nil {
+            if depth > 0 && editingItemID == nil && memoEditingItemID == nil {
                 ZStack(alignment: .leading) {
                     ForEach(0..<depth, id: \.self) { d in
                         Rectangle()
@@ -1124,52 +1124,48 @@ struct TodoListView: View {
         if let parentID = parentID,
            let parent = allItems.first(where: { $0.id == parentID }) {
             // 子タスク追加
-            let isMemoEditing = memoEditingItemID != nil
             let accentColor = depthAccentColor(depth)
 
-            // L字罫線＋色付き＋ボタン（メモ編集中のみ薄く）
-            let lineColor = isMemoEditing ? accentColor.opacity(0.3) : accentColor
             Group {
                     Button {
-                        // 編集中なら先に確定してから追加
+                        // 編集中・メモ編集中なら先に確定してから追加
                         commitCurrentEditIfNeeded()
                         addEmptyItemAndEdit(parentID: parentID)
                     } label: {
                         HStack(spacing: 6) {
                             Image(systemName: "plus.circle.fill")
                                 .font(.system(size: 15))
-                                .foregroundStyle(lineColor)
+                                .foregroundStyle(accentColor)
                             // リスト内に子項目が1つもない時のみガイドテキスト（depth 1 = 紫のみ）
                             if depth == 1 && !allItems.contains(where: { $0.parentID != nil }) {
                                 Text("子項目を追加できます")
                                     .font(.system(size: 12, weight: .medium, design: .rounded))
-                                    .foregroundStyle(lineColor)
+                                    .foregroundStyle(accentColor)
                             }
                         }
                         .frame(maxWidth: .infinity, alignment: .leading)
                     }
                     .buttonStyle(.plain)
-                    .disabled(isMemoEditing)
                     .padding(.trailing, 12)
                     .padding(.vertical, 2)
                     // チェックボックス中心に合わせる: indentLeading(depth) + 12(padding) + 17(34/2) - 7.5(15/2) = depth*28 + 21.5
                     .padding(.leading, CGFloat(depth) * indentStep + 21.5)
-                    // L字罫線：角丸＋横線のみCanvasで描画（編集中は非表示）
+                    // L字罫線：角丸＋横線のみCanvasで描画（編集中・メモ編集中は非表示）
                     .overlay(alignment: .topLeading) {
-                        if editingItemID == nil {
+                        if editingItemID == nil && memoEditingItemID == nil {
                             let lineX: CGFloat = 16 + CGFloat(depth - 1) * indentStep + indentStep / 2 - 0.75
-                            LShapeCorner(color: lineColor)
+                            LShapeCorner(color: accentColor)
                                 .frame(width: 14, height: 12)
                                 .padding(.leading, lineX)
                         }
                     }
-                    // 縦線（上半分のみ、編集中は非表示）
+                    // 縦線（上半分のみ、編集中・メモ編集中は非表示）
                     .overlay(alignment: .topLeading) {
-                        if editingItemID == nil {
+                        if editingItemID == nil && memoEditingItemID == nil {
                             let lineX: CGFloat = 16 + CGFloat(depth - 1) * indentStep + indentStep / 2 - 0.75
                             GeometryReader { geo in
                                 Rectangle()
-                                    .fill(lineColor)
+                                    .fill(accentColor)
                                     .frame(width: 1.5, height: geo.size.height * 0.5 - 12)
                                     .padding(.leading, lineX)
                             }
@@ -1188,9 +1184,9 @@ struct TodoListView: View {
                         .frame(maxWidth: .infinity, alignment: .trailing)
                 }
             }
-            // シンプルモード: 上位祖先の縦線（自分の階層のL字より上の階層）
+            // シンプルモード: 上位祖先の縦線（編集中・メモ編集中は非表示）
             .overlay(alignment: .leading) {
-                if depth > 1 && editingItemID == nil {
+                if depth > 1 && editingItemID == nil && memoEditingItemID == nil {
                     ZStack(alignment: .leading) {
                         ForEach(0..<(depth - 1), id: \.self) { d in
                             Rectangle()
@@ -1207,7 +1203,6 @@ struct TodoListView: View {
             .listRowInsets(EdgeInsets(top: 0, leading: 16, bottom: 0, trailing: 16))
         } else {
             // ルート追加（チェックボックスの中心に緑＋ボタン）
-            let isMemoEditing_ = memoEditingItemID != nil
             // チェックボックスと同じレイアウト構造で自動センター合わせ
             HStack(spacing: 8) {
                 Button {
@@ -1216,10 +1211,9 @@ struct TodoListView: View {
                 } label: {
                     Image(systemName: "plus.circle.fill")
                         .font(.system(size: 22))
-                        .foregroundStyle(isMemoEditing_ ? .green.opacity(0.15) : .green.opacity(0.5))
+                        .foregroundStyle(.green.opacity(0.5))
                 }
                 .buttonStyle(.plain)
-                .disabled(isMemoEditing_)
                 .frame(width: 34, height: 34) // チェックボックスと同じフレーム
                 // 項目が0件の時だけガイドテキスト表示
                 if allItems.isEmpty {
