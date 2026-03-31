@@ -60,6 +60,8 @@ struct TodoListView: View {
     // 選択削除モード
     @State private var isSelectMode = false
     @State private var selectedItems: Set<UUID> = []
+    // 親チェック前の子孫選択状態を記憶（親ID → チェック前の子孫選択セット）
+    @State private var selectionSnapshot: [UUID: Set<UUID>] = [:]
     // メモ削除確認ダイアログ
     @State private var showMemoDeleteDialog = false
     @State private var memoDeleteTargetID: UUID?
@@ -1430,19 +1432,49 @@ struct TodoListView: View {
         isSelectMode = false
     }
 
-    // MARK: - 選択の追加/削除（子孫も再帰的に）
+    // MARK: - 選択の追加/削除（子孫も再帰的に、状態記憶付き）
     private func addToSelection(_ id: UUID) {
+        // 子孫の現在の選択状態をスナップショットに保存
+        let descendantIDs = allDescendantIDs(of: id)
+        let currentSelection = selectedItems.intersection(descendantIDs)
+        selectionSnapshot[id] = currentSelection
+
+        // 自分+子孫を全選択
         selectedItems.insert(id)
-        for child in allItems where child.parentID == id {
-            addToSelection(child.id)
+        for did in descendantIDs {
+            selectedItems.insert(did)
         }
     }
 
     private func removeFromSelection(_ id: UUID) {
+        // 自分を外す
         selectedItems.remove(id)
-        for child in allItems where child.parentID == id {
-            removeFromSelection(child.id)
+
+        // スナップショットがあれば復元、なければ子孫も全解除
+        if let snapshot = selectionSnapshot.removeValue(forKey: id) {
+            let descendantIDs = allDescendantIDs(of: id)
+            for did in descendantIDs {
+                if snapshot.contains(did) {
+                    selectedItems.insert(did)
+                } else {
+                    selectedItems.remove(did)
+                }
+            }
+        } else {
+            for child in allItems where child.parentID == id {
+                removeFromSelection(child.id)
+            }
         }
+    }
+
+    // 全子孫IDを再帰的に取得
+    private func allDescendantIDs(of id: UUID) -> Set<UUID> {
+        var result = Set<UUID>()
+        for child in allItems where child.parentID == id {
+            result.insert(child.id)
+            result.formUnion(allDescendantIDs(of: child.id))
+        }
+        return result
     }
 
     // MARK: - 全項目削除（リスト自体は残す）
