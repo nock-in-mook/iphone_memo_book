@@ -2094,8 +2094,10 @@ struct MemoCardView: View {
         // 下部: ボタンバー(44) + 余白(10) = 54
         let topPadding: CGFloat = 43
         let bottomPadding: CGFloat = 54
-        let usable = availableHeight - topPadding - bottomPadding - (spacing * (rows - 1))
-        return max(36, usable / rows)
+        // N行完全表示 + 次の行が少し覗く（スクロール可能を示唆）
+        let peek: CGFloat = 0.35
+        let usable = availableHeight - topPadding - bottomPadding - (spacing * rows)
+        return max(36, usable / (rows + peek))
     }
 
     var body: some View {
