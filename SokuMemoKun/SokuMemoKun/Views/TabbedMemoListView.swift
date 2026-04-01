@@ -202,8 +202,8 @@ func tagColor(for index: Int) -> Color {
 // 紙の質感を表現するオーバーレイ
 // グリッドサイズ定義（列数×行数）
 enum GridSizeOption: Int, CaseIterable {
-    case grid3x8 = 0   // 3×8
-    case grid2x6 = 1   // 2×6
+    case grid3x8 = 0   // 3×6
+    case grid2x6 = 1   // 2×5
     case grid2x3 = 2   // 2×3
     case grid1x2 = 3   // 1×2
     case full = 4       // 1列・全文表示
@@ -222,8 +222,8 @@ enum GridSizeOption: Int, CaseIterable {
 
     var label: String {
         switch self {
-        case .grid3x8: return "3×8"
-        case .grid2x6: return "2×6"
+        case .grid3x8: return "3×6"
+        case .grid2x6: return "2×5"
         case .grid2x3: return "2×3"
         case .grid1x2: return "1×2"
         case .full: return "1(全文)"
@@ -245,7 +245,7 @@ enum GridSizeOption: Int, CaseIterable {
 // 「よく見る」フォルダ専用グリッドオプション
 enum FrequentGridOption: Int, CaseIterable {
     case grid2x8 = 0   // 2×8（各列8件）
-    case grid2x6 = 1   // 2×6（各列6件）
+    case grid2x6 = 1   // 2×5（各列6件）
     case grid2x3 = 2   // 2×3（各列3件）
     case full = 3       // 2×1（全文）
     case titleOnly = 4  // タイトルのみ（1列）
@@ -2037,8 +2037,8 @@ struct MemoCardView: View {
 
     private var bodyFont: CGFloat {
         switch gridSize {
-        case .grid3x8: return 11
-        case .grid2x6: return 13
+        case .grid3x8: return 13
+        case .grid2x6: return 14
         case .grid2x3: return 14
         case .grid1x2: return 15
         case .full: return 16
@@ -2076,30 +2076,23 @@ struct MemoCardView: View {
 
     private var cardHeight: CGFloat? {
         if isFullMode || isTitleOnly { return nil }
-        guard availableHeight > 0 else {
-            switch gridSize {
-            case .grid3x8: return 40
-            case .grid2x6: return 72
-            case .grid2x3: return 120
-            case .grid1x2: return 180
-            case .full: return nil
-            case .titleOnly: return nil
-            }
-        }
         let rows: CGFloat
         switch gridSize {
-        case .grid3x8: rows = 8
-        case .grid2x6: rows = 6
+        case .grid3x8: rows = 6
+        case .grid2x6: rows = 5
         case .grid2x3: rows = 3
         case .grid1x2: rows = 2
         case .full: return nil
         case .titleOnly: return nil
         }
+        guard availableHeight > 0 else {
+            return max(36, 322 / (rows + 0.2))
+        }
+        // N行完全表示 + 次の行が少し覗く（スクロール可能を示唆）
         let spacing: CGFloat = 8
-        let topPadding: CGFloat = 58
-        let bottomPadding: CGFloat = 70
-        let usable = availableHeight - topPadding - bottomPadding - (spacing * (rows - 1))
-        return max(40, usable / rows)
+        let peek: CGFloat = 0.2
+        let totalSpacing = spacing * (rows + peek)
+        return max(36, (availableHeight - totalSpacing) / (rows + peek))
     }
 
     var body: some View {
@@ -2134,12 +2127,11 @@ struct MemoCardView: View {
         } else {
             // 通常カードモード
             VStack(alignment: .leading, spacing: 2) {
-                if !memo.title.isEmpty {
-                    Text(memo.title)
-                        .font(.system(size: titleFont, weight: .semibold, design: .rounded))
-                        .lineLimit(1)
-                        .truncationMode(.tail)
-                }
+                Text(memo.title.isEmpty ? "(タイトルなし)" : memo.title)
+                    .font(.system(size: titleFont, weight: memo.title.isEmpty ? .regular : .semibold, design: .rounded))
+                    .foregroundStyle(memo.title.isEmpty ? .gray.opacity(0.5) : .primary)
+                    .lineLimit(1)
+                    .truncationMode(.tail)
 
                 Text(memo.content)
                     .font(.system(size: bodyFont))
@@ -2170,7 +2162,7 @@ struct MemoCardView: View {
                 }
                 .padding(3)
             }
-            .frame(height: gridSize == .grid3x8 ? 36 : gridSize == .grid2x6 ? 48 : gridSize == .grid2x3 ? 104 : gridSize == .grid1x2 ? 160 : cardHeight, alignment: .topLeading)
+            .frame(height: cardHeight, alignment: .topLeading)
             .background(Color(uiColor: .systemBackground))
             .contentShape(RoundedRectangle(cornerRadius: 6))
             .onTapGesture { onTap?() }
