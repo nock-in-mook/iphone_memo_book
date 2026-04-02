@@ -82,8 +82,12 @@ struct TodoListView: View {
     // メモ展開時のスクロール用（IDが変わるとスクロール発火）
     @State private var scrollToMemoItemID: UUID?
 
-    // タグ選択ルーレット（収納式、MemoDetailViewと同じ方式）
+    // タグ選択ルーレット
     @State private var showParentDial = false
+    @State private var showNewTagSheet = false
+    @State private var newTagIsChild = false
+    @State private var showTagHistory = false
+    @State private var tagHistoryItems: [TagHistory] = []
     @State private var dialParentID: UUID? = nil
     @State private var dialChildID: UUID? = nil
     @State private var showChildDial = false
@@ -753,7 +757,7 @@ struct TodoListView: View {
                 .transition(.opacity)
             }
         }
-        // タグ選択ルーレット（overlayで右からスライドイン）
+        // タグ選択ルーレット（overlayで右からスライドイン、中央やや上に配置）
         .overlay {
             ZStack {
                 if showParentDial {
@@ -762,22 +766,40 @@ struct TodoListView: View {
                         .ignoresSafeArea()
                         .onTapGesture {
                             saveDialTags()
-                            withAnimation(.spring(response: 0.3)) {
+                            withAnimation(.easeInOut(duration: 0.25)) {
                                 showParentDial = false; showChildDial = false
                             }
                         }
                         .transition(.opacity)
                 }
-                // ルーレットパネル（右端）
-                HStack(spacing: 0) {
-                    Spacer()
-                    if showParentDial {
-                        dialPanel
-                            .transition(.move(edge: .trailing))
+                // ルーレットパネル（右寄せ、中央やや上）
+                VStack {
+                    Spacer().frame(height: 80)
+                    HStack(spacing: 0) {
+                        Spacer()
+                        if showParentDial {
+                            dialPanel
+                                .transition(.move(edge: .trailing))
+                        }
                     }
+                    Spacer()
                 }
             }
-            .animation(.spring(response: 0.3), value: showParentDial)
+            .animation(.easeInOut(duration: 0.25), value: showParentDial)
+        }
+        // 新規タグ作成シート
+        .sheet(isPresented: $showNewTagSheet) {
+            NewTagSheetView(
+                parentTagID: newTagIsChild ? dialParentID : nil,
+                onTagCreated: { newTagID in
+                    if newTagIsChild {
+                        dialChildID = newTagID
+                    } else {
+                        dialParentID = newTagID
+                        dialChildID = nil
+                    }
+                }
+            )
         }
     }
 
@@ -1889,61 +1911,17 @@ struct TodoListView: View {
         .buttonStyle(.plain)
     }
 
-    // MARK: - ルーレットパネル（overlay内で右からスライドイン）
+    // MARK: - ルーレットパネル（QuickSortCellViewのdialAreaと同じ構造）
+    private let trayColor = Color.gray
+    private let trayCornerRadius: CGFloat = 10
+    private let dialTabWidth: CGFloat = 38
+    private let dialTabHeight: CGFloat = 22
+    private let dialTabRadius: CGFloat = 6
+    private let dialFixedHeight: CGFloat = 211
+
     private var dialPanel: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 4) {
             HStack(spacing: 0) {
-                // 収納ボタン（しまう時にタグ保存）
-                Text("›")
-                    .font(.system(size: 12, weight: .bold))
-                    .foregroundStyle(.tertiary)
-                    .frame(width: 12, height: 50)
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        saveDialTags()
-                        withAnimation(.spring(response: 0.3)) {
-                            showParentDial = false; showChildDial = false
-                        }
-                    }
-
-                // 子タブ開閉ボタン
-                ZStack {
-                    if showChildDial {
-                        Text("›")
-                            .font(.system(size: 14, weight: .bold))
-                            .foregroundStyle(.secondary)
-                            .frame(width: 14, height: 60)
-                            .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.1)))
-                            .contentShape(Rectangle())
-                            .onTapGesture {
-                                withAnimation(.spring(response: 0.3)) { showChildDial = false }
-                            }
-                    } else {
-                        VStack(spacing: 2) {
-                            Text("子").font(.system(size: 11, weight: .bold, design: .rounded))
-                            Text("‹").font(.system(size: 12, weight: .bold))
-                        }
-                        .foregroundStyle(.secondary)
-                        .frame(width: 20, height: 60)
-                        .background(RoundedRectangle(cornerRadius: 4).fill(Color.gray.opacity(0.15)))
-                        .contentShape(Rectangle())
-                        .onTapGesture {
-                            withAnimation(.spring(response: 0.3)) { showChildDial = true }
-                        }
-                    }
-                }
-                .contentShape(Rectangle())
-                .simultaneousGesture(
-                    DragGesture(minimumDistance: 5)
-                        .onChanged { value in
-                            if !showChildDial { showChildDial = true }
-                            childExternalDragY = value.translation.height
-                        }
-                        .onEnded { _ in childExternalDragY = nil }
-                )
-
-                Rectangle().fill(Color.gray.opacity(0.2)).frame(width: 1)
-
                 TagDialView(
                     parentOptions: parentOptions,
                     parentSelectedID: $dialParentID,
@@ -1951,12 +1929,130 @@ struct TodoListView: View {
                     childSelectedID: $dialChildID,
                     showChild: $showChildDial,
                     isOpen: true,
-                    childExternalDragY: $childExternalDragY
+                    childExternalDragY: $childExternalDragY,
+                    onLongPress: nil
                 )
+                .background {
+                    DialEdgeArcShape(radius: 350, dialHeight: 211)
+                        .fill(Color.white)
+                        .shadow(color: .black.opacity(0.5), radius: 3, x: -2, y: 0)
+                        .allowsHitTesting(false)
+                }
+                .offset(x: -27, y: -10)
+
+                // 「しまう」ボタン
+                Image(systemName: "chevron.right")
+                    .font(.system(size: 28, weight: .bold))
+                    .foregroundStyle(.white.opacity(0.5))
+                    .frame(maxHeight: .infinity)
+                    .frame(width: 36)
+                    .contentShape(Rectangle())
+                    .onTapGesture {
+                        saveDialTags()
+                        withAnimation(.easeInOut(duration: 0.25)) {
+                            showParentDial = false; showChildDial = false
+                        }
+                    }
             }
-            Spacer()
+            .frame(height: dialFixedHeight)
+
+            // 親タグ追加・子タグ追加ボタン
+            ZStack(alignment: .trailing) {
+                Button {
+                    newTagIsChild = false
+                    showNewTagSheet = true
+                } label: {
+                    Label("親タグ追加", systemImage: "plus.circle.fill")
+                        .font(.system(size: 14, weight: .medium))
+                        .foregroundStyle(.white.opacity(0.8))
+                }
+                .padding(.trailing, 196)
+                if showChildDial {
+                    Button {
+                        if dialParentID != nil {
+                            newTagIsChild = true
+                            showNewTagSheet = true
+                        }
+                    } label: {
+                        Label("子タグ追加", systemImage: "plus.circle")
+                            .font(.system(size: 13, weight: .medium))
+                            .foregroundStyle(.white.opacity(0.7))
+                    }
+                    .padding(.trailing, 86)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .trailing)
+            .padding(.vertical, 4)
+            .offset(y: -13)
         }
-        .background(Color(uiColor: .systemBackground))
+        .padding(.top, dialTabHeight + 10)
+        .padding(.bottom, 6)
+        .padding(.leading, dialTabWidth + 12)
+        .padding(.trailing, 12)
+        .background(
+            TrayWithTabShape(
+                tabWidth: dialTabWidth,
+                tabHeight: dialTabHeight,
+                tabRadius: dialTabRadius,
+                bodyRadius: trayCornerRadius,
+                bodyPeek: 0
+            )
+            .fill(trayColor)
+            .shadow(color: .black.opacity(0.2), radius: 3, x: -2, y: 0)
+        )
+        // ルーレットラベル
+        .overlay(alignment: .topTrailing) {
+            ZStack(alignment: .trailing) {
+                Text("親タグ")
+                    .font(.system(size: 10, weight: .medium, design: .rounded))
+                    .foregroundStyle(.white.opacity(0.6))
+                    .frame(height: dialTabHeight)
+                    .padding(.trailing, 236)
+                if showChildDial {
+                    Text("子タグ")
+                        .font(.system(size: 10, weight: .medium, design: .rounded))
+                        .foregroundStyle(.white.opacity(0.6))
+                        .frame(height: dialTabHeight)
+                        .padding(.trailing, 119)
+                }
+            }
+        }
+        // タブ「しまう」ラベル
+        .overlay(alignment: .topLeading) {
+            Text("しまう")
+                .font(.system(size: 13, weight: .bold, design: .rounded))
+                .foregroundStyle(.white)
+                .frame(width: dialTabWidth, height: dialTabHeight, alignment: .leading)
+                .padding(.leading, 3)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    saveDialTags()
+                    withAnimation(.easeInOut(duration: 0.25)) {
+                        showParentDial = false; showChildDial = false
+                    }
+                }
+        }
+        // 履歴ボタン（トレー右下）
+        .overlay(alignment: .bottomTrailing) {
+            Button {
+                if showTagHistory {
+                    showTagHistory = false
+                } else {
+                    tagHistoryItems = TagHistory.recentHistory(context: modelContext)
+                    showTagHistory = true
+                }
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 9, weight: .semibold))
+                    Text("履歴")
+                        .font(.system(size: 11, weight: .medium))
+                }
+                .foregroundStyle(.white.opacity(0.7))
+            }
+            .padding(.trailing, 12)
+            .offset(y: 16)
+        }
     }
 
     // タグ保存
