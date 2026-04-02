@@ -874,9 +874,10 @@ struct TodoListView: View {
                             .font(.system(size: 13, weight: .medium))
                             .foregroundStyle(.secondary)
                     }
-                    Spacer(minLength: 4)
-                    // タグバッジ（右端固定、左に伸びる）
+                    Spacer(minLength: 2)
+                    // タグバッジ（右端寄せ）
                     tagRowInHeader
+                        .padding(.trailing, -6)
                 }
             }
             .contextMenu {
@@ -1931,44 +1932,44 @@ struct TodoListView: View {
                     // 親タグ＋右下に子タグめり込みデザイン（MemoInputViewと同じ）
                     let parentDisplay = truncateByWidth(parent.name, maxWidth: 12)
                     let childDisplay = truncateByWidth(child.name, maxWidth: 8)
-                    HStack(alignment: .bottom, spacing: -4) {
+                    HStack(alignment: .bottom, spacing: -3) {
                         Text(parentDisplay)
-                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .font(.system(size: 11, weight: .semibold, design: .rounded))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
-                            .padding(.leading, 7)
-                            .padding(.trailing, 10)
-                            .padding(.vertical, 4)
-                            .background(RoundedRectangle(cornerRadius: 6).fill(tagColor(for: parent.colorIndex)))
+                            .padding(.leading, 5)
+                            .padding(.trailing, 8)
+                            .padding(.vertical, 3)
+                            .background(RoundedRectangle(cornerRadius: 5).fill(tagColor(for: parent.colorIndex)))
                         Text(childDisplay)
-                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .font(.system(size: 9, weight: .medium, design: .rounded))
                             .lineLimit(1)
                             .fixedSize(horizontal: true, vertical: false)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 1.5)
                             .background(
-                                RoundedRectangle(cornerRadius: 4).fill(tagColor(for: child.colorIndex))
+                                RoundedRectangle(cornerRadius: 3).fill(tagColor(for: child.colorIndex))
                             )
                             .overlay(
-                                RoundedRectangle(cornerRadius: 4)
+                                RoundedRectangle(cornerRadius: 3)
                                     .stroke(Color.white, lineWidth: 1.5)
                             )
                     }
                 } else {
                     // 親タグのみ
                     Text(truncateByWidth(parent.name, maxWidth: 12))
-                        .font(.system(size: 13, weight: .semibold, design: .rounded))
-                        .padding(.horizontal, 7)
-                        .padding(.vertical, 4)
-                        .background(RoundedRectangle(cornerRadius: 6).fill(tagColor(for: parent.colorIndex)))
+                        .font(.system(size: 11, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 3)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(tagColor(for: parent.colorIndex)))
                 }
             } else {
                 Text("タグなし")
-                    .font(.system(size: 13, design: .rounded))
+                    .font(.system(size: 11, design: .rounded))
                     .foregroundStyle(.secondary.opacity(0.5))
-                    .padding(.horizontal, 7)
-                    .padding(.vertical, 4)
-                    .background(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1))
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 5).strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1))
             }
         }
         .onTapGesture {
