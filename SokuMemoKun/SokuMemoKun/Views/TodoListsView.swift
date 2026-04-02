@@ -215,17 +215,17 @@ struct TodoListsView: View {
                 showNewListDialog = true
             } label: {
                 Label("リストを作成", systemImage: "plus")
-                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
                     .foregroundStyle(todoTabColor)
-                    .padding(.horizontal, 24)
-                    .padding(.vertical, 12)
+                    .padding(.horizontal, 12)
+                    .padding(.vertical, 8)
                     .background(
-                        RoundedRectangle(cornerRadius: 10)
+                        RoundedRectangle(cornerRadius: 8)
                             .fill(.white)
                             .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
                     )
             }
-            .padding(.top, 16)
+            .padding(.top, 12)
             .padding(.bottom, 24)
         }
     }
