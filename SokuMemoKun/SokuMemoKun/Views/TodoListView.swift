@@ -88,6 +88,7 @@ struct TodoListView: View {
     @State private var newTagIsChild = false
     @State private var showTagHistory = false
     @State private var tagHistoryItems: [TagHistory] = []
+    @State private var headerBottomY: CGFloat = 0
     @State private var dialParentID: UUID? = nil
     @State private var dialChildID: UUID? = nil
     @State private var showChildDial = true
@@ -113,6 +114,16 @@ struct TodoListView: View {
                 headerView
 
                 Divider()
+                    .background(
+                        GeometryReader { geo in
+                            Color.clear.onAppear {
+                                headerBottomY = geo.frame(in: .global).maxY
+                            }
+                            .onChange(of: geo.frame(in: .global).maxY) { _, newVal in
+                                headerBottomY = newVal
+                            }
+                        }
+                    )
                     .padding(.horizontal, 16)
 
                 // ToDoリスト（Listベース: スワイプ・スクロール・リオーダー全対応）
@@ -774,7 +785,7 @@ struct TodoListView: View {
                 }
                 // ルーレットパネル（QuickSortCellViewと同じ配置方法）
                 VStack(spacing: 0) {
-                    Spacer().frame(height: 180)
+                    Spacer().frame(height: headerBottomY)
 
                     if showParentDial {
                         dialPanel
