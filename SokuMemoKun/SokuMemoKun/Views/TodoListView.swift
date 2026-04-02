@@ -197,7 +197,7 @@ struct TodoListView: View {
                             } else if !focused {
                                 // フォーカスが外れたら少し待ってからcommitEdit
                                 // （submitEditのisChainEditing=trueが先に実行される猶予）
-                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.02) {
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
                                     guard !isChainEditing else { return }
                                     if let editID = editingItemID,
                                        let item = allItems.first(where: { $0.id == editID }) {
