@@ -799,29 +799,6 @@ struct TodoListView: View {
 
                     Spacer()
                 }
-                // 履歴ボタン（トレーの外、MemoInputViewと同じ方式）
-                .overlay(alignment: .bottomTrailing) {
-                    if showParentDial {
-                        Button {
-                            if showTagHistory {
-                                showTagHistory = false
-                            } else {
-                                tagHistoryItems = TagHistory.recentHistory(context: modelContext)
-                                showTagHistory = true
-                            }
-                        } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
-                                    .font(.system(size: 9, weight: .semibold))
-                                Text("履歴")
-                                    .font(.system(size: 11, weight: .medium))
-                            }
-                            .foregroundStyle(.white.opacity(0.7))
-                        }
-                        .padding(.trailing, 8)
-                        .offset(y: 21)
-                    }
-                }
             }
             .background(
                 GeometryReader { geo in
@@ -2053,6 +2030,25 @@ struct TodoListView: View {
                     }
                     .padding(.trailing, 86)
                 }
+                // 履歴ボタン（右端）
+                Button {
+                    if showTagHistory {
+                        showTagHistory = false
+                    } else {
+                        tagHistoryItems = TagHistory.recentHistory(context: modelContext)
+                        showTagHistory = true
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                        Text("履歴")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(.white.opacity(0.7))
+                }
+                .padding(.trailing, 4)
+                .offset(y: 8)
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
             .padding(.vertical, 4)
