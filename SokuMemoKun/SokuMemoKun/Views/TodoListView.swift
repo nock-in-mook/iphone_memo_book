@@ -1923,45 +1923,36 @@ struct TodoListView: View {
     }
 
     private var tagRowInHeader: some View {
-        Button {
+        HStack(spacing: 3) {
+            if let parent = currentParentTag {
+                Text(parent.name.prefix(8) + (parent.name.count > 8 ? "…" : ""))
+                    .font(.system(size: 13, weight: .semibold, design: .rounded))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 6).fill(tagColor(for: parent.colorIndex)))
+                if let child = currentChildTag {
+                    Text(child.name.prefix(6) + (child.name.count > 6 ? "…" : ""))
+                        .font(.system(size: 12, weight: .medium, design: .rounded))
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 2)
+                        .background(RoundedRectangle(cornerRadius: 5).fill(tagColor(for: child.colorIndex)))
+                }
+            } else {
+                Text("タグなし")
+                    .font(.system(size: 13, design: .rounded))
+                    .foregroundStyle(.secondary.opacity(0.5))
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 3)
+                    .background(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1))
+            }
+        }
+        .onTapGesture {
             dialParentID = currentParentTag?.id
             dialChildID = currentChildTag?.id
             withAnimation(.spring(response: 0.3)) {
                 showParentDial = true
             }
-        } label: {
-            HStack(spacing: 3) {
-                if let parent = currentParentTag {
-                    Text(truncTagName(parent.name))
-                        .font(.system(size: 11, weight: .semibold, design: .rounded))
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Capsule().fill(tagColor(for: parent.colorIndex)))
-                    if let child = currentChildTag {
-                        Text("›")
-                            .font(.system(size: 10))
-                            .foregroundStyle(.secondary.opacity(0.4))
-                        Text(truncTagName(child.name))
-                            .font(.system(size: 11, weight: .semibold, design: .rounded))
-                            .foregroundStyle(.primary)
-                            .lineLimit(1)
-                            .padding(.horizontal, 6)
-                            .padding(.vertical, 3)
-                            .background(Capsule().fill(tagColor(for: child.colorIndex)))
-                    }
-                } else {
-                    Text("タグなし")
-                        .font(.system(size: 11, design: .rounded))
-                        .foregroundStyle(.secondary.opacity(0.5))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(Capsule().strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1))
-                }
-            }
         }
-        .buttonStyle(.plain)
     }
 
     // MARK: - ルーレットパネル（QuickSortCellViewのdialAreaと同じ構造）
