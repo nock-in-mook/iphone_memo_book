@@ -792,27 +792,6 @@ struct TodoListView: View {
 
                     if showParentDial {
                         dialPanel
-                            // 履歴ボタン（トレーの外、MemoInputViewと同じ配置）
-                            .overlay(alignment: .bottomTrailing) {
-                                Button {
-                                    if showTagHistory {
-                                        showTagHistory = false
-                                    } else {
-                                        tagHistoryItems = TagHistory.recentHistory(context: modelContext)
-                                        showTagHistory = true
-                                    }
-                                } label: {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
-                                            .font(.system(size: 9, weight: .semibold))
-                                        Text("履歴")
-                                            .font(.system(size: 11, weight: .medium))
-                                    }
-                                    .foregroundStyle(.white.opacity(0.7))
-                                }
-                                .padding(.trailing, 8)
-                                .offset(y: 21)
-                            }
                             .fixedSize(horizontal: true, vertical: false)
                             .frame(maxWidth: .infinity, alignment: .trailing)
                             .transition(.move(edge: .trailing).combined(with: .opacity))
@@ -1975,6 +1954,7 @@ struct TodoListView: View {
         .onTapGesture {
             dialParentID = currentParentTag?.id
             dialChildID = currentChildTag?.id
+            showChildDial = true
             withAnimation(.spring(response: 0.3)) {
                 showParentDial = true
             }
@@ -2026,7 +2006,7 @@ struct TodoListView: View {
             }
             .frame(height: dialFixedHeight)
 
-            // 親タグ追加・子タグ追加ボタン
+            // 親タグ追加・子タグ追加・履歴ボタン
             ZStack(alignment: .trailing) {
                 Button {
                     newTagIsChild = false
@@ -2049,6 +2029,23 @@ struct TodoListView: View {
                             .foregroundStyle(.white.opacity(0.7))
                     }
                     .padding(.trailing, 86)
+                }
+                // 履歴ボタン（右端）
+                Button {
+                    if showTagHistory {
+                        showTagHistory = false
+                    } else {
+                        tagHistoryItems = TagHistory.recentHistory(context: modelContext)
+                        showTagHistory = true
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 9, weight: .semibold))
+                        Text("履歴")
+                            .font(.system(size: 11, weight: .medium))
+                    }
+                    .foregroundStyle(.white.opacity(0.7))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .trailing)
