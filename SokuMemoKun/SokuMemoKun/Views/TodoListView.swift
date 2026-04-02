@@ -785,7 +785,8 @@ struct TodoListView: View {
                 }
                 // ルーレットパネル（QuickSortCellViewと同じ配置方法）
                 VStack(spacing: 0) {
-                    Spacer().frame(height: headerBottomY)
+                    // トレー内のtop paddingを差し引いてヘッダー下端に合わせる
+                    Spacer().frame(height: max(0, headerBottomY - (dialTabHeight + 10)))
 
                     if showParentDial {
                         dialPanel
