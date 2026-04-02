@@ -1909,40 +1909,65 @@ struct TodoListView: View {
     }
 
     // ヘッダー内のタグ行
-    // 全角8文字に制限
-    private func truncTagName(_ name: String) -> String {
-        var width: Double = 0
+    // 半角幅換算で文字列を切り詰める（全角=2、半角=1）
+    private func truncateByWidth(_ text: String, maxWidth: CGFloat) -> String {
+        var width: CGFloat = 0
         var result = ""
-        for char in name {
-            let w: Double = char.isASCII ? 0.5 : 1.0
-            if width + w > 8 { return result + "…" }
+        for ch in text {
+            let w: CGFloat = ch.isASCII ? 1.0 : 2.0
+            if width + w > maxWidth {
+                return result + "…"
+            }
             width += w
-            result.append(char)
+            result.append(ch)
         }
         return result
     }
 
     private var tagRowInHeader: some View {
-        HStack(spacing: 3) {
+        Group {
             if let parent = currentParentTag {
-                Text(parent.name.prefix(8) + (parent.name.count > 8 ? "…" : ""))
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
-                    .background(RoundedRectangle(cornerRadius: 6).fill(tagColor(for: parent.colorIndex)))
                 if let child = currentChildTag {
-                    Text(child.name.prefix(6) + (child.name.count > 6 ? "…" : ""))
-                        .font(.system(size: 12, weight: .medium, design: .rounded))
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(RoundedRectangle(cornerRadius: 5).fill(tagColor(for: child.colorIndex)))
+                    // 親タグ＋右下に子タグめり込みデザイン（MemoInputViewと同じ）
+                    let parentDisplay = truncateByWidth(parent.name, maxWidth: 12)
+                    let childDisplay = truncateByWidth(child.name, maxWidth: 8)
+                    HStack(alignment: .bottom, spacing: -4) {
+                        Text(parentDisplay)
+                            .font(.system(size: 13, weight: .semibold, design: .rounded))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.leading, 7)
+                            .padding(.trailing, 10)
+                            .padding(.vertical, 4)
+                            .background(RoundedRectangle(cornerRadius: 6).fill(tagColor(for: parent.colorIndex)))
+                        Text(childDisplay)
+                            .font(.system(size: 11, weight: .medium, design: .rounded))
+                            .lineLimit(1)
+                            .fixedSize(horizontal: true, vertical: false)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4).fill(tagColor(for: child.colorIndex))
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .stroke(Color.white, lineWidth: 1.5)
+                            )
+                    }
+                } else {
+                    // 親タグのみ
+                    Text(truncateByWidth(parent.name, maxWidth: 12))
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .padding(.horizontal, 7)
+                        .padding(.vertical, 4)
+                        .background(RoundedRectangle(cornerRadius: 6).fill(tagColor(for: parent.colorIndex)))
                 }
             } else {
                 Text("タグなし")
                     .font(.system(size: 13, design: .rounded))
                     .foregroundStyle(.secondary.opacity(0.5))
-                    .padding(.horizontal, 8)
-                    .padding(.vertical, 3)
+                    .padding(.horizontal, 7)
+                    .padding(.vertical, 4)
                     .background(RoundedRectangle(cornerRadius: 6).strokeBorder(Color.secondary.opacity(0.2), lineWidth: 1))
             }
         }
