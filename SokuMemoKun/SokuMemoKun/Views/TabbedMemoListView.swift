@@ -2177,14 +2177,14 @@ struct MemoCardView: View {
             .shadow(color: .black.opacity(0.1), radius: 2, x: -1, y: 1)
             .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
             .overlay(alignment: .bottomTrailing) {
-                // 子タグバッジ（右下にはみ出し気味に表示）
+                // 子タグバッジ（右下、カード右端に揃えてはみ出し）
                 if !childTagsForBadge.isEmpty {
                     HStack(spacing: 2) {
                         let maxShow = 3
                         ForEach(Array(childTagsForBadge.prefix(maxShow).enumerated()), id: \.offset) { _, tag in
                             Text(tag.name)
                                 .font(.system(size: 9, weight: .semibold, design: .rounded))
-                                .foregroundStyle(.white)
+                                .foregroundStyle(.primary)
                                 .padding(.horizontal, 5)
                                 .padding(.vertical, 2)
                                 .background(
@@ -2202,7 +2202,7 @@ struct MemoCardView: View {
                                 )
                         }
                     }
-                    .offset(x: 4, y: 6)
+                    .offset(y: 6)
                 }
             }
         }

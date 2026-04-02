@@ -14,6 +14,8 @@ struct SokuMemoKunApp: App {
         Self.insertLongTextTestMemos(container: container)
         // タグ履歴ダミーデータ（デバッグ用）
         Self.insertDummyTagHistory(container: container)
+        // 子タグバッジテスト用ダミーデータ
+        Self.insertChildTagBadgeTestData(container: container)
     }
 
     var body: some Scene {
@@ -906,6 +908,102 @@ struct SokuMemoKunApp: App {
                 tags: [testTag]
             )
             context.insert(memo)
+        }
+
+        try? context.save()
+        UserDefaults.standard.set(true, forKey: key)
+    }
+
+    // 子タグバッジテスト用ダミーデータ（親タグ1つ＋子タグ多数＋メモ大量）
+    private static func insertChildTagBadgeTestData(container: ModelContainer) {
+        let key = "childTagBadgeTestV1"
+        guard !UserDefaults.standard.bool(forKey: key) else { return }
+
+        let context = ModelContext(container)
+
+        // 親タグ作成
+        let parentTag = Tag(name: "バッジテスト", colorIndex: 22)
+        context.insert(parentTag)
+
+        // 様々な長さ・言語の子タグを作成
+        let childTagNames: [(String, Int)] = [
+            ("買い物", 2),
+            ("Work", 7),
+            ("あ", 5),
+            ("超重要タスクリスト", 6),
+            ("Meeting Notes", 15),
+            ("日記", 3),
+            ("Recipe Collection", 23),
+            ("アイデアメモ帳", 4),
+            ("x", 29),
+            ("プログラミング学習記録ノート", 18),
+            ("TODO", 37),
+            ("Brainstorming", 25),
+            ("旅", 9),
+            ("Very Long Tag Name For Testing Overflow", 40),
+            ("映画レビュー", 11),
+        ]
+
+        var childTags: [Tag] = []
+        for (i, (name, color)) in childTagNames.enumerated() {
+            let tag = Tag(name: name, colorIndex: color, parentTagID: parentTag.id)
+            tag.sortOrder = i
+            context.insert(tag)
+            childTags.append(tag)
+        }
+
+        // メモを20件作成（子タグをランダムに1〜6個付ける）
+        let titles = [
+            "今日の買い物リスト", "Weekly standup notes", "読みたい本メモ",
+            "API設計のアイデア", "旅行の持ち物", "映画「千と千尋」感想",
+            "Swift並行処理メモ", "Recipe: Pasta Carbonara", "来月の目標",
+            "バグ修正メモ", "散歩で見つけた花", "English vocabulary",
+            "プレゼン資料の構成", "引っ越し準備チェックリスト", "Design sprint notes",
+            "", "お気に入りカフェ", "New feature brainstorm",
+            "数学の公式まとめ", "ギター練習メニュー",
+        ]
+        let bodies = [
+            "牛乳、卵、パン、バター、チーズ、トマト、レタス",
+            "Discussed Q3 roadmap. Action items: update docs, review PRs.",
+            "『百年の孤独』ガルシア・マルケス、『ノルウェイの森』村上春樹",
+            "RESTful API → GraphQLへの移行を検討。パフォーマンス比較が必要。",
+            "パスポート、充電器、着替え3日分、常備薬、ガイドブック",
+            "映像美が圧巻。カオナシの存在が不気味で良い。★★★★☆",
+            "async/await, Task, TaskGroup, Actor — 並行処理の基本を整理する",
+            "Ingredients: spaghetti, eggs, pecorino, guanciale, black pepper",
+            "毎日30分ランニング、本を2冊読む、SwiftUIの勉強を進める",
+            "Issue #42: nilチェック漏れ。Optional Bindingで修正済み。",
+            "桜が満開だった。名前のわからない青い花も咲いていた。",
+            "ephemeral, ubiquitous, serendipity, melancholy, resilience",
+            "1. 自己紹介 2. 課題提起 3. 解決策 4. デモ 5. Q&A",
+            "不動産屋に連絡、ネット回線解約、住所変更届、郵便転送届",
+            "Day 1: empathize. Day 2: define. Day 3: ideate. Day 4: prototype.",
+            "とりあえずメモしておく。あとで整理する。",
+            "駅前の「珈琲時間」が良かった。静かで電源あり。",
+            "Push notifications, widget support, shortcuts integration",
+            "∫f(x)dx, Σ(n=1→∞), lim(x→0), ∂f/∂x",
+            "Am, C, G, Em のコード進行。カポ2フレット。",
+        ]
+
+        for i in 0..<20 {
+            let memo = Memo(
+                content: bodies[i],
+                title: titles[i],
+                tags: [parentTag]
+            )
+            context.insert(memo)
+
+            // 子タグをランダムに1〜6個付ける
+            let tagCount = (i % 6) + 1
+            var shuffled = childTags
+            // 簡易シャッフル（iベースで散らす）
+            for j in 0..<shuffled.count {
+                let swapIdx = (j + i * 7 + 3) % shuffled.count
+                shuffled.swapAt(j, swapIdx)
+            }
+            for tag in shuffled.prefix(tagCount) {
+                memo.tags.append(tag)
+            }
         }
 
         try? context.save()
