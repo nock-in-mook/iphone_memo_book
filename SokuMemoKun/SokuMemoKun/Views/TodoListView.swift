@@ -89,6 +89,7 @@ struct TodoListView: View {
     @State private var showTagHistory = false
     @State private var tagHistoryItems: [TagHistory] = []
     @State private var headerBottomY: CGFloat = 0
+    @State private var overlayTopY: CGFloat = 0
     @State private var dialParentID: UUID? = nil
     @State private var dialChildID: UUID? = nil
     @State private var showChildDial = true
@@ -119,8 +120,8 @@ struct TodoListView: View {
                             Color.clear.onAppear {
                                 headerBottomY = geo.frame(in: .global).maxY
                             }
-                            .onChange(of: geo.frame(in: .global).maxY) { _, newVal in
-                                headerBottomY = newVal
+                            .onChange(of: geo.frame(in: .global).maxY) { _, v in
+                                headerBottomY = v
                             }
                         }
                     )
@@ -771,6 +772,17 @@ struct TodoListView: View {
         // タグ選択ルーレット（overlayで右からスライドイン、中央やや上に配置）
         .overlay {
             ZStack {
+                // overlay上端のグローバル座標を取得
+                GeometryReader { geo in
+                    Color.clear.onAppear {
+                        overlayTopY = geo.frame(in: .global).minY
+                    }
+                    .onChange(of: geo.frame(in: .global).minY) { _, v in
+                        overlayTopY = v
+                    }
+                }
+                .frame(height: 0)
+
                 if showParentDial {
                     // グレーアウト背景
                     Color.black.opacity(0.4)
@@ -785,8 +797,9 @@ struct TodoListView: View {
                 }
                 // ルーレットパネル（QuickSortCellViewと同じ配置方法）
                 VStack(spacing: 0) {
-                    // トレー内のtop paddingを差し引いてヘッダー下端に合わせる
-                    Spacer().frame(height: max(0, headerBottomY - (dialTabHeight + 10)))
+                    // ヘッダー下端 - overlay上端 = 1項目目の上端に一致
+                    let topOffset = max(0, headerBottomY - overlayTopY)
+                    Spacer().frame(height: topOffset)
 
                     if showParentDial {
                         dialPanel
