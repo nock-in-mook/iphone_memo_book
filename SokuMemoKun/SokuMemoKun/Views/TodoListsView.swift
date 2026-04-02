@@ -214,16 +214,16 @@ struct TodoListsView: View {
             Button {
                 showNewListDialog = true
             } label: {
-                Label("リストを作成", systemImage: "plus")
-                    .font(.system(size: 13, weight: .semibold, design: .rounded))
-                    .foregroundStyle(todoTabColor)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(
-                        RoundedRectangle(cornerRadius: 8)
-                            .fill(.white)
-                            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
-                    )
+                HStack(spacing: 6) {
+                    Image(systemName: "plus")
+                        .font(.system(size: 10, weight: .bold))
+                        .foregroundStyle(.white)
+                        .frame(width: 18, height: 18)
+                        .background(Circle().stroke(.white, lineWidth: 1.5))
+                    Text("リストを作成")
+                        .font(.system(size: 13, weight: .semibold, design: .rounded))
+                        .foregroundStyle(.white)
+                }
             }
             .padding(.top, 12)
             .padding(.bottom, 24)
