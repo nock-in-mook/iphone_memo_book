@@ -1783,7 +1783,7 @@ struct TabbedMemoListView: View {
                         }
                 }
             }
-            MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight, onTap: {
+            MemoCardView(memo: memo, gridSize: currentGridSize, availableHeight: availableHeight, parentTag: currentParentTag, onTap: {
                 handleMemoTap(memo)
             })
                 .overlay(
@@ -2018,7 +2018,17 @@ struct MemoCardView: View {
     let memo: Memo
     var gridSize: GridSizeOption = .grid3x8
     var availableHeight: CGFloat = 0
+    var parentTag: Tag? = nil  // 現在のフォルダの親タグ（子タグバッジ表示用）
     var onTap: (() -> Void)? = nil
+
+    // このメモに付いている子タグ（現在のフォルダの子タグのみ）
+    private var childTagsForBadge: [(name: String, colorIndex: Int)] {
+        guard let parent = parentTag else { return [] }
+        return memo.tags
+            .filter { $0.parentTagID == parent.id }
+            .sorted { $0.sortOrder < $1.sortOrder }
+            .map { (name: $0.name, colorIndex: $0.colorIndex) }
+    }
 
     // グリッドサイズに応じたスタイル
     private var titleFont: CGFloat {
@@ -2166,6 +2176,35 @@ struct MemoCardView: View {
             .clipShape(RoundedRectangle(cornerRadius: 6))
             .shadow(color: .black.opacity(0.1), radius: 2, x: -1, y: 1)
             .shadow(color: .black.opacity(0.08), radius: 2, x: 0, y: 1)
+            .overlay(alignment: .bottomTrailing) {
+                // 子タグバッジ（右下にはみ出し気味に表示）
+                if !childTagsForBadge.isEmpty {
+                    HStack(spacing: 2) {
+                        let maxShow = 3
+                        ForEach(Array(childTagsForBadge.prefix(maxShow).enumerated()), id: \.offset) { _, tag in
+                            Text(tag.name)
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.white)
+                                .padding(.horizontal, 5)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule().fill(tagColor(for: tag.colorIndex))
+                                )
+                        }
+                        if childTagsForBadge.count > maxShow {
+                            Text("+\(childTagsForBadge.count - maxShow)")
+                                .font(.system(size: 9, weight: .semibold, design: .rounded))
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 4)
+                                .padding(.vertical, 2)
+                                .background(
+                                    Capsule().fill(Color(uiColor: .systemGray5))
+                                )
+                        }
+                    }
+                    .offset(x: 4, y: 6)
+                }
+            }
         }
     }
 }
