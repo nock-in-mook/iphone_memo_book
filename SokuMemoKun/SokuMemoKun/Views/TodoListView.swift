@@ -90,7 +90,7 @@ struct TodoListView: View {
     @State private var tagHistoryItems: [TagHistory] = []
     @State private var dialParentID: UUID? = nil
     @State private var dialChildID: UUID? = nil
-    @State private var showChildDial = false
+    @State private var showChildDial = true
     @State private var childExternalDragY: CGFloat? = nil
 
 
