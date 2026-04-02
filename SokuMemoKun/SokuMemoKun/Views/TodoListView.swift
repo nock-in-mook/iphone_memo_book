@@ -794,31 +794,33 @@ struct TodoListView: View {
                         dialPanel
                             .fixedSize(horizontal: true, vertical: false)
                             .frame(maxWidth: .infinity, alignment: .trailing)
-                            // 履歴ボタン（トレー右下、クリップされない位置）
-                            .overlay(alignment: .bottomTrailing) {
-                                Button {
-                                    if showTagHistory {
-                                        showTagHistory = false
-                                    } else {
-                                        tagHistoryItems = TagHistory.recentHistory(context: modelContext)
-                                        showTagHistory = true
-                                    }
-                                } label: {
-                                    HStack(spacing: 3) {
-                                        Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
-                                            .font(.system(size: 9, weight: .semibold))
-                                        Text("履歴")
-                                            .font(.system(size: 11, weight: .medium))
-                                    }
-                                    .foregroundStyle(.white.opacity(0.7))
-                                }
-                                .padding(.trailing, 12)
-                                .offset(y: 16)
-                            }
                             .transition(.move(edge: .trailing).combined(with: .opacity))
                     }
 
                     Spacer()
+                }
+                // 履歴ボタン（トレーの外、MemoInputViewと同じ方式）
+                .overlay(alignment: .bottomTrailing) {
+                    if showParentDial {
+                        Button {
+                            if showTagHistory {
+                                showTagHistory = false
+                            } else {
+                                tagHistoryItems = TagHistory.recentHistory(context: modelContext)
+                                showTagHistory = true
+                            }
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: showTagHistory ? "chevron.down" : "chevron.right")
+                                    .font(.system(size: 9, weight: .semibold))
+                                Text("履歴")
+                                    .font(.system(size: 11, weight: .medium))
+                            }
+                            .foregroundStyle(.white.opacity(0.7))
+                        }
+                        .padding(.trailing, 8)
+                        .offset(y: 21)
+                    }
                 }
             }
             .background(
