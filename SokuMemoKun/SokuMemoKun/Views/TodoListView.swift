@@ -799,6 +799,12 @@ struct TodoListView: View {
 
                     Spacer()
                 }
+                // タグ履歴リスト（中央overlay）
+                .overlay(alignment: .center) {
+                    if showTagHistory {
+                        tagHistoryListView
+                    }
+                }
             }
             .background(
                 GeometryReader { geo in
@@ -2101,6 +2107,82 @@ struct TodoListView: View {
                     }
                 }
         }
+    }
+
+    // MARK: - タグ履歴リスト（QuickSortCellViewと同じ）
+    private var tagHistoryListView: some View {
+        VStack(spacing: 0) {
+            HStack {
+                Text("タグ履歴")
+                    .font(.system(size: 12, weight: .bold, design: .rounded))
+                    .foregroundStyle(.secondary)
+                Spacer()
+                Button { showTagHistory = false } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.system(size: 16))
+                        .foregroundStyle(.secondary.opacity(0.5))
+                }
+            }
+            .padding(.horizontal, 12)
+            .padding(.top, 8)
+            .padding(.bottom, 4)
+
+            if tagHistoryItems.isEmpty {
+                Text("まだ履歴がありません")
+                    .font(.system(size: 12))
+                    .foregroundStyle(.secondary)
+                    .padding(.vertical, 12)
+            } else {
+                ScrollView {
+                    VStack(spacing: 4) {
+                        ForEach(tagHistoryItems, id: \.id) { item in
+                            if let parentTag = allTags.first(where: { $0.id == item.parentTagID }) {
+                                Button {
+                                    dialParentID = parentTag.id
+                                    dialChildID = item.childTagID
+                                    saveDialTags()
+                                    showTagHistory = false
+                                } label: {
+                                    HStack(spacing: 4) {
+                                        Text(parentTag.name)
+                                            .font(.system(size: 12, weight: .bold, design: .rounded))
+                                            .padding(.horizontal, 6)
+                                            .padding(.vertical, 3)
+                                            .background(RoundedRectangle(cornerRadius: 5).fill(tagColor(for: parentTag.colorIndex)))
+                                        if let childID = item.childTagID,
+                                           let childTag = allTags.first(where: { $0.id == childID }) {
+                                            Text(childTag.name)
+                                                .font(.system(size: 11, weight: .semibold, design: .rounded))
+                                                .padding(.horizontal, 5)
+                                                .padding(.vertical, 2)
+                                                .background(RoundedRectangle(cornerRadius: 4).fill(tagColor(for: childTag.colorIndex)))
+                                                .overlay(RoundedRectangle(cornerRadius: 4).stroke(Color.white.opacity(0.3), lineWidth: 1))
+                                        }
+                                        Spacer()
+                                    }
+                                    .padding(.horizontal, 10)
+                                    .padding(.vertical, 6)
+                                }
+                                .buttonStyle(.plain)
+                            }
+                        }
+                    }
+                }
+                .frame(maxHeight: 180)
+
+                Image(systemName: "chevron.compact.down")
+                    .font(.system(size: 20, weight: .light))
+                    .foregroundStyle(.secondary.opacity(0.4))
+                    .frame(maxWidth: .infinity)
+                    .padding(.bottom, 4)
+            }
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 10)
+                .fill(Color(uiColor: .systemBackground))
+                .shadow(color: .black.opacity(0.15), radius: 6, y: 2)
+        )
+        .frame(maxWidth: 220)
     }
 
     // タグ保存
