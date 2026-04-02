@@ -843,9 +843,13 @@ struct TodoListView: View {
                     }
 
                     // ヒント（常に同じ高さを確保、完了なしの場合は透明）
-                    Text("リセット")
-                        .font(.system(size: 9, weight: .medium, design: .rounded))
-                        .foregroundStyle(.secondary.opacity(doneCount > 0 ? 0.4 : 0))
+                    HStack(spacing: 2) {
+                        Image(systemName: "checkmark.square.fill")
+                            .font(.system(size: 9))
+                        Text("リセット")
+                            .font(.system(size: 9, weight: .medium, design: .rounded))
+                    }
+                    .foregroundStyle(.secondary.opacity(doneCount > 0 ? 0.4 : 0))
                 }
             }
         }
