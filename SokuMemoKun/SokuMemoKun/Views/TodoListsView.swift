@@ -209,6 +209,24 @@ struct TodoListsView: View {
             }
             .padding(.horizontal, 12)
             .padding(.top, 12)
+
+            // リスト作成ボタン（常時表示）
+            Button {
+                showNewListDialog = true
+            } label: {
+                Label("リストを作成", systemImage: "plus")
+                    .font(.system(size: 16, weight: .semibold, design: .rounded))
+                    .foregroundStyle(todoTabColor)
+                    .padding(.horizontal, 24)
+                    .padding(.vertical, 12)
+                    .background(
+                        RoundedRectangle(cornerRadius: 10)
+                            .fill(.white)
+                            .shadow(color: .black.opacity(0.15), radius: 4, y: 2)
+                    )
+            }
+            .padding(.top, 16)
+            .padding(.bottom, 24)
         }
     }
 
