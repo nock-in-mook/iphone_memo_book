@@ -1,33 +1,33 @@
 # 引き継ぎメモ
 
 ## 現在の状況
-- **remove-tag-suggest** ブランチで作業中（mainにはまだマージしていない）
-- セッション055でフォルダのグリッド表示を大幅改善
+- mainブランチで作業中
+- セッション057でメモ一覧へのToDoリスト混在表示を実装
 
-### セッション055の主な変更点
+### セッション057の主な変更点
 
-#### グリッドカード高さの動的計算化
-- ハードコード高さ(36/48/104/160pt)を廃止
-- `availableHeight`（GeometryReader）から設定行数+覗き分(0.2行)で自動算出
-- `topPadding`/`bottomPadding` は不要（geo.size.heightがそのまま可視領域）
-- デバッグで `availableHeight=322pt` を実測して計算を検証
+#### リスト作成ボタンのデザイン変更
+- 白い線の丸囲み＋アイコン付きデザインに変更（Capsule背景→Circle stroke）
+- フォントサイズ10pt、丸サイズ18pt
 
-#### グリッドサイズ変更
-- 3×8 → **3×6** に縮小（カードが大きくなり視認性UP）
-- 2×6 → **2×5** に縮小（同上）
-- 3×6/2×5の本文フォントをひとまわり拡大（11→13, 13→14）
+#### 「よく見る」フォルダを並べ替え対象に追加
+- `applyTabOrder`に`frequentTabColorIndex`の分岐を追加
+- 選択タブ追従にも対応
 
-#### タイトルなしメモの表示改善
-- 「(タイトルなし)」を薄グレー・通常ウェイトで表示
-- 本文はタイトルの有無に関わらず常に表示（統一感）
+#### メモ一覧にToDoリスト混在表示
+- `MemoGridItem` enum（Memo/TodoList統合型）を新設
+- `TodoCardView`を作成（しおりマーク、タイトル、「ToDo ○/○件」表示）
+- `filteredGridItems`でメモとToDoを統合ソート
+- タップで直接TodoListViewを開く（TodoListsView経由不要）
+- 長押しメニュー対応（トップ移動、固定、ロック、削除）
+- 選択削除モードでもToDoリストを対象に
 
-#### よく見るフォルダの改善
-- FrequentGridOption を 2×5 / 2×3 / 全文 / タイトルのみ の4択に整理
-- 列ラベル+padding分のオフセット(36pt)をavailableHeightから減算して高さ調整
-- `itemsPerColumn` による件数制限を撤廃、スクロールで全件表示に変更
+#### 選択モードガイド文字の強調
+- 削除モード: 赤字太字16pt
+- トップ移動モード: 青字太字16pt
 
 ## 次のアクション（優先順）
-1. **remove-tag-suggest ブランチをmainにマージ**
+1. **マークダウン機能の作り込み**（次回セッションのメインタスク）
 2. **タグ履歴のデバッグ**: 履歴が正しく記録・表示されるか実機確認
 3. **ダミーデータ削除**: SokuMemoKunApp.swift の insertDummyTagHistory をリリース前に削除
 4. **実機ビルドの問題解決**（CodeSign / Google Driveのxattr問題）
@@ -60,6 +60,9 @@
 - **MainView.swift**: tagHistoryListView（フォルダタブゾーンにoverlay表示）
 - **MemoInputView.swift**: 履歴ボタン（トレー外overlay）、履歴記録（ルーレット閉じ時）
 - **QuickSortCellView.swift**: 履歴ボタン（トレーoverlay）、履歴リスト（カード中央overlay）、履歴記録（ページ送り時・タグ編集閉じ時）
+
+## 主要ファイル（メモ一覧ToDo混在表示）
+- **TabbedMemoListView.swift**: MemoGridItem enum、TodoCardView、filteredGridItems、todoGridItem関数
 
 ## 環境
 - **Mac②（新）**: MacBook Air — Xcode 26.3, シミュレータ iPhone 17 Pro (iOS 26.3)
