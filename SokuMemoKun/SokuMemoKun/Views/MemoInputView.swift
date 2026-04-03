@@ -17,6 +17,7 @@ struct MemoInputView: View {
     @AppStorage("coloredFrame") private var coloredFrame = true
     @AppStorage("showCharCount") private var showCharCount = false
     @AppStorage("showLineNumbers") private var showLineNumbers = false
+    @AppStorage("markdownEnabled") private var markdownEnabled = false
     @State private var isTextEditorFocused: Bool = false
     @FocusState private var isTitleFocused: Bool
 
@@ -280,15 +281,22 @@ struct MemoInputView: View {
                 // 本文入力（編集中はTextEditor、閲覧中はText）
                 ZStack(alignment: .topLeading) {
                     if isEditing || !viewModel.inputText.isEmpty {
-                        LineNumberTextEditor(
-                            text: $viewModel.inputText,
-                            isFocused: $isTextEditorFocused,
-                            showLineNumbers: showLineNumbers,
-                            initialCursorOffset: contentTapOffset
-                        )
-                        .padding(.leading, showLineNumbers ? 0 : 10)
-                        .padding(.trailing, 4)
-                        .padding(.top, 0)
+                        if viewModel.isMarkdown {
+                            // マークダウンモード: Bear風インラインエディタ
+                            MarkdownTextEditor(text: $viewModel.inputText, isFocused: $isTextEditorFocused)
+                                .padding(.leading, 6)
+                                .padding(.trailing, 4)
+                        } else {
+                            LineNumberTextEditor(
+                                text: $viewModel.inputText,
+                                isFocused: $isTextEditorFocused,
+                                showLineNumbers: showLineNumbers,
+                                initialCursorOffset: contentTapOffset
+                            )
+                            .padding(.leading, showLineNumbers ? 0 : 10)
+                            .padding(.trailing, 4)
+                            .padding(.top, 0)
+                        }
                     } else {
                         ScrollView {
                             HStack(alignment: .top, spacing: 0) {
@@ -765,6 +773,29 @@ struct MemoInputView: View {
                     .foregroundStyle(.red.opacity(0.5))
             }
             .disabled(!viewModel.canClear)
+
+            // MDトグル（設定でマークダウンが有効な場合のみ表示）
+            if markdownEnabled {
+                Button {
+                    viewModel.isMarkdown.toggle()
+                    if let memo = viewModel.editingMemo {
+                        memo.isMarkdown = viewModel.isMarkdown
+                    }
+                } label: {
+                    Text("MD")
+                        .font(.system(size: 12, weight: .bold, design: .monospaced))
+                        .foregroundStyle(viewModel.isMarkdown ? .white : .secondary)
+                        .frame(width: 32, height: 22)
+                        .background(
+                            RoundedRectangle(cornerRadius: 5)
+                                .fill(viewModel.isMarkdown ? Color.blue : Color.clear)
+                        )
+                        .overlay(
+                            RoundedRectangle(cornerRadius: 5)
+                                .stroke(viewModel.isMarkdown ? Color.blue : Color.gray.opacity(0.4), lineWidth: 1)
+                        )
+                }
+            }
 
             Spacer()
 
