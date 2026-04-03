@@ -5,6 +5,7 @@ import UIKit
 // 記号を薄く表示しつつ、見出し・太字・斜体などをリアルタイムでスタイリング
 struct MarkdownTextEditor: UIViewRepresentable {
     @Binding var text: String
+    @Binding var isFocused: Bool
 
     // 基本フォントサイズ
     private let baseFontSize: CGFloat = 16
@@ -292,6 +293,14 @@ struct MarkdownTextEditor: UIViewRepresentable {
 
         init(_ parent: MarkdownTextEditor) {
             self.parent = parent
+        }
+
+        func textViewDidBeginEditing(_ textView: UITextView) {
+            parent.isFocused = true
+        }
+
+        func textViewDidEndEditing(_ textView: UITextView) {
+            parent.isFocused = false
         }
 
         func textViewDidChange(_ textView: UITextView) {
