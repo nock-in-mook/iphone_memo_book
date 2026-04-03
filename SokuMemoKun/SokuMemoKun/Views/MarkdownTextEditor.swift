@@ -91,6 +91,10 @@ struct MarkdownTextEditor: UIViewRepresentable {
             let lineLen = (line as NSString).length
             let lineRange = NSRange(location: currentLocation, length: lineLen)
 
+            // ネストリスト（インデント付き箇条書き / チェックボックス）
+            let trimmed = line.drop(while: { $0 == " " || $0 == "\t" })
+            let indent = line.count - trimmed.count
+
             if line.hasPrefix("### ") {
                 styleHeading(storage, lineRange: lineRange, prefixLength: 4, fontSize: baseFontSize + 2)
             } else if line.hasPrefix("## ") {
@@ -98,16 +102,41 @@ struct MarkdownTextEditor: UIViewRepresentable {
             } else if line.hasPrefix("# ") {
                 styleHeading(storage, lineRange: lineRange, prefixLength: 2, fontSize: baseFontSize + 8)
             }
-            else if line.hasPrefix("- [ ] ") || line.hasPrefix("- [x] ") || line.hasPrefix("- [X] ") {
-                styleSymbol(storage, lineRange: lineRange, symbolLength: 6)
-                if line.hasPrefix("- [x] ") || line.hasPrefix("- [X] ") {
-                    let contentRange = NSRange(location: lineRange.location + 6, length: max(0, lineLen - 6))
+            // 水平線（---、***、___ の3文字以上）
+            else if lineLen >= 3 && (
+                line.allSatisfy({ $0 == "-" }) ||
+                line.allSatisfy({ $0 == "*" }) ||
+                line.allSatisfy({ $0 == "_" })
+            ) {
+                storage.addAttribute(.foregroundColor, value: symbolColor, range: lineRange)
+            }
+            // チェックボックス（ネスト対応）
+            else if String(trimmed).hasPrefix("- [ ] ") || String(trimmed).hasPrefix("- [x] ") || String(trimmed).hasPrefix("- [X] ") {
+                styleSymbol(storage, lineRange: lineRange, symbolLength: indent + 6)
+                // インデント分の左マージン
+                if indent > 0 {
+                    applyIndent(storage, lineRange: lineRange, level: indent)
+                }
+                if String(trimmed).hasPrefix("- [x] ") || String(trimmed).hasPrefix("- [X] ") {
+                    let contentRange = NSRange(location: lineRange.location + indent + 6, length: max(0, lineLen - indent - 6))
                     storage.addAttribute(.strikethroughStyle, value: NSUnderlineStyle.single.rawValue, range: contentRange)
                     storage.addAttribute(.foregroundColor, value: UIColor.secondaryLabel, range: contentRange)
                 }
             }
-            else if line.hasPrefix("- ") {
-                styleSymbol(storage, lineRange: lineRange, symbolLength: 2)
+            // 箇条書き（ネスト対応）
+            else if String(trimmed).hasPrefix("- ") {
+                styleSymbol(storage, lineRange: lineRange, symbolLength: indent + 2)
+                if indent > 0 {
+                    applyIndent(storage, lineRange: lineRange, level: indent)
+                }
+            }
+            // 番号付きリスト（ネスト対応: "1. ", "12. " 等）
+            else if let dotRange = matchNumberedList(String(trimmed)) {
+                let prefixLen = indent + dotRange
+                styleSymbol(storage, lineRange: lineRange, symbolLength: prefixLen)
+                if indent > 0 {
+                    applyIndent(storage, lineRange: lineRange, level: indent)
+                }
             }
             else if line.hasPrefix("> ") {
                 styleSymbol(storage, lineRange: lineRange, symbolLength: 2)
@@ -138,6 +167,34 @@ struct MarkdownTextEditor: UIViewRepresentable {
     private func styleSymbol(_ storage: NSTextStorage, lineRange: NSRange, symbolLength: Int) {
         let symbolRange = NSRange(location: lineRange.location, length: min(symbolLength, lineRange.length))
         storage.addAttribute(.foregroundColor, value: symbolColor, range: symbolRange)
+    }
+
+    // 番号付きリストかどうか判定（"1. " "12. " 等）。マッチしたら接頭辞の長さを返す
+    private func matchNumberedList(_ line: String) -> Int? {
+        guard let first = line.first, first.isNumber else { return nil }
+        for (i, ch) in line.enumerated() {
+            if ch == "." {
+                // "数字." の直後がスペースであること
+                let nextIndex = line.index(line.startIndex, offsetBy: i + 1, limitedBy: line.endIndex)
+                if let nextIndex, line[nextIndex] == " " {
+                    return i + 2  // "1. " → 3文字
+                }
+                return nil
+            }
+            if !ch.isNumber { return nil }
+        }
+        return nil
+    }
+
+    // ネストリストのインデント表現（段落の左余白を増やす）
+    private func applyIndent(_ storage: NSTextStorage, lineRange: NSRange, level: Int) {
+        let indentParagraph = NSMutableParagraphStyle()
+        indentParagraph.lineSpacing = 4
+        // 1インデント（スペース2つ or タブ1つ）= 20pt
+        let indentPoints = CGFloat(level) * 10.0
+        indentParagraph.headIndent = indentPoints
+        indentParagraph.firstLineHeadIndent = indentPoints
+        storage.addAttribute(.paragraphStyle, value: indentParagraph, range: lineRange)
     }
 
     private func applyInlineStyles(_ storage: NSTextStorage, in lineRange: NSRange, text: String) {
@@ -174,6 +231,27 @@ struct MarkdownTextEditor: UIViewRepresentable {
             storage.addAttribute(.foregroundColor, value: symbolColor, range: endSymbol)
             storage.addAttribute(.font, value: UIFont.monospacedSystemFont(ofSize: baseFontSize - 1, weight: .regular), range: innerRange)
             storage.addAttribute(.backgroundColor, value: UIColor.systemGray6, range: innerRange)
+        }
+
+        // リンク [テキスト](URL)
+        applyPattern("\\[([^\\]]+)\\]\\(([^)]+)\\)", storage: storage, lineRange: lineRange, nsText: nsText) { matchRange, innerRange in
+            // [と] を薄く
+            let openBracket = NSRange(location: matchRange.location, length: 1)
+            storage.addAttribute(.foregroundColor, value: symbolColor, range: openBracket)
+            let closeBracketPos = matchRange.location + 1 + innerRange.length
+            let closeBracket = NSRange(location: closeBracketPos, length: 1)
+            storage.addAttribute(.foregroundColor, value: symbolColor, range: closeBracket)
+            // テキスト部分をリンク色に
+            storage.addAttribute(.foregroundColor, value: UIColor.systemBlue, range: innerRange)
+            storage.addAttribute(.underlineStyle, value: NSUnderlineStyle.single.rawValue, range: innerRange)
+            // (URL) 部分を薄く
+            let urlPartStart = closeBracketPos + 1
+            let urlPartLen = matchRange.location + matchRange.length - urlPartStart
+            if urlPartLen > 0 {
+                let urlRange = NSRange(location: urlPartStart, length: urlPartLen)
+                storage.addAttribute(.foregroundColor, value: symbolColor, range: urlRange)
+                storage.addAttribute(.font, value: UIFont.systemFont(ofSize: baseFontSize - 2), range: urlRange)
+            }
         }
     }
 
