@@ -419,30 +419,6 @@ struct MemoInputView: View {
                                 .shadow(color: .black.opacity(0.2), radius: 2, x: 1, y: 1)
                         }
                     }
-                    // プレビューボタン（MDモード＋本文ありのとき表示）
-                    if viewModel.isMarkdown && !viewModel.inputText.isEmpty {
-                        Button {
-                            if !showMarkdownPreview {
-                                isTextEditorFocused = false
-                                UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            }
-                            showMarkdownPreview.toggle()
-                        } label: {
-                            Text("プレビュー")
-                                .font(.system(size: 11, weight: .bold))
-                                .foregroundStyle(showMarkdownPreview ? .white : .secondary)
-                                .padding(.horizontal, 8)
-                                .padding(.vertical, 4)
-                                .background(
-                                    RoundedRectangle(cornerRadius: 5)
-                                        .fill(showMarkdownPreview ? Color.orange : Color.clear)
-                                )
-                                .overlay(
-                                    RoundedRectangle(cornerRadius: 5)
-                                        .stroke(showMarkdownPreview ? Color.orange : Color.gray.opacity(0.4), lineWidth: 1)
-                                )
-                        }
-                    }
                     // 文字数カウンター（フロートバッジ）
                     if showCharCount && !viewModel.inputText.isEmpty {
                         Text("\(viewModel.inputText.count.formatted())文字")
@@ -463,6 +439,33 @@ struct MemoInputView: View {
                 }
                 .padding(.leading, 8)
                 .padding(.bottom, 8)
+            }
+            // プレビューボタン（入力欄中央下端）
+            .overlay(alignment: .bottom) {
+                if viewModel.isMarkdown && !viewModel.inputText.isEmpty {
+                    Button {
+                        if !showMarkdownPreview {
+                            isTextEditorFocused = false
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        }
+                        showMarkdownPreview.toggle()
+                    } label: {
+                        Text("プレビュー")
+                            .font(.system(size: 11, weight: .bold))
+                            .foregroundStyle(showMarkdownPreview ? .white : .secondary)
+                            .padding(.horizontal, 8)
+                            .padding(.vertical, 4)
+                            .background(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .fill(showMarkdownPreview ? Color.orange : Color.clear)
+                            )
+                            .overlay(
+                                RoundedRectangle(cornerRadius: 5)
+                                    .stroke(showMarkdownPreview ? Color.orange : Color.gray.opacity(0.4), lineWidth: 1)
+                            )
+                    }
+                    .padding(.bottom, 6)
+                }
             }
             // トレー外タップは本文オーバーレイで処理済み
             .overlay(alignment: .topTrailing) {
