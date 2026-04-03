@@ -457,10 +457,6 @@ struct MemoInputView: View {
                     .offset(y: 21)
                 }
             }
-            // マークダウンツールバー（MD編集中のみ表示）
-            if viewModel.isMarkdown && isTextEditorFocused {
-                MarkdownToolbar(text: $viewModel.inputText)
-            }
             Divider()
             // フッター: 左=削除 右=コピー+保存（ルーレット展開中は無効）
             footerRow

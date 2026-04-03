@@ -29,6 +29,24 @@ struct MarkdownTextEditor: UIViewRepresentable {
         textView.text = text
         applyStyle(to: textView)
 
+        // キーボード直上にマークダウンツールバーを配置
+        let toolbar = MarkdownToolbar(text: $text)
+        let hostingController = UIHostingController(rootView: toolbar)
+        hostingController.view.frame = CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44)
+        hostingController.view.backgroundColor = .secondarySystemBackground
+        // AutoLayoutの競合を防止
+        hostingController.view.translatesAutoresizingMaskIntoConstraints = false
+        let wrapper = UIView(frame: CGRect(x: 0, y: 0, width: UIScreen.main.bounds.width, height: 44))
+        wrapper.addSubview(hostingController.view)
+        NSLayoutConstraint.activate([
+            hostingController.view.leadingAnchor.constraint(equalTo: wrapper.leadingAnchor),
+            hostingController.view.trailingAnchor.constraint(equalTo: wrapper.trailingAnchor),
+            hostingController.view.topAnchor.constraint(equalTo: wrapper.topAnchor),
+            hostingController.view.bottomAnchor.constraint(equalTo: wrapper.bottomAnchor),
+        ])
+        context.coordinator.toolbarHostingController = hostingController
+        textView.inputAccessoryView = wrapper
+
         // カーソル位置の通知を受け取る
         context.coordinator.cursorObserver = NotificationCenter.default.addObserver(
             forName: .markdownCursorFromEnd,
@@ -290,6 +308,7 @@ struct MarkdownTextEditor: UIViewRepresentable {
         var parent: MarkdownTextEditor
         var isUpdating = false
         var cursorObserver: Any?
+        var toolbarHostingController: UIHostingController<MarkdownToolbar>?
 
         init(_ parent: MarkdownTextEditor) {
             self.parent = parent
