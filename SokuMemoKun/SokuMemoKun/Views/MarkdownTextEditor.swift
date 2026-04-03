@@ -174,6 +174,16 @@ struct MarkdownTextEditor: UIViewRepresentable {
         }
 
         storage.endEditing()
+
+        // カーソル位置の入力属性をデフォルトに戻す
+        // （記号のグレー色や太字が後続入力に引き継がれるのを防止）
+        let defaultParagraph = NSMutableParagraphStyle()
+        defaultParagraph.lineSpacing = 4
+        textView.typingAttributes = [
+            .font: defaultFont,
+            .foregroundColor: UIColor.label,
+            .paragraphStyle: defaultParagraph,
+        ]
     }
 
     private func styleHeading(_ storage: NSTextStorage, lineRange: NSRange, prefixLength: Int, fontSize: CGFloat) {
