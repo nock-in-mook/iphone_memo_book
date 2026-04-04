@@ -1285,3 +1285,16 @@ ToDo・ルーレット・入力欄のUI微調整多数。feature/todo-listをmai
 - ToDoリストの長押しメニュー（トップ移動・固定・ロック・削除）
 - 選択削除モードでToDoリストも対象に
 - 選択モードガイド文字を色分け強調（削除=赤、移動=青）
+
+---
+## #58 (2026-04-04)
+マークダウン統合・レイアウト統一・定数集約
+- マークダウン記法拡充（番号リスト・水平線・リンク・ネストリスト）
+- GutteredTextViewにMDスタイリング統合（MarkdownContainerView廃止、レイアウトずれゼロ）
+- マークダウンプレビュー機能追加（MarkdownPreviewView）
+- 枠外タップでキーボード閉じるバグ修正（KeyboardDismissView新設）
+- ルーレットのチラ見え縮小・三角マーク化
+- 入力欄の余白最適化（TextAreaLayout定数統一）
+- AppStorageKeys/DesignConstants新設（メンテナンス性向上）
+- 最大化時フロートボタン（消しゴム・プレビュー・縮小+⌨️）
+- typingAttributesグレーアウト修正
