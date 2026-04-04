@@ -954,7 +954,7 @@ struct MemoInputView: View {
     // MARK: - フッター（左=削除 右=コピー+閉じる）
 
     private var footerRow: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 6) {
             // 左: 削除
             Button {
                 UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -1018,68 +1018,80 @@ struct MemoInputView: View {
 
             Spacer()
 
-            // Undo/Redo（間隔広め）
-            HStack(spacing: 20) {
-                Button {
-                    viewModel.undo()
-                } label: {
-                    Image(systemName: "arrow.uturn.backward")
-                        .font(.system(size: 16))
+            // 右グループ（Undo/Redo + コピー + 確定/閉じる）
+            HStack(spacing: 10) {
+                // Undo/Redo
+                HStack(spacing: 10) {
+                    Button {
+                        viewModel.undo()
+                    } label: {
+                        Image(systemName: "arrow.uturn.backward")
+                            .font(.system(size: 16))
+                    }
+                    .disabled(!viewModel.canUndo)
+
+                    Button {
+                        viewModel.redo()
+                    } label: {
+                        Image(systemName: "arrow.uturn.forward")
+                            .font(.system(size: 16))
+                    }
+                    .disabled(!viewModel.canRedo)
                 }
-                .disabled(!viewModel.canUndo)
 
+                // コピー
                 Button {
-                    viewModel.redo()
+                    UIPasteboard.general.string = viewModel.inputText
                 } label: {
-                    Image(systemName: "arrow.uturn.forward")
-                        .font(.system(size: 16))
+                    HStack(spacing: 3) {
+                        Image(systemName: "doc.on.doc")
+                        Text("コピー")
+                    }.font(.system(size: 14))
                 }
-                .disabled(!viewModel.canRedo)
-            }
+                .disabled(viewModel.inputText.isEmpty)
 
-            Spacer().frame(width: 12)
-
-            // コピー
-            Button {
-                UIPasteboard.general.string = viewModel.inputText
-            } label: {
-                Label("コピー", systemImage: "doc.on.doc").font(.system(size: 14))
-            }
-            .disabled(viewModel.inputText.isEmpty)
-
-            // 右: 編集中→「確定」、それ以外→「メモを閉じる」
-            if viewModel.editingMemo != nil {
-                if isTextEditorFocused {
-                    // 編集中（カーソルあり）→ カーソルを消すだけ（枠外タップと同じ）
+                // 右: 編集中→「確定」、それ以外→「メモを閉じる」
+                if viewModel.editingMemo != nil {
+                    if isTextEditorFocused {
+                        Button {
+                            isTextEditorFocused = false
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "checkmark.circle")
+                                Text("確定")
+                            }.font(.system(size: 14))
+                                .foregroundStyle(.blue)
+                        }
+                    } else {
+                        Button {
+                            isTextEditorFocused = false
+                            viewModel.clearInput()
+                        } label: {
+                            HStack(spacing: 3) {
+                                Image(systemName: "xmark.circle")
+                                Text("メモを閉じる")
+                            }.font(.system(size: 14))
+                        }
+                    }
+                } else if viewModel.hasText {
                     Button {
                         isTextEditorFocused = false
                         UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        onConfirm?()
                     } label: {
-                        Label("確定", systemImage: "checkmark.circle").font(.system(size: 14))
+                        HStack(spacing: 3) {
+                            Image(systemName: "checkmark.circle")
+                            Text("確定")
+                        }.font(.system(size: 14))
                             .foregroundStyle(.blue)
                     }
-                } else {
-                    Button {
-                        isTextEditorFocused = false
-                        viewModel.clearInput()
-                    } label: {
-                        Label("メモを閉じる", systemImage: "xmark.circle").font(.system(size: 14))
-                    }
-                }
-            } else if viewModel.hasText {
-                // 新規メモでテキストがある場合のみ「確定」
-                Button {
-                    isTextEditorFocused = false
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    onConfirm?()
-                } label: {
-                    Label("確定", systemImage: "checkmark.circle").font(.system(size: 14))
-                        .foregroundStyle(.blue)
                 }
             }
 
         }
         .lineLimit(1)
+        .minimumScaleFactor(0.8)
         .padding(.horizontal, 10)
         .padding(.vertical, 5)
     }
