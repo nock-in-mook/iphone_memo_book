@@ -342,28 +342,29 @@ struct MainView: View {
             }
             .overlay(alignment: .bottom) {
                 if isKeyboardVisible {
-                    HStack {
+                    ZStack {
                         if isInputExpanded {
                             // 左: 消しゴム
-                            Button {
-                                viewModel.showClearBodyAlert = true
-                            } label: {
-                                Image(systemName: "eraser")
-                                    .font(.system(size: 14, weight: .semibold))
-                                    .foregroundStyle(.white)
-                                    .frame(width: 28, height: 28)
-                                    .background(
-                                        Circle().fill(
-                                            !viewModel.inputText.isEmpty ? Color.orange.opacity(0.6) : Color.gray.opacity(0.25)
+                            HStack {
+                                Button {
+                                    viewModel.showClearBodyAlert = true
+                                } label: {
+                                    Image(systemName: "eraser")
+                                        .font(.system(size: 14, weight: .semibold))
+                                        .foregroundStyle(.white)
+                                        .frame(width: 28, height: 28)
+                                        .background(
+                                            Circle().fill(
+                                                !viewModel.inputText.isEmpty ? Color.orange.opacity(0.6) : Color.gray.opacity(0.25)
+                                            )
                                         )
-                                    )
-                                    .shadowLight()
+                                        .shadowLight()
+                                }
+                                .disabled(viewModel.inputText.isEmpty)
+                                Spacer()
                             }
-                            .disabled(viewModel.inputText.isEmpty)
 
-                            Spacer()
-
-                            // 中央: プレビュー（MDモード＋本文ありのとき）
+                            // 中央: プレビュー（画面中央に固定）
                             if viewModel.isMarkdown && !viewModel.inputText.isEmpty {
                                 Button {
                                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
@@ -385,25 +386,47 @@ struct MainView: View {
                                 }
                             }
 
-                            Spacer()
-
                             // 右: 縮小 + キーボード格納
-                            HStack(spacing: 8) {
-                                Button {
-                                    withAnimation(.spring(response: 0.35)) {
-                                        isInputExpanded = false
+                            HStack {
+                                Spacer()
+                                HStack(spacing: 8) {
+                                    Button {
+                                        withAnimation(.spring(response: 0.35)) {
+                                            isInputExpanded = false
+                                        }
+                                    } label: {
+                                        Image(systemName: "arrow.down.forward.and.arrow.up.backward")
+                                            .font(.system(size: 10, weight: .semibold))
+                                            .foregroundStyle(.white)
+                                            .frame(width: 28, height: 28)
+                                            .background(
+                                                Circle().fill(Color.blue.opacity(0.6))
+                                            )
+                                            .shadowLight()
                                     }
-                                } label: {
-                                    Image(systemName: "arrow.down.forward.and.arrow.up.backward")
-                                        .font(.system(size: 10, weight: .semibold))
-                                        .foregroundStyle(.white)
-                                        .frame(width: 28, height: 28)
-                                        .background(
-                                            Circle().fill(Color.blue.opacity(0.6))
-                                        )
-                                        .shadowLight()
-                                }
 
+                                    Button {
+                                        UIApplication.shared.sendAction(
+                                            #selector(UIResponder.resignFirstResponder),
+                                            to: nil, from: nil, for: nil
+                                        )
+                                    } label: {
+                                        Image(systemName: "keyboard.chevron.compact.down")
+                                            .font(.system(size: 14))
+                                            .foregroundStyle(.secondary)
+                                            .frame(width: 28, height: 28)
+                                            .background(
+                                                Circle()
+                                                    .fill(Color(uiColor: .secondarySystemBackground))
+                                                    .shadowLight()
+                                            )
+                                    }
+                                }
+                            }
+                        } else {
+                            // 通常時: キーボード格納のみ（右端）
+                            HStack {
+                                Spacer()
                                 Button {
                                     UIApplication.shared.sendAction(
                                         #selector(UIResponder.resignFirstResponder),
@@ -411,34 +434,15 @@ struct MainView: View {
                                     )
                                 } label: {
                                     Image(systemName: "keyboard.chevron.compact.down")
-                                        .font(.system(size: 14))
+                                        .font(.system(size: 16))
                                         .foregroundStyle(.secondary)
-                                        .frame(width: 28, height: 28)
+                                        .padding(10)
                                         .background(
                                             Circle()
                                                 .fill(Color(uiColor: .secondarySystemBackground))
                                                 .shadowLight()
                                         )
                                 }
-                            }
-                        } else {
-                            Spacer()
-                            // 通常時: キーボード格納のみ（右端）
-                            Button {
-                                UIApplication.shared.sendAction(
-                                    #selector(UIResponder.resignFirstResponder),
-                                    to: nil, from: nil, for: nil
-                                )
-                            } label: {
-                                Image(systemName: "keyboard.chevron.compact.down")
-                                    .font(.system(size: 16))
-                                    .foregroundStyle(.secondary)
-                                    .padding(10)
-                                    .background(
-                                        Circle()
-                                            .fill(Color(uiColor: .secondarySystemBackground))
-                                            .shadowLight()
-                                    )
                             }
                         }
                     }
