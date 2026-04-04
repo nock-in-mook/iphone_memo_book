@@ -965,47 +965,45 @@ struct MemoInputView: View {
             }
             .disabled(!viewModel.canClear)
 
-            // MDトグル（markdownEnabled=trueなら通常トグル、falseでも初回説明用に表示）
+            // MDラベル + トグルスイッチ
             if markdownEnabled {
-                Button {
-                    viewModel.isMarkdown.toggle()
-                    viewModel.showMarkdownPreview = false
-                    if let memo = viewModel.editingMemo {
-                        memo.isMarkdown = viewModel.isMarkdown
-                    }
-                    // トースト表示
-                    showMdToast(viewModel.isMarkdown ? "マークダウンモード オン" : "マークダウンモード オフ")
-                } label: {
+                // MD有効時: ラベル + ミニトグル
+                HStack(spacing: 4) {
                     Text("MD")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
-                        .foregroundStyle(viewModel.isMarkdown ? .white : .secondary)
-                        .frame(width: 32, height: 22)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(viewModel.isMarkdown ? Color.blue : Color.clear)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 5)
-                                .stroke(viewModel.isMarkdown ? Color.blue : Color.gray.opacity(0.4), lineWidth: 1)
-                        )
+                        .foregroundStyle(viewModel.isMarkdown ? .blue : .secondary)
+
+                    // ミニトグルスイッチ
+                    Toggle("", isOn: Binding(
+                        get: { viewModel.isMarkdown },
+                        set: { newValue in
+                            viewModel.isMarkdown = newValue
+                            viewModel.showMarkdownPreview = false
+                            if let memo = viewModel.editingMemo {
+                                memo.isMarkdown = newValue
+                            }
+                            showMdToast(newValue ? "マークダウンモード オン" : "マークダウンモード オフ")
+                        }
+                    ))
+                    .labelsHidden()
+                    .scaleEffect(0.6)
+                    .frame(width: 34, height: 22)
                 }
             } else if !mdToggleFirstSeen {
-                // 初回: まだ説明を見ていない場合はボタンを表示し、タップで説明ダイアログ
-                Button {
-                    withAnimation(.easeOut(duration: 0.2)) { showMdExplainDialog = true }
-                } label: {
+                // 初回: まだ説明を見ていない場合はラベル+OFFトグルで表示、タップで説明ダイアログ
+                HStack(spacing: 4) {
                     Text("MD")
                         .font(.system(size: 12, weight: .bold, design: .monospaced))
                         .foregroundStyle(.secondary)
-                        .frame(width: 32, height: 22)
-                        .background(
-                            RoundedRectangle(cornerRadius: 5)
-                                .fill(Color.clear)
-                        )
-                        .overlay(
-                            RoundedRectangle(cornerRadius: 5)
-                                .stroke(Color.gray.opacity(0.4), lineWidth: 1)
-                        )
+
+                    Toggle("", isOn: .constant(false))
+                        .labelsHidden()
+                        .scaleEffect(0.6)
+                        .frame(width: 34, height: 22)
+                        .allowsHitTesting(false)
+                }
+                .onTapGesture {
+                    withAnimation(.easeOut(duration: 0.2)) { showMdExplainDialog = true }
                 }
             }
 
