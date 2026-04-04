@@ -64,7 +64,7 @@ struct SettingsView: View {
                     if markdownEnabled {
                         Toggle(isOn: $defaultMarkdown) {
                             HStack {
-                                Text("常時ON")
+                                Text("常にマークダウンモードON")
                                     .font(.system(size: 15))
                             }
                         }
