@@ -11,6 +11,9 @@ class MemoInputViewModel {
     var selectedTagID: UUID?       // 親タグ
     var selectedChildTagID: UUID?  // 子タグ
     var isMarkdown: Bool = UserDefaults.standard.bool(forKey: AppStorageKeys.defaultMarkdown)
+    // UI制御フラグ（MainViewとMemoInputViewの両方からアクセス）
+    var showClearBodyAlert: Bool = false
+    var showMarkdownPreview: Bool = false
 
     // 現在編集中のメモ（自動保存の対象）
     var editingMemo: Memo?

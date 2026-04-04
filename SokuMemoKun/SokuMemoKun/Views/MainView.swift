@@ -340,25 +340,85 @@ struct MainView: View {
                     selectedTabIndex = tabIndex
                 }
             }
-            .overlay(alignment: .bottomTrailing) {
+            .overlay(alignment: .bottom) {
                 if isKeyboardVisible {
-                    Button {
-                        UIApplication.shared.sendAction(
-                            #selector(UIResponder.resignFirstResponder),
-                            to: nil, from: nil, for: nil
-                        )
-                    } label: {
-                        Image(systemName: "keyboard.chevron.compact.down")
-                            .font(.system(size: 16))
-                            .foregroundStyle(.secondary)
-                            .padding(10)
-                            .background(
-                                Circle()
-                                    .fill(Color(uiColor: .secondarySystemBackground))
+                    HStack {
+                        // 左: 最大化時のみ消しゴム・プレビューを表示
+                        if isInputExpanded {
+                            // 消しゴム
+                            Button {
+                                viewModel.showClearBodyAlert = true
+                            } label: {
+                                Image(systemName: "eraser")
+                                    .font(.system(size: 14, weight: .semibold))
+                                    .foregroundStyle(.white)
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .fill(!viewModel.inputText.isEmpty ? Color.orange.opacity(0.6) : Color.gray.opacity(0.25))
+                                    )
                                     .shadowLight()
+                            }
+                            .disabled(viewModel.inputText.isEmpty)
+
+                            // プレビュー（MDモード＋本文ありのとき）
+                            if viewModel.isMarkdown && !viewModel.inputText.isEmpty {
+                                Button {
+                                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                                    viewModel.showMarkdownPreview.toggle()
+                                } label: {
+                                    Text("プレビュー")
+                                        .font(.system(size: 11, weight: .bold))
+                                        .foregroundStyle(viewModel.showMarkdownPreview ? .white : .secondary)
+                                        .padding(.horizontal, 8)
+                                        .padding(.vertical, 6)
+                                        .background(
+                                            RoundedRectangle(cornerRadius: 5)
+                                                .fill(viewModel.showMarkdownPreview ? Color.orange : Color(uiColor: .secondarySystemBackground))
+                                        )
+                                        .shadowLight()
+                                }
+                            }
+
+                            // 最大化解除
+                            Button {
+                                withAnimation(.spring(response: 0.35)) {
+                                    isInputExpanded = false
+                                }
+                            } label: {
+                                Image(systemName: "arrow.down.forward.and.arrow.up.backward")
+                                    .font(.system(size: 12, weight: .semibold))
+                                    .foregroundStyle(.secondary)
+                                    .padding(8)
+                                    .background(
+                                        Circle()
+                                            .fill(Color(uiColor: .secondarySystemBackground))
+                                    )
+                                    .shadowLight()
+                            }
+                        }
+
+                        Spacer()
+
+                        // 右: キーボード格納
+                        Button {
+                            UIApplication.shared.sendAction(
+                                #selector(UIResponder.resignFirstResponder),
+                                to: nil, from: nil, for: nil
                             )
+                        } label: {
+                            Image(systemName: "keyboard.chevron.compact.down")
+                                .font(.system(size: 16))
+                                .foregroundStyle(.secondary)
+                                .padding(10)
+                                .background(
+                                    Circle()
+                                        .fill(Color(uiColor: .secondarySystemBackground))
+                                        .shadowLight()
+                                )
+                        }
                     }
-                    .padding(.trailing, 12)
+                    .padding(.horizontal, 12)
                     .padding(.bottom, 8)
                     .transition(.scale.combined(with: .opacity))
                 }

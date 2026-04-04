@@ -54,12 +54,8 @@ struct MemoInputView: View {
     @State private var isEditing = true
     /// タップ位置のカーソルオフセット（nil=末尾）
     @State private var contentTapOffset: Int?
-    // マークダウンプレビュー表示中
-    @State private var showMarkdownPreview = false
     // 削除確認ダイアログ
     @State private var showDeleteAlert = false
-    // 本文クリア確認ダイアログ
-    @State private var showClearBodyAlert = false
     // 子タグ追加時の親タグ未選択警告
     @State private var showNoParentAlert = false
     // タグ長押し編集/削除
@@ -309,7 +305,7 @@ struct MemoInputView: View {
                 // 本文入力（編集中はTextEditor、閲覧中はText）
                 ZStack(alignment: .topLeading) {
                     if isEditing || !viewModel.inputText.isEmpty {
-                        if viewModel.isMarkdown && showMarkdownPreview {
+                        if viewModel.isMarkdown && viewModel.showMarkdownPreview {
                             // マークダウンプレビュー表示（エディタと同じpadding）
                             ScrollView {
                                 MarkdownPreviewView(text: viewModel.inputText)
@@ -321,7 +317,7 @@ struct MemoInputView: View {
                             .padding(.trailing, TextAreaLayout.trailingPadding + TextAreaLayout.textInsetRight)
                             .padding(.top, TextAreaLayout.placeholderTop)
                             .onTapGesture {
-                                showMarkdownPreview = false
+                                viewModel.showMarkdownPreview = false
                             }
                         } else {
                             // 通常モード・マークダウンモード共通（同じGutteredTextView）
@@ -437,7 +433,7 @@ struct MemoInputView: View {
                 HStack(spacing: 6) {
                     // 本文クリアボタン（常時表示、編集中はオレンジ、それ以外は薄グレー）
                     Button {
-                        showClearBodyAlert = true
+                        viewModel.showClearBodyAlert = true
                     } label: {
                         Image(systemName: "eraser")
                             .font(.system(size: 14, weight: .semibold))
@@ -478,24 +474,24 @@ struct MemoInputView: View {
             .overlay(alignment: .bottom) {
                 if viewModel.isMarkdown && !viewModel.inputText.isEmpty {
                     Button {
-                        if !showMarkdownPreview {
+                        if !viewModel.showMarkdownPreview {
                             isTextEditorFocused = false
                             UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         }
-                        showMarkdownPreview.toggle()
+                        viewModel.showMarkdownPreview.toggle()
                     } label: {
                         Text("プレビュー")
                             .font(.system(size: 11, weight: .bold))
-                            .foregroundStyle(showMarkdownPreview ? .white : .secondary)
+                            .foregroundStyle(viewModel.showMarkdownPreview ? .white : .secondary)
                             .padding(.horizontal, 8)
                             .padding(.vertical, 4)
                             .background(
                                 RoundedRectangle(cornerRadius: 5)
-                                    .fill(showMarkdownPreview ? Color.orange : Color.clear)
+                                    .fill(viewModel.showMarkdownPreview ? Color.orange : Color.clear)
                             )
                             .overlay(
                                 RoundedRectangle(cornerRadius: 5)
-                                    .stroke(showMarkdownPreview ? Color.orange : Color.gray.opacity(0.4), lineWidth: 1)
+                                    .stroke(viewModel.showMarkdownPreview ? Color.orange : Color.gray.opacity(0.4), lineWidth: 1)
                             )
                     }
                     .padding(.bottom, 6)
@@ -548,7 +544,7 @@ struct MemoInputView: View {
         .animation(.easeInOut(duration: 0.3), value: viewModel.selectedTagID)
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .alert("本文をクリアします。よろしいですか？", isPresented: $showClearBodyAlert) {
+        .alert("本文をクリアします。よろしいですか？", isPresented: $viewModel.showClearBodyAlert) {
             Button("クリア", role: .destructive) {
                 viewModel.pushUndoIfNeeded()
                 viewModel.inputText = ""
@@ -852,7 +848,7 @@ struct MemoInputView: View {
             if markdownEnabled {
                 Button {
                     viewModel.isMarkdown.toggle()
-                    showMarkdownPreview = false
+                    viewModel.showMarkdownPreview = false
                     if let memo = viewModel.editingMemo {
                         memo.isMarkdown = viewModel.isMarkdown
                     }
