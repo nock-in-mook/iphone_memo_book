@@ -265,13 +265,11 @@ struct MainView: View {
                 }
                 // 右: 差分ありの入力欄最大化時は「確定」、それ以外は設定
                 ToolbarItem(placement: .topBarTrailing) {
-                    let isEditing = viewModel.editingMemo != nil
-                    let hasDiff = viewModel.inputText != originalContent || viewModel.titleText != originalTitle
                     let hasContent = viewModel.hasText
-                    let showConfirm = isInputExpanded && hasContent && (!isEditing || hasDiff)
+                    let showConfirm = isInputExpanded && hasContent
                     if showConfirm {
                         Button {
-                            confirmMemo()
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                         } label: {
                             Text("確定")
                                 .font(.system(size: 15, weight: .semibold, design: .rounded))

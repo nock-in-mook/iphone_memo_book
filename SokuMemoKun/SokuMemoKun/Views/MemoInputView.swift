@@ -1054,62 +1054,34 @@ struct MemoInputView: View {
                 }
                 .disabled(viewModel.inputText.isEmpty)
 
-                // 右: 編集中（タイトル or 本文）→「確定」、それ以外→「メモを閉じる」
-                if viewModel.editingMemo != nil {
-                    if isTextEditorFocused || isTitleEditing {
-                        Button {
-                            isTextEditorFocused = false
-                            isTitleFocused = false
-                            isTitleEditing = false
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: "checkmark.circle")
-                                Text("確定")
-                            }.font(.system(size: 14))
-                                .foregroundStyle(.blue)
-                        }
-                    } else {
-                        Button {
-                            isTextEditorFocused = false
-                            isTitleFocused = false
-                            isTitleEditing = false
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            viewModel.clearInput()
-                        } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: "xmark.circle")
-                                Text("メモを閉じる")
-                            }.font(.system(size: 14))
-                        }
+                // 右: 編集中→「確定」（キーボード閉じるだけ）、非編集→「メモを閉じる」
+                if viewModel.editingMemo != nil && !isTextEditorFocused && !isTitleEditing {
+                    // キーボードが閉じてる状態 → メモを閉じる
+                    Button {
+                        isTextEditorFocused = false
+                        isTitleFocused = false
+                        isTitleEditing = false
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                        viewModel.clearInput()
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "xmark.circle")
+                            Text("メモを閉じる")
+                        }.font(.system(size: 14))
                     }
-                } else if viewModel.hasText {
-                    if isTitleEditing {
-                        // タイトル編集中 → キーボード閉じるだけ
-                        Button {
-                            isTextEditorFocused = false
-                            isTitleFocused = false
-                            isTitleEditing = false
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                        } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: "checkmark.circle")
-                                Text("確定")
-                            }.font(.system(size: 14))
-                                .foregroundStyle(.blue)
-                        }
-                    } else {
-                        Button {
-                            isTextEditorFocused = false
-                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                            onConfirm?()
-                        } label: {
-                            HStack(spacing: 3) {
-                                Image(systemName: "checkmark.circle")
-                                Text("確定")
-                            }.font(.system(size: 14))
-                                .foregroundStyle(.blue)
-                        }
+                } else if isTextEditorFocused || isTitleEditing || viewModel.hasText {
+                    // キーボードが出てる or テキストがある → 確定（キーボード閉じるだけ）
+                    Button {
+                        isTextEditorFocused = false
+                        isTitleFocused = false
+                        isTitleEditing = false
+                        UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    } label: {
+                        HStack(spacing: 3) {
+                            Image(systemName: "checkmark.circle")
+                            Text("確定")
+                        }.font(.system(size: 14))
+                            .foregroundStyle(.blue)
                     }
                 }
             }
