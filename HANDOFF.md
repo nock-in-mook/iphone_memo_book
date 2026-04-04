@@ -2,68 +2,68 @@
 
 ## 現在の状況
 - mainブランチで作業中
-- セッション058でマークダウン機能を大幅に進化
+- セッション059でMDトグルUI・アイコン統一・各種バグ修正を実施
+- **Flutter移行を決定** — 次セッションでFlutter環境構築から開始
 
-### セッション058の主な変更点
+### セッション059の主な変更点
 
-#### マークダウン記法の拡充
-- 番号付きリスト（1. 2. 3.）のスタイリング追加
-- 水平線（---/***/___）の表示対応
-- リンク記法 [テキスト](URL) のスタイリング
-- ネストリスト（インデント付き箇条書き/チェックボックス）対応
-- ツールバーに「1.」「──」「🔗」ボタン追加
+#### MDトグル初回説明ダイアログ
+- 初めてMDボタンをタップした時にリッチダイアログで説明表示
+- 「非表示にする」「残しておく」の選択肢付き
+- MDモードON/OFF時に「マークダウンモード オン/オフ」トースト表示
 
-#### MemoInputViewへのマークダウンエディタ統合
-- GutteredTextViewにMDスタイリングを統合（MarkdownContainerView廃止）
-- 通常モードもMDモードも同じUITextViewインスタンスを使用（レイアウトずれゼロ）
-- MDトグルの動的切り替え対応（inputAccessoryViewの付け外し+スタイルリセット）
-- フッターにMDトグルボタン追加（設定でmarkdownEnabled時のみ表示）
+#### MDトグルUI改善
+- 「MD」テキスト（14pt）+ ミニトグルスイッチ（青色）に変更
+- ゴミ箱との間にスペース追加
+- 設定テキスト: 「マークダウン切替ボタンを常時表示」「常にマークダウンモードON」
 
-#### マークダウンプレビュー機能
-- MarkdownPreviewView新設（全記法対応のプレビュー表示）
-- 入力欄の中央下端に「プレビュー」ボタン配置（MDモードON時は0文字でも表示）
-- プレビュータップで編集に戻る
+#### MDアイコン自動判定
+- memo.isMarkdownフラグ依存 → containsMarkdown()によるテキスト内容自動判定に変更
+- 正規表現で見出し・リスト・太字・引用・リンク等を検出（先頭500文字）
+- カードのMDマークを紫背景+白文字バッジに統一（全画面）
 
-#### 枠外タップでキーボード閉じるバグ修正
-- simultaneousGesture(TapGesture)がUITextView内タップと同時発火する潜在バグを修正
-- UIKitのhitTestでタップ先がUITextViewか判定するKeyboardDismissViewを新設
-- 入力欄内タップ→カーソル移動のみ、枠外タップ→キーボード閉じる、が両立
+#### アイコン統一・並び順
+- 全カードで ピン→MD→ロック の並び順に統一
+- 爆速モードのロックアイコン: 丸枠+縁取り線
+- メモ一覧のロックアイコン: シンプル（枠なし）
+- 爆速モードの右上アイコンをHStackで統一配置
 
-#### ルーレットのチラ見え縮小
-- タブ幅38→22に縮小（「タグ」テキスト→◀三角マークのみ）
-- 円盤のチラ見えオフセットを-50→-42に調整
+#### フッターレイアウト改善
+- 左グループ（削除+MDトグル）と右グループ（Undo/Redo+コピー+確定/閉じる）に分離
+- 右端ボタンの途切れ解消
+- アイコンとテキストのHStack spacing 3ptに
 
-#### 入力欄の余白調整
-- テキストエリアの左右余白を最小化（textInsetLeft: 10, lineFragmentPadding: 0）
-- プレースホルダー位置をカーソル位置+1ptで自動計算
-- TextAreaLayout定数で全モード（通常/MD/プレビュー/プレースホルダー）統一
+#### KeyboardDismissView修正
+- windowへのジェスチャー追加をやめ、view自身にジェスチャー追加
+- キーボード非表示時はタッチを完全透過（ボタンタップ阻害を解消）
 
-#### メンテナンス性の向上
-- AppStorageKeys enum新設（19個のキー文字列を集約）
-- DesignConstants新設（CornerRadius/Shadow/TagBorder定数化）
-- TextAreaLayout定数で全エディタのレイアウト一元管理
-- View拡張でshadowLight()/shadowMedium()等のヘルパー追加
+#### 確定ボタンの動作統一
+- 確定ボタンは常にキーボード閉じるだけ（保存・クリア廃止）
+- タイトル編集中も「確定」を正しく表示（isTitleEditing @Stateで追跡）
+- キーボード表示中のみ「確定」、既存メモ非編集時「メモを閉じる」
+- タイトルのみ入力時も「メモを閉じる」表示
 
-#### 最大化時のフロートボタン
-- 最大化+キーボード表示時に消しゴム・プレビュー・縮小+⌨️ボタンをフロート表示
-- ZStack方式でプレビューを画面中央に固定
+#### 爆速モード改善
+- メモ順をフォルダ一覧と統一（ピン固定→手動順→作成日降順）
+- カード下に最終更新日・作成日を表示（入力中/ルーレット/最大化時は非表示）
+- ピンマーク追加
+- フィルタ画面のチェックアニメーションOFF
+- 最大化時のカード高さ 80%→77%
 
-#### typingAttributesグレーアウト修正
-- MD記号隣接テキストのグレーアウト修正（textViewDidChange後にtypingAttributes再リセット）
+## 次のアクション（最優先）
+1. **Flutter版プロジェクト作成**（別プロジェクトフォルダ: `_Apps2026/MemoletteFl` 等）
+2. **Flutter環境構築**（Flutter SDK, Android Studio, CocoaPods, flutter doctor）
+3. **Swift版の機能をFlutter版に移植開始**（コア機能から）
 
-## 次のアクション（優先順）
-1. **爆速モードでMDファイルをどう扱うか検討**（次回最初に相談）
-2. **文字色対応**（独自記法 or カラーピッカー）
-3. **下線・ハイライト（蛍光ペン風）**
-4. **MemoDetailView（閲覧画面）でのマークダウンプレビュー表示**
-5. **タグ履歴のデバッグ**: 履歴が正しく記録・表示されるか実機確認
-6. **ダミーデータ削除**: SokuMemoKunApp.swift の insertDummyTagHistory をリリース前に削除
-7. **実機ビルドの問題解決**（CodeSign / Google Driveのxattr問題）
-8. **並び替え問題の大改修**
+## Flutter移行の方針
+- Swift版は `_Apps2026/Memolette` にそのまま残す（戻れるように）
+- Flutter版は別プロジェクトフォルダで管理
+- 同期はFirebaseベースで設計（全プラットフォーム対応）
+- 画像挿入は圧縮+リサイズ方式（長辺1024px, JPEG 70%, 1枚100-200KB）
+- 必要に応じてiCloud同期も後から追加可能
 
 ## 主要ファイル（マークダウン関連）
-- **LineNumberTextEditor.swift**: GutteredTextViewにMDスタイリング統合済み（applyMarkdownStyle/updateMarkdownMode）
-- **MarkdownTextEditor.swift**: 旧実装（MarkdownContainerView）— 現在未使用だが残存
+- **LineNumberTextEditor.swift**: GutteredTextViewにMDスタイリング統合済み
 - **MarkdownToolbar.swift**: キーボード直上の記号入力バー
 - **MarkdownPreviewView.swift**: プレビュー表示（全記法対応）
 - **MemoInputView.swift**: MDトグル・プレビューボタン・TextAreaLayout定数

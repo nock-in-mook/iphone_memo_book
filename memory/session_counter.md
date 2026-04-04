@@ -1,7 +1,7 @@
 ---
 name: session_counter
-description: セッション連番カウンター（次回は060）
+description: セッション連番カウンター（次回は061）
 type: project
 ---
 
-next_session: 060
+next_session: 061
