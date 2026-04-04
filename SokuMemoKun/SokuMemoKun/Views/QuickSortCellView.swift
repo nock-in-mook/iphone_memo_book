@@ -585,7 +585,7 @@ struct QuickSortCellView: View {
                 .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
 
                 // 右上アイコン群（ピン・MD・ロック）
-                HStack(spacing: 6) {
+                HStack(spacing: 10) {
                     if memo.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 10))
@@ -627,7 +627,7 @@ struct QuickSortCellView: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .trailing)
                 .padding(.trailing, 8)
-                .padding(.top, 6)
+                .padding(.top, 2)
             }
         }
     }
