@@ -2212,9 +2212,9 @@ struct SearchMemoCardView: View {
                         .foregroundStyle(.orange.opacity(0.6))
                 }
                 if containsMarkdown(memo.content) {
-                    Text("M↓")
+                    Text("MD")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.gray.opacity(0.5))
+                        .foregroundStyle(.purple.opacity(0.6))
                 }
             }
             .padding(3)
