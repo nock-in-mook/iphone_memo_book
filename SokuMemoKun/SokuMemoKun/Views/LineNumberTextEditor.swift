@@ -190,6 +190,16 @@ class GutteredTextView: UIView {
         // キーボード表示/非表示でcontentInset.bottomを自動調整
         NotificationCenter.default.addObserver(self, selector: #selector(adjustForKeyboard), name: UIResponder.keyboardWillChangeFrameNotification, object: nil)
         NotificationCenter.default.addObserver(self, selector: #selector(adjustForKeyboard), name: UIResponder.keyboardWillHideNotification, object: nil)
+
+        // マークダウンツールバーからのカーソル位置通知を受信
+        NotificationCenter.default.addObserver(self, selector: #selector(handleMarkdownCursor), name: .markdownCursorFromEnd, object: nil)
+    }
+
+    @objc private func handleMarkdownCursor(_ notification: Notification) {
+        guard isMarkdown, let offset = notification.userInfo?["offset"] as? Int else { return }
+        let len = textView.text.count
+        let pos = max(0, len - offset)
+        textView.selectedRange = NSRange(location: pos, length: 0)
     }
 
     @objc private func adjustForKeyboard(_ notification: Notification) {
