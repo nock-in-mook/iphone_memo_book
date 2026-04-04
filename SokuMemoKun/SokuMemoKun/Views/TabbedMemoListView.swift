@@ -2199,13 +2199,8 @@ struct SearchMemoCardView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .padding(8)
 
-            // 右上マーク（ロック・ピン・マークダウン）
-            VStack(spacing: 2) {
-                if memo.isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 8))
-                        .foregroundStyle(.blue.opacity(0.6))
-                }
+            // 右上マーク（ピン・MD・ロック）
+            VStack(spacing: 3) {
                 if memo.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.system(size: 8))
@@ -2220,6 +2215,17 @@ struct SearchMemoCardView: View {
                         .background(
                             RoundedRectangle(cornerRadius: 3)
                                 .fill(Color.purple.opacity(0.7))
+                        )
+                }
+                if memo.isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 8, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .padding(4)
+                        .background(
+                            Circle()
+                                .fill(Color.orange.opacity(0.1))
+                                .overlay(Circle().stroke(Color.orange.opacity(0.4), lineWidth: 1))
                         )
                 }
             }
@@ -2345,16 +2351,33 @@ struct MemoCardView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                // 右端マーク（アイコンがある時だけスペースを使う）
-                if memo.isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 7))
-                        .foregroundStyle(.blue.opacity(0.6))
-                }
+                // 右端マーク（ピン・MD・ロック）
                 if memo.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.system(size: 7))
                         .foregroundStyle(.orange.opacity(0.6))
+                }
+                if containsMarkdown(memo.content) {
+                    Text("MD")
+                        .font(.system(size: 7, weight: .bold, design: .monospaced))
+                        .foregroundStyle(.white)
+                        .padding(.horizontal, 2)
+                        .padding(.vertical, 1)
+                        .background(
+                            RoundedRectangle(cornerRadius: 2)
+                                .fill(Color.purple.opacity(0.7))
+                        )
+                }
+                if memo.isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 7, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .padding(3)
+                        .background(
+                            Circle()
+                                .fill(Color.orange.opacity(0.1))
+                                .overlay(Circle().stroke(Color.orange.opacity(0.4), lineWidth: 0.5))
+                        )
                 }
             }
             .padding(.horizontal, 6)
@@ -2382,13 +2405,8 @@ struct MemoCardView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(cardPadding)
             .overlay(alignment: .topTrailing) {
-                // 右上マーク（overlayでテキスト幅に影響させない）
-                VStack(spacing: 2) {
-                    if memo.isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.blue.opacity(0.6))
-                    }
+                // 右上マーク（ピン・MD・ロック）
+                VStack(spacing: 3) {
                     if memo.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 8))
@@ -2403,6 +2421,17 @@ struct MemoCardView: View {
                             .background(
                                 RoundedRectangle(cornerRadius: 3)
                                     .fill(Color.purple.opacity(0.7))
+                            )
+                    }
+                    if memo.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(.orange)
+                            .padding(4)
+                            .background(
+                                Circle()
+                                    .fill(Color.orange.opacity(0.1))
+                                    .overlay(Circle().stroke(Color.orange.opacity(0.4), lineWidth: 1))
                             )
                     }
                 }
@@ -2533,15 +2562,21 @@ struct TodoCardView: View {
                     .lineLimit(1)
                     .truncationMode(.tail)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                if todoList.isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 7))
-                        .foregroundStyle(.blue.opacity(0.6))
-                }
                 if todoList.isPinned {
                     Image(systemName: "pin.fill")
                         .font(.system(size: 7))
                         .foregroundStyle(.orange.opacity(0.6))
+                }
+                if todoList.isLocked {
+                    Image(systemName: "lock.fill")
+                        .font(.system(size: 7, weight: .semibold))
+                        .foregroundStyle(.orange)
+                        .padding(3)
+                        .background(
+                            Circle()
+                                .fill(Color.orange.opacity(0.1))
+                                .overlay(Circle().stroke(Color.orange.opacity(0.4), lineWidth: 0.5))
+                        )
                 }
             }
             .padding(.horizontal, 6)
@@ -2579,16 +2614,22 @@ struct TodoCardView: View {
             .frame(maxWidth: .infinity, alignment: .topLeading)
             .padding(cardPadding)
             .overlay(alignment: .topTrailing) {
-                VStack(spacing: 2) {
-                    if todoList.isLocked {
-                        Image(systemName: "lock.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(.blue.opacity(0.6))
-                    }
+                VStack(spacing: 3) {
                     if todoList.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 8))
                             .foregroundStyle(.orange.opacity(0.6))
+                    }
+                    if todoList.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 8, weight: .semibold))
+                            .foregroundStyle(.orange)
+                            .padding(4)
+                            .background(
+                                Circle()
+                                    .fill(Color.orange.opacity(0.1))
+                                    .overlay(Circle().stroke(Color.orange.opacity(0.4), lineWidth: 1))
+                            )
                     }
                 }
                 .padding(3)

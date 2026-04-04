@@ -588,6 +588,10 @@ struct QuickSortCellView: View {
                         .background(
                             Circle()
                                 .fill(Color.orange.opacity(lockIconFlash ? 0.25 : 0.1))
+                                .overlay(
+                                    Circle()
+                                        .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                                )
                         )
                         .scaleEffect(lockIconFlash ? 1.3 : 1.0)
                         .offset(x: geo.size.width - 28, y: 6)
