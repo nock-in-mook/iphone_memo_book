@@ -584,19 +584,26 @@ struct QuickSortCellView: View {
                 )
                 .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
 
-                // MDマーク（カード右上、ロックの左隣）
-                if containsMarkdown(memo.content) {
-                    Text("MD")
-                        .font(.system(size: 10, weight: .bold, design: .monospaced))
-                        .foregroundStyle(.white)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4)
-                                .fill(Color.purple.opacity(0.7))
-                        )
-                        .offset(x: geo.size.width - (memo.isLocked ? 58 : 28), y: 6)
+                // 右上アイコン群（ピン・MD・ロック）
+                HStack(spacing: 4) {
+                    if memo.isPinned {
+                        Image(systemName: "pin.fill")
+                            .font(.system(size: 10))
+                            .foregroundStyle(.orange.opacity(0.6))
+                    }
+                    if containsMarkdown(memo.content) {
+                        Text("MD")
+                            .font(.system(size: 10, weight: .bold, design: .monospaced))
+                            .foregroundStyle(.white)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 3)
+                            .background(
+                                RoundedRectangle(cornerRadius: 4)
+                                    .fill(Color.purple.opacity(0.7))
+                            )
+                    }
                 }
+                .offset(x: geo.size.width - (memo.isLocked ? 58 : 28), y: 6)
 
                 // ロックアイコン（カード右上端）
                 if memo.isLocked {
