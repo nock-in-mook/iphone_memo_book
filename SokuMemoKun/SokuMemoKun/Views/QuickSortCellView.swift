@@ -585,7 +585,7 @@ struct QuickSortCellView: View {
                 .shadow(color: .black.opacity(0.1), radius: 8, y: 4)
 
                 // 右上アイコン群（ピン・MD・ロック）
-                HStack(spacing: 4) {
+                HStack(spacing: 6) {
                     if memo.isPinned {
                         Image(systemName: "pin.fill")
                             .font(.system(size: 10))
@@ -602,34 +602,32 @@ struct QuickSortCellView: View {
                                     .fill(Color.purple.opacity(0.7))
                             )
                     }
-                }
-                .offset(x: geo.size.width - (memo.isLocked ? 58 : 28), y: 6)
-
-                // ロックアイコン（カード右上端）
-                if memo.isLocked {
-                    Image(systemName: "lock.fill")
-                        .font(.system(size: 13, weight: .semibold))
-                        .foregroundStyle(.orange)
-                        .padding(6)
-                        .background(
-                            Circle()
-                                .fill(Color.orange.opacity(lockIconFlash ? 0.25 : 0.1))
-                                .overlay(
-                                    Circle()
-                                        .stroke(Color.orange.opacity(0.4), lineWidth: 1)
-                                )
-                        )
-                        .scaleEffect(lockIconFlash ? 1.3 : 1.0)
-                        .offset(x: geo.size.width - 28, y: 2)
-                        .transition(.scale.combined(with: .opacity))
-                        .onAppear {
-                            // 出現時フラッシュ
-                            withAnimation(.easeOut(duration: 0.15)) { lockIconFlash = true }
-                            DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
-                                withAnimation(.easeOut(duration: 0.3)) { lockIconFlash = false }
+                    if memo.isLocked {
+                        Image(systemName: "lock.fill")
+                            .font(.system(size: 13, weight: .semibold))
+                            .foregroundStyle(.orange)
+                            .padding(6)
+                            .background(
+                                Circle()
+                                    .fill(Color.orange.opacity(lockIconFlash ? 0.25 : 0.1))
+                                    .overlay(
+                                        Circle()
+                                            .stroke(Color.orange.opacity(0.4), lineWidth: 1)
+                                    )
+                            )
+                            .scaleEffect(lockIconFlash ? 1.3 : 1.0)
+                            .transition(.scale.combined(with: .opacity))
+                            .onAppear {
+                                withAnimation(.easeOut(duration: 0.15)) { lockIconFlash = true }
+                                DispatchQueue.main.asyncAfter(deadline: .now() + 0.3) {
+                                    withAnimation(.easeOut(duration: 0.3)) { lockIconFlash = false }
+                                }
                             }
-                        }
+                    }
                 }
+                .frame(maxWidth: .infinity, alignment: .trailing)
+                .padding(.trailing, 8)
+                .padding(.top, 6)
             }
         }
     }
