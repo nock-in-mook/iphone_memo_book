@@ -24,10 +24,12 @@ enum TextAreaLayout {
     static let leadingPaddingWithGutter: CGFloat = 0
     static let trailingPadding: CGFloat = 2
 
-    // プレースホルダーのpadding（SwiftUI padding + textInsetLeft + lineFragmentPadding の合算）
-    static let placeholderLeading: CGFloat = 10  // テキスト開始位置と揃える微調整
-    static let placeholderLeadingWithGutter: CGFloat = 38  // gutterWidth(36) + textInsetLeft(2)
-    static let placeholderTop: CGFloat = 16  // textInsetTopと同じ
+    // プレースホルダーのオフセット（カーソル位置から+3pt右にずらす）
+    private static let placeholderOffset: CGFloat = 3
+    // プレースホルダーのpadding（カーソル位置 = leadingPadding + textInsetLeft + lineFragmentPadding に +3pt）
+    static let placeholderLeading: CGFloat = leadingPadding + textInsetLeft + lineFragmentPadding + placeholderOffset
+    static let placeholderLeadingWithGutter: CGFloat = leadingPaddingWithGutter + 36 + textInsetLeft + lineFragmentPadding + placeholderOffset  // 36 = gutterWidth
+    static let placeholderTop: CGFloat = textInsetTop
 }
 
 struct MemoInputView: View {
