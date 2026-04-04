@@ -2211,7 +2211,7 @@ struct SearchMemoCardView: View {
                         .font(.system(size: 8))
                         .foregroundStyle(.orange.opacity(0.6))
                 }
-                if memo.isMarkdown {
+                if containsMarkdown(memo.content) {
                     Text("M↓")
                         .font(.system(size: 9, weight: .bold, design: .monospaced))
                         .foregroundStyle(.gray.opacity(0.5))
@@ -3246,4 +3246,31 @@ struct MoveToTopIcon: View {
             context.fill(shaft, with: .color(.primary.opacity(0.45)))
         }
     }
+}
+
+// テキスト内容からマークダウン記法を含むか自動判定
+func containsMarkdown(_ text: String) -> Bool {
+    // 先頭200文字程度でチェック（パフォーマンス考慮）
+    let sample = String(text.prefix(500))
+    let patterns = [
+        "^#{1,6} ",       // 見出し
+        "^- ",            // リスト
+        "^\\* ",          // リスト（*）
+        "^\\d+\\. ",      // 番号付きリスト
+        "^> ",            // 引用
+        "\\*\\*.+\\*\\*", // 太字
+        "\\*[^*]+\\*",    // 斜体
+        "~~.+~~",         // 取り消し線
+        "^---$|^\\*\\*\\*$|^___$", // 水平線
+        "\\[.+\\]\\(.+\\)",        // リンク
+        "^- \\[[ x]\\]",           // チェックボックス
+        "`.+`",                     // インラインコード
+    ]
+    for pattern in patterns {
+        if let regex = try? NSRegularExpression(pattern: pattern, options: .anchorsMatchLines),
+           regex.firstMatch(in: sample, range: NSRange(sample.startIndex..., in: sample)) != nil {
+            return true
+        }
+    }
+    return false
 }
