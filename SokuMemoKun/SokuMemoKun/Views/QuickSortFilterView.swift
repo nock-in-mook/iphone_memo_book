@@ -35,7 +35,15 @@ struct QuickSortFilterView: View {
     private var filteredCount: Int { filteredMemos.count }
 
     private var filteredMemos: [Memo] {
-        if filterAll { return allMemos }
+        if filterAll {
+            return allMemos.sorted { a, b in
+                if a.isPinned != b.isPinned { return a.isPinned }
+                if a.manualSortOrder != b.manualSortOrder {
+                    return a.manualSortOrder > b.manualSortOrder
+                }
+                return a.createdAt > b.createdAt
+            }
+        }
         var result: Set<UUID> = []
         for memo in allMemos {
             if filterNoTag && memo.tags.isEmpty {
@@ -58,7 +66,14 @@ struct QuickSortFilterView: View {
                 }
             }
         }
-        return allMemos.filter { result.contains($0.id) }
+        // フォルダ一覧と同じ並び順: ピン固定→手動順→作成日降順
+        return allMemos.filter { result.contains($0.id) }.sorted { a, b in
+            if a.isPinned != b.isPinned { return a.isPinned }
+            if a.manualSortOrder != b.manualSortOrder {
+                return a.manualSortOrder > b.manualSortOrder
+            }
+            return a.createdAt > b.createdAt
+        }
     }
 
     var body: some View {
