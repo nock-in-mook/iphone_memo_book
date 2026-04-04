@@ -1066,6 +1066,7 @@ struct MemoInputView: View {
                     } else {
                         Button {
                             isTextEditorFocused = false
+                            UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                             viewModel.clearInput()
                         } label: {
                             HStack(spacing: 3) {
