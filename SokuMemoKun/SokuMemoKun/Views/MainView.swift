@@ -365,7 +365,7 @@ struct MainView: View {
                             }
 
                             // 中央: プレビュー（画面中央に固定）
-                            if viewModel.isMarkdown && !viewModel.inputText.isEmpty {
+                            if viewModel.isMarkdown {
                                 Button {
                                     UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                                     viewModel.showMarkdownPreview.toggle()

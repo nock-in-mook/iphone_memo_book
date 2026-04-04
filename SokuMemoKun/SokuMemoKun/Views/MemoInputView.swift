@@ -472,7 +472,7 @@ struct MemoInputView: View {
             }
             // プレビューボタン（入力欄中央下端）
             .overlay(alignment: .bottom) {
-                if viewModel.isMarkdown && !viewModel.inputText.isEmpty {
+                if viewModel.isMarkdown {
                     Button {
                         if !viewModel.showMarkdownPreview {
                             isTextEditorFocused = false
